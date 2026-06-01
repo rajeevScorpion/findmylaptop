@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
@@ -15,6 +16,14 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
+
+  // Don't auth-check the login page — it's under this layout but must be public
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

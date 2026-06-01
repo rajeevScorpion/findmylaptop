@@ -220,11 +220,12 @@ export function getRecommendations(
   return sortResults(results, sort);
 }
 
-export function generateSlug(name: string): string {
-  return name
+export function generateSlug(name: string, id?: string): string {
+  const base = name
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .trim();
+  return id ? `${base}-${id.slice(0, 8)}` : base;
 }

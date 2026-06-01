@@ -145,9 +145,12 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
     setSaveError(null);
 
     const supabase = createClient();
-    const slug = laptop?.slug ?? generateSlug(data.name);
+    // For new laptops: generate a UUID now and bake it into the slug to guarantee uniqueness
+    const newId = laptop ? undefined : crypto.randomUUID();
+    const slug = laptop?.slug ?? generateSlug(data.name, newId);
 
     const payload = {
+      ...(newId ? { id: newId } : {}),
       slug,
       name: data.name,
       brand: data.brand || null,
