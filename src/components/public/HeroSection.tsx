@@ -37,7 +37,6 @@ export function HeroSection() {
             animate="visible"
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card text-xs text-muted-foreground border mb-2"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             Trusted recommendations for design students
           </m.div>
 

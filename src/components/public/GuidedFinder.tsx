@@ -52,6 +52,7 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
           <div>
             <h2 className="text-lg font-semibold text-foreground">Find your laptop</h2>
             <p className="text-sm text-muted-foreground">Filter by course, budget, and workload</p>
+            <p className="text-xs text-muted-foreground/70 leading-relaxed mt-0.5">Every laptop listed here is hand-picked based on real course requirements and years of experience guiding design students.</p>
           </div>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={reset} className="gap-1.5 text-xs text-muted-foreground">
@@ -62,18 +63,18 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, brand, GPU, CPU, or course…"
+            placeholder="Search by course, brand, or GPU…"
             value={filters.searchQuery}
             onChange={(e) => update({ searchQuery: e.target.value })}
-            className="pl-9 bg-background/50 border-border/60"
+            className="pl-10 h-12 rounded-full bg-background/50 border-border/60"
           />
         </div>
 
         {/* Course category */}
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Your Course</p>
+          <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Your Course</p>
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {Object.keys(COURSES_BY_CATEGORY).map((cat) => (
@@ -118,28 +119,6 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
           </div>
         </div>
 
-        {/* Budget */}
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Budget</p>
-          <div className="flex flex-wrap gap-2">
-            {BUDGET_RANGES.map((range) => (
-              <button
-                key={range.value}
-                onClick={() =>
-                  update({ maxBudget: filters.maxBudget === range.value ? undefined : range.value })
-                }
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  filters.maxBudget === range.value
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Advanced toggle */}
         <div>
           <button
@@ -153,9 +132,31 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
 
         {showAdvanced && (
           <div className="space-y-4 pt-1 border-t border-border/30">
+            {/* Budget */}
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Budget</p>
+              <div className="flex flex-wrap gap-2">
+                {BUDGET_RANGES.map((range) => (
+                  <button
+                    key={range.value}
+                    onClick={() =>
+                      update({ maxBudget: filters.maxBudget === range.value ? undefined : range.value })
+                    }
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      filters.maxBudget === range.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Workload tags */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Workload</p>
+              <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Workload</p>
               <div className="flex flex-wrap gap-2">
                 {WORKLOAD_TAGS.map((tag) => (
                   <button
@@ -178,51 +179,53 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
               </div>
             </div>
 
-            {/* Min RAM */}
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Minimum RAM</p>
-              <div className="flex flex-wrap gap-2">
-                {[8, 16, 24, 32].map((gb) => (
-                  <button
-                    key={gb}
-                    onClick={() =>
-                      update({ minRamGb: filters.minRamGb === gb ? undefined : gb })
-                    }
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      filters.minRamGb === gb
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
-                    }`}
-                  >
-                    {gb}GB+
-                  </button>
-                ))}
+            {/* Min RAM + Min VRAM — side by side on desktop */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Minimum RAM</p>
+                <div className="flex flex-wrap gap-2">
+                  {[8, 16, 24, 32].map((gb) => (
+                    <button
+                      key={gb}
+                      onClick={() =>
+                        update({ minRamGb: filters.minRamGb === gb ? undefined : gb })
+                      }
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        filters.minRamGb === gb
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {gb}GB+
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Min VRAM */}
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Minimum GPU VRAM</p>
-              <div className="flex flex-wrap gap-2">
-                {[4, 6, 8, 12].map((gb) => (
-                  <button
-                    key={gb}
-                    onClick={() =>
-                      update({ minVramGb: filters.minVramGb === gb ? undefined : gb })
-                    }
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      filters.minVramGb === gb
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
-                    }`}
-                  >
-                    {gb}GB+
-                  </button>
-                ))}
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Minimum GPU VRAM</p>
+                <div className="flex flex-wrap gap-2">
+                  {[4, 6, 8, 12].map((gb) => (
+                    <button
+                      key={gb}
+                      onClick={() =>
+                        update({ minVramGb: filters.minVramGb === gb ? undefined : gb })
+                      }
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        filters.minVramGb === gb
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {gb}GB+
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </section>
   );

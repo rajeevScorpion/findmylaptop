@@ -1,4 +1,4 @@
-import { Apple, Monitor, Info } from "lucide-react";
+import { Apple, Monitor, Info, Cpu } from "lucide-react";
 
 export function MacGuidance() {
   return (
@@ -38,6 +38,29 @@ export function MacGuidance() {
           </div>
 
           <div className="flex gap-3">
+            <Cpu className="w-4 h-4 text-violet-500 dark:text-violet-400 shrink-0 mt-1" />
+            <div>
+              <p className="text-sm font-medium text-foreground mb-0.5">
+                Windows + NVIDIA RTX — native AI advantage
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                NVIDIA's CUDA platform is the backbone of nearly every serious AI and creative computing
+                tool — Stable Diffusion, ComfyUI, Blender Cycles, DaVinci Resolve, Topaz, and most local
+                LLM runners (Ollama, llama.cpp) all run significantly faster, or exclusively, on CUDA.
+                Apple Silicon has its own ML acceleration, but CUDA compatibility remains the industry
+                standard and the gap widens as models grow larger.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+                Regardless of your design discipline — even if you are studying communication or fashion
+                — if you want to run local AI models, explore generative image workflows, automate tasks
+                with AI scripts, or experiment with creative coding and diffusion tools, an NVIDIA RTX
+                GPU gives you direct access to the full ecosystem without workarounds. This is increasingly
+                relevant across every design field, not just the compute-heavy ones.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
             <Monitor className="w-4 h-4 text-foreground/60 shrink-0 mt-1" />
             <div>
               <p className="text-sm font-medium text-foreground mb-0.5">iPad</p>
@@ -55,8 +78,8 @@ export function MacGuidance() {
             <span className="font-medium text-foreground">Practical advice: </span>
             Students who already own a MacBook or iPad may use them initially and decide after
             understanding their specific course workload. Heavy 3D, animation, game, AI, and
-            computational design workflows will benefit from a Windows machine with an NVIDIA GPU
-            sooner than lighter disciplines.
+            computational design workflows will benefit from a Windows machine with an NVIDIA RTX GPU
+            sooner — but even lighter disciplines benefit the moment you want to run AI tools natively.
           </p>
         </div>
       </div>

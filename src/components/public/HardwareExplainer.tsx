@@ -10,7 +10,7 @@ type ExplainerItem = {
   subtitle: string;
   iconClass: string;
   glowColor: string;
-  body: string;
+  bullets: string[];
 };
 
 const EXPLAINERS: ExplainerItem[] = [
@@ -21,7 +21,13 @@ const EXPLAINERS: ExplainerItem[] = [
     subtitle: "The Brain",
     iconClass: "text-violet-400",
     glowColor: "#a78bfa",
-    body: "The CPU handles all computation — running your software, processing files, and managing multitasking. For design students, a modern Intel Core i7/i9 H-series or AMD Ryzen 7/9 HS/HX gives smooth Photoshop, Illustrator, and Figma performance. A stronger CPU also speeds up 3D rendering bakes, video exports, and simulation calculations. Look for H-class (not U-class) for real sustained performance under load.",
+    bullets: [
+      "Runs your software, processes files, handles multitasking",
+      "Intel Core i7/i9 H-series or AMD Ryzen 7/9 HS/HX for design work",
+      "H-class only — U-class chips throttle under sustained creative load",
+      "Faster CPU = quicker 3D bakes, video exports, simulation calculations",
+      "More cores help when running Blender, Photoshop, and AI tools together",
+    ],
   },
   {
     Icon: Zap,
@@ -30,7 +36,13 @@ const EXPLAINERS: ExplainerItem[] = [
     subtitle: "The Visual Engine",
     iconClass: "text-amber-400",
     glowColor: "#fbbf24",
-    body: "The GPU powers 3D rendering, video processing, AI image generation, real-time previews in Blender and Unreal Engine, and simulations. For most design courses, an NVIDIA RTX 4050 (6GB VRAM) is a practical minimum. RTX 4060 (8GB) is strongly preferred for 3D-heavy, game, animation, or AI workflows. VRAM is the most critical figure — 6–8GB is the practical minimum for modern creative workflows.",
+    bullets: [
+      "Powers 3D rendering, AI generation, real-time previews, video processing",
+      "NVIDIA RTX 4050 (6GB VRAM) is the practical minimum",
+      "RTX 4060 (8GB VRAM) strongly preferred for 3D, animation, game, or AI",
+      "VRAM is the most critical figure — aim for 6–8GB minimum",
+      "CUDA unlocks Stable Diffusion, Blender CUDA, DaVinci, and local AI models",
+    ],
   },
   {
     Icon: MemoryStick,
@@ -39,7 +51,13 @@ const EXPLAINERS: ExplainerItem[] = [
     subtitle: "Your Working Table",
     iconClass: "text-sky-400",
     glowColor: "#38bdf8",
-    body: "RAM is the workspace where your laptop holds active tasks. 16GB is the minimum for design work. 24–32GB is strongly preferred for students working with 3D, multiple large files, rendering, and AI tools simultaneously. Upgradeable RAM is a significant advantage — it extends the usable life of your laptop. Soldered RAM means your laptop is capped at the RAM it ships with.",
+    bullets: [
+      "Holds all active apps, open files, and background processes",
+      "16GB is the floor — 24–32GB strongly preferred",
+      "3D, AI tools, and large file workflows exhaust 16GB quickly",
+      "Upgradeable RAM extends useful laptop life at low cost (~₹4,000–6,000)",
+      "Soldered RAM caps you permanently at what the laptop ships with",
+    ],
   },
   {
     Icon: HardDrive,
@@ -48,7 +66,13 @@ const EXPLAINERS: ExplainerItem[] = [
     subtitle: "Speed and Space",
     iconClass: "text-violet-400",
     glowColor: "#a78bfa",
-    body: "The SSD is your storage. A fast NVMe SSD means faster boot times, quicker file saves, and smoother 3D asset loading. 512GB is a bare minimum — assets, textures, renders, and video footage fill up fast. 1TB is the recommended starting point. An M.2 expansion slot is a practical advantage, letting you add storage later without replacing the drive.",
+    bullets: [
+      "Faster SSD = quicker boot, file saves, and 3D asset loading",
+      "512GB is a bare minimum — assets and renders fill it fast",
+      "1TB NVMe is the recommended starting point",
+      "NVMe (M.2) SSDs are significantly faster than SATA drives",
+      "A free M.2 slot lets you add storage later without replacing the drive",
+    ],
   },
   {
     Icon: Monitor,
@@ -57,7 +81,13 @@ const EXPLAINERS: ExplainerItem[] = [
     subtitle: "Colour and Clarity",
     iconClass: "text-emerald-400",
     glowColor: "#34d399",
-    body: "For design work, colour accuracy matters. Look for displays with 100% sRGB coverage or higher. DCI-P3 coverage is a bonus for video and photography disciplines. A 15–16 inch display is generally more comfortable for creative work. Higher refresh rates (144Hz+) are useful for game design and animation students but less critical for 2D and communication design courses.",
+    bullets: [
+      "Colour accuracy is non-negotiable for any design discipline",
+      "Minimum: 100% sRGB coverage — DCI-P3 is a bonus for video/photo",
+      "15–16 inch screen is more comfortable for extended creative work",
+      "144Hz+ matters for game design and animation; less so for 2D and UI",
+      "Matte panel reduces glare under varied studio lighting",
+    ],
   },
   {
     Icon: Thermometer,
@@ -66,7 +96,13 @@ const EXPLAINERS: ExplainerItem[] = [
     subtitle: "Performance Under Load",
     iconClass: "text-rose-400",
     glowColor: "#f87171",
-    body: "Thin laptops with powerful GPUs often throttle under sustained load to prevent overheating. This means the RTX 4060 in a slim chassis may perform worse than the same GPU in a well-cooled build. Look for laptops with good thermal scores from reviews. Heavier chassis often mean better thermals. If you plan to render, animate, or run AI workflows for hours at a time, thermals matter significantly.",
+    bullets: [
+      "Thin laptops throttle their GPU to prevent overheating",
+      "Same RTX 4060 can run 20–30% slower in a slim chassis vs. a proper build",
+      "Heavier chassis = better cooling = consistent sustained performance",
+      "Always check thermal reviews — benchmark peaks do not tell the full story",
+      "Critical if you render, animate, or run AI workflows for hours at a time",
+    ],
   },
   {
     Icon: Wrench,
@@ -75,7 +111,13 @@ const EXPLAINERS: ExplainerItem[] = [
     subtitle: "Extending Your Laptop's Life",
     iconClass: "text-orange-400",
     glowColor: "#fb923c",
-    body: "A laptop with upgradeable RAM and a free M.2 slot gives you the ability to extend its useful life. Starting with 16GB RAM and upgrading to 32GB a year later is much cheaper than buying a new laptop. When comparing two otherwise similar laptops, the one with upgradeable RAM and expandable storage has meaningfully better four-year value.",
+    bullets: [
+      "Start at 16GB RAM, upgrade to 32GB a year later for ~₹5,000",
+      "A free M.2 slot lets you expand storage without opening the main drive",
+      "Upgradeable laptop beats a sealed one with the same specs — every time",
+      "Ask before buying: is RAM soldered? How many M.2 slots are free?",
+      "Upgradeability is the single biggest factor in 4-year value",
+    ],
   },
 ];
 
@@ -171,10 +213,18 @@ function ExplainerCard({ item }: { item: ExplainerItem }) {
         style={{ background: `linear-gradient(to right, ${item.glowColor}40, transparent)` }}
       />
 
-      {/* Body */}
-      <p className="relative z-10 text-sm text-muted-foreground leading-relaxed">
-        {item.body}
-      </p>
+      {/* Bullets */}
+      <ul className="relative z-10 flex flex-col gap-2">
+        {item.bullets.map((point, i) => (
+          <li key={i} className="flex items-start gap-2.5 text-sm text-muted-foreground leading-snug">
+            <span
+              className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: item.glowColor }}
+            />
+            {point}
+          </li>
+        ))}
+      </ul>
     </m.div>
   );
 }

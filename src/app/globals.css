@@ -265,8 +265,9 @@
   border-color: oklch(1 0 0 / 16%);
 }
 
-/* ── Smooth scroll ── */
+/* ── Smooth scroll + base font scale ── */
 html {
+  font-size: 110%;
   scroll-behavior: smooth;
 }
 
