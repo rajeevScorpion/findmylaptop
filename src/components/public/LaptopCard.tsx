@@ -36,10 +36,10 @@ const SUITABILITY_COLORS: Record<string, string> = {
 export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardProps) {
   const [showWhy, setShowWhy]         = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showBestFor, setShowBestFor] = useState(false);
 
   const glowColor = TIER_GLOW[laptop.tier ?? ""] ?? "#a78bfa";
-  const hasDetails =
-    laptop.cautions || laptop.upgrade_notes || laptop.recommended_for_courses.length > 0;
+  const hasDetails = laptop.cautions || laptop.upgrade_notes;
 
   return (
     <LazyMotion features={domAnimation}>
@@ -172,6 +172,39 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
           )}
 
           {/* Cautions + upgrade notes + courses */}
+          {/* Best for — own collapsible */}
+          {laptop.recommended_for_courses.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowBestFor(!showBestFor)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Best for:
+                {showBestFor
+                  ? <ChevronUp className="w-3 h-3" />
+                  : <ChevronDown className="w-3 h-3" />}
+              </button>
+              {showBestFor && (
+                <m.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, ease: "easeOut" as const }}
+                  className="flex flex-wrap gap-1 mt-2"
+                >
+                  {laptop.recommended_for_courses.map((course) => (
+                    <span
+                      key={course}
+                      className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary/90 border border-primary/20"
+                    >
+                      {course}
+                    </span>
+                  ))}
+                </m.div>
+              )}
+            </div>
+          )}
+
+          {/* Cautions + upgrade notes */}
           {showDetails && (
             <m.div
               initial={{ opacity: 0, y: -6 }}
@@ -189,21 +222,6 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
                 <div className="flex gap-2 p-3 rounded-xl bg-sky-500/10 dark:bg-sky-500/5 border border-sky-500/20 dark:border-sky-500/10">
                   <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
                   <p className="text-xs text-sky-900 dark:text-sky-200/90 leading-relaxed">{laptop.upgrade_notes}</p>
-                </div>
-              )}
-              {laptop.recommended_for_courses.length > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5">Best for:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {laptop.recommended_for_courses.map((course) => (
-                      <span
-                        key={course}
-                        className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary/90 border border-primary/20"
-                      >
-                        {course}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               )}
             </m.div>
@@ -228,7 +246,7 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
               className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded-lg h-7 px-2.5 bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Buy on Amazon
+              See on Amazon
             </a>
             <Button
               variant="outline"

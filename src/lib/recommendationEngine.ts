@@ -1,5 +1,5 @@
 import type { Laptop, FilterState, RecommendationResult, BadgeType, SortOption } from "./types";
-import { getGpuStrengthScore } from "./constants";
+import { getGpuStrengthScore, COURSES_BY_CATEGORY } from "./constants";
 
 const FOUR_YEAR_SCORES: Record<string, number> = {
   excellent: 4,
@@ -174,6 +174,23 @@ export function getRecommendations(
   const filtered = laptops.filter((laptop) => {
     // Text search
     if (!matchesSearch(laptop, filters.searchQuery)) return false;
+
+    // Course hard filter — specific course selected
+    if (filters.course) {
+      const matches = laptop.recommended_for_courses.some(
+        (c) => c.toLowerCase() === filters.course!.toLowerCase()
+      );
+      if (!matches) return false;
+    } else if (filters.courseCategory) {
+      // Only category selected — match any course in that category
+      const categoryCourses = (COURSES_BY_CATEGORY[filters.courseCategory] ?? []).map(
+        (c) => c.toLowerCase()
+      );
+      const matches = laptop.recommended_for_courses.some((c) =>
+        categoryCourses.includes(c.toLowerCase())
+      );
+      if (!matches) return false;
+    }
 
     // Budget filter
     if (

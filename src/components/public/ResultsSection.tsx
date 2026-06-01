@@ -63,7 +63,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
 
       <section id="results" className="px-4 pb-12 max-w-5xl mx-auto w-full">
         {/* Results header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Laptop className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
@@ -89,6 +89,9 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
             </Select>
           </div>
         </div>
+        <p className="text-xs text-muted-foreground/60 mb-5">
+          Prices may vary. For the latest price, click <span className="italic">See on Amazon</span>.
+        </p>
 
         {/* Results grid */}
         {results.length > 0 ? (
