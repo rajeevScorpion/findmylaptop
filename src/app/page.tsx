@@ -6,6 +6,7 @@ import { AISection } from "@/components/public/AISection";
 import { MacGuidance } from "@/components/public/MacGuidance";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
 import { Disclaimer } from "@/components/public/Disclaimer";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { Laptop } from "@/lib/types";
 
 export const revalidate = 300;
@@ -31,6 +32,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen">
+      <ThemeToggle />
       <HeroSection />
       <ResultsSection laptops={laptops} />
       <HardwareExplainer />

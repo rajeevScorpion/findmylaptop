@@ -27,9 +27,9 @@ const TIER_GLOW: Record<string, string> = {
 };
 
 const SUITABILITY_COLORS: Record<string, string> = {
-  excellent: "text-emerald-400",
-  strong:    "text-sky-400",
-  good:      "text-amber-400",
+  excellent: "text-emerald-700 dark:text-emerald-400",
+  strong:    "text-sky-700 dark:text-sky-400",
+  good:      "text-amber-700 dark:text-amber-400",
   basic:     "text-muted-foreground",
 };
 
@@ -147,7 +147,7 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
             <div>
               <button
                 onClick={() => setShowWhy(!showWhy)}
-                className="flex items-center gap-1.5 text-xs text-emerald-400/80 hover:text-emerald-400 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-emerald-700/80 hover:text-emerald-700 dark:text-emerald-400/80 dark:hover:text-emerald-400 transition-colors"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 Why this laptop?
@@ -161,9 +161,9 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, ease: "easeOut" as const }}
-                  className="mt-2 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10"
+                  className="mt-2 p-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 dark:border-emerald-500/10"
                 >
-                  <p className="text-xs text-emerald-300/90 leading-relaxed">
+                  <p className="text-xs text-emerald-900 dark:text-emerald-200/90 leading-relaxed">
                     {laptop.why_recommended}
                   </p>
                 </m.div>
@@ -180,15 +180,15 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
               className="flex flex-col gap-3"
             >
               {laptop.cautions && (
-                <div className="flex gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
-                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-300/90 leading-relaxed">{laptop.cautions}</p>
+                <div className="flex gap-2 p-3 rounded-xl bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 dark:border-amber-500/10">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-900 dark:text-amber-200/90 leading-relaxed">{laptop.cautions}</p>
                 </div>
               )}
               {laptop.upgrade_notes && (
-                <div className="flex gap-2 p-3 rounded-xl bg-sky-500/5 border border-sky-500/10">
-                  <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-sky-300/90 leading-relaxed">{laptop.upgrade_notes}</p>
+                <div className="flex gap-2 p-3 rounded-xl bg-sky-500/10 dark:bg-sky-500/5 border border-sky-500/20 dark:border-sky-500/10">
+                  <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-sky-900 dark:text-sky-200/90 leading-relaxed">{laptop.upgrade_notes}</p>
                 </div>
               )}
               {laptop.recommended_for_courses.length > 0 && (
