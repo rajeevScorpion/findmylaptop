@@ -1,36 +1,186 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FindMyLaptop
 
-## Getting Started
+A mobile-first, single-page laptop recommendation website for design students. Helps students find the right laptop based on their course, budget, and creative workflow — with Amazon affiliate links and an admin utility for managing recommendations.
 
-First, run the development server:
+## Features
+
+- **Public recommender**: Guided finder (course → budget → workload) → matching laptop cards
+- **Instant filtering**: All filtering runs client-side after a single SSR data load
+- **Laptop comparison**: Compare up to 3 laptops side-by-side
+- **Educational sections**: Hardware explainer, AI disruption in design, MacBook/iPad guidance
+- **WhatsApp CTA**: Configurable group link for student doubts
+- **Admin utility**: Supabase Auth + email allowlist → add laptops by pasting Amazon details → OpenAI extracts specs → review → publish
+
+---
+
+## Tech Stack
+
+- **Next.js 16** App Router, TypeScript
+- **Tailwind CSS v4** + shadcn/ui (base-nova style with @base-ui/react)
+- **Framer Motion** (LazyMotion for reduced bundle)
+- **Supabase** (Postgres + Auth)
+- **OpenAI** `gpt-4o-mini` (JSON mode for spec extraction)
+- **Zod** + React Hook Form
+
+---
+
+## Local Setup
 
 ```bash
+# 1. Enter the project
+cd findmylaptop
+
+# 2. Install dependencies
+npm install
+
+# 3. Copy env file and fill in values
+cp .env.example .env.local
+# Edit .env.local — see Environment Variables below
+
+# 4. Run migrations in Supabase (see Supabase Setup below)
+
+# 5. Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+OPENAI_API_KEY=sk-your_openai_key
+ADMIN_EMAILS=your-email@example.com
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
-## Learn More
+> **Important**: Do not put spaces before the value in `.env.local`. Use `KEY=value` not `KEY= value`.
 
-To learn more about Next.js, take a look at the following resources:
+- `NEXT_PUBLIC_*` keys are safe to expose to the browser
+- `SUPABASE_SERVICE_ROLE_KEY` and `OPENAI_API_KEY` are server-only — never expose in client code
+- `ADMIN_EMAILS` is a comma-separated list of emails that can access `/admin`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Supabase Setup
 
-## Deploy on Vercel
+1. Create a project at [supabase.com](https://supabase.com)
+2. Get your **Project URL**, **anon key**, and **service role key** from **Project Settings → API**
+3. Open the **SQL Editor** in your Supabase dashboard
+4. Run these migration files **in order**:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+supabase/migrations/001_create_courses.sql
+supabase/migrations/002_create_laptops.sql
+supabase/migrations/003_create_settings.sql
+supabase/migrations/004_seed_courses.sql
+supabase/migrations/005_rls_policies.sql
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Copy the contents of each file and paste into the SQL editor, then click **Run**.
+
+---
+
+## Creating an Admin Account
+
+1. In your Supabase dashboard, go to **Authentication → Users**
+2. Click **Add user** → **Create new user**
+3. Enter the email and password for your admin account
+4. Add that email to `ADMIN_EMAILS` in your `.env.local`
+
+Only users whose email is listed in `ADMIN_EMAILS` can access the admin panel, even if they have valid Supabase Auth sessions.
+
+---
+
+## Adding Laptop Recommendations (Admin)
+
+1. Go to `http://localhost:3000/admin/login`
+2. Sign in with your Supabase Auth credentials
+3. Click **Add Laptop**
+4. In the **Process with AI** section, paste raw Amazon product details (title, bullet points, specs table)
+5. Click **Extract specs with AI** — OpenAI will populate the form fields
+6. Review and edit all fields (especially cautions and why_recommended)
+7. Select **Workload Tags** and **Recommended Courses**
+8. Set the **Amazon Affiliate URL**
+9. Toggle **Published** to make it visible on the public site
+10. Click **Create Laptop**
+
+---
+
+## How OpenAI Processing Works
+
+The `/api/admin/process-laptop` route:
+1. Verifies the caller is an authenticated admin (session + ADMIN_EMAILS check)
+2. Sends the pasted text to `gpt-4o-mini` with a structured extraction prompt
+3. Returns a JSON object with laptop specs, workload tags, recommended courses, why_recommended, cautions, and 4-year suitability
+4. The admin reviews and edits before saving — nothing is auto-saved
+
+The OpenAI API key is only used server-side and never exposed to the browser.
+
+---
+
+## Updating Amazon Affiliate Links
+
+Edit any laptop's affiliate URL from `/admin/laptops/[id]` → **Amazon Affiliate URL** field → Save.
+
+---
+
+## Updating the WhatsApp Group Link
+
+1. Go to `/admin/settings`
+2. Update the **WhatsApp Group / Chat URL**
+3. Click **Save Settings**
+
+---
+
+## Deploying on Vercel
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Link project
+vercel link
+
+# Add environment variables
+vercel env add NEXT_PUBLIC_SUPABASE_URL
+vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+vercel env add OPENAI_API_KEY
+vercel env add ADMIN_EMAILS
+vercel env add NEXT_PUBLIC_SITE_URL  # set to your Vercel domain
+
+# Deploy
+vercel deploy --prod
+```
+
+Or connect the GitHub repo to Vercel via the dashboard and add env vars in **Project Settings → Environment Variables**.
+
+---
+
+## Why Not Local SQLite?
+
+Vercel serverless functions do not provide a reliable persistent writable filesystem. A SQLite database written during one function invocation is not accessible to others. Supabase provides a hosted Postgres database that works correctly with Vercel's ephemeral serverless environment.
+
+---
+
+## Security Notes
+
+- `SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security. It is only used in server-side code (`src/lib/supabase/admin.ts`, API routes). It must never appear in client-side bundles.
+- `OPENAI_API_KEY` is only used in the `/api/admin/process-laptop` route handler.
+- The admin email check is done **both** in `src/app/admin/layout.tsx` (UI protection) **and** in the API route (defense in depth).
+- RLS policies ensure anonymous users can only read published laptops. See `supabase/migrations/005_rls_policies.sql`.
+
+---
+
+## Row Level Security Policies
+
+| Table | anon | authenticated |
+|---|---|---|
+| `courses` | SELECT | ALL |
+| `laptops` | SELECT (is\_published=true only) | ALL |
+| `settings` | SELECT | ALL |
+
+Admin writes use the service role client which bypasses RLS entirely — this is intentional and safe as long as the service role key stays server-side.
