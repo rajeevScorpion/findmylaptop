@@ -14,6 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://findmylaptop.in"
+  ),
   title: "Find My Laptop — Design Course Laptop Recommender",
   description:
     "Find the perfect laptop for your design course. Get personalised recommendations based on your discipline, budget, and creative workflow.",
@@ -22,6 +25,21 @@ export const metadata: Metadata = {
     description:
       "Personalised laptop recommendations for design students. Filter by course, budget, and workload.",
     type: "website",
+    images: [
+      {
+        url: "/sharing-cover.png",
+        width: 1200,
+        height: 630,
+        alt: "Find My Laptop — Design Course Laptop Recommender",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Find My Laptop — Design Course Laptop Recommender",
+    description:
+      "Personalised laptop recommendations for design students. Filter by course, budget, and workload.",
+    images: ["/sharing-cover.png"],
   },
 };
 
