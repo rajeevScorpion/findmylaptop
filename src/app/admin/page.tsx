@@ -85,6 +85,7 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
       {/* Course coverage */}
       <div className="glass-card rounded-xl border overflow-hidden">
         <div className="px-5 py-3.5 border-b border-border/30 flex items-center justify-between">
@@ -147,24 +148,24 @@ export default async function AdminDashboardPage() {
 
       {/* Recent laptops */}
       {laptops && laptops.length > 0 && (
-        <div className="glass-card rounded-xl border overflow-hidden">
+        <div className="glass-card rounded-xl border overflow-hidden sticky top-6">
           <div className="px-4 py-3 border-b border-border/30">
             <p className="text-sm font-medium text-foreground">Recent laptops</p>
           </div>
           <div className="divide-y divide-border/20">
             {laptops.slice(0, 8).map((laptop) => (
               <div key={laptop.id} className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 ${
                       laptop.is_published ? "bg-emerald-400" : "bg-amber-400"
                     }`}
                   />
-                  <p className="text-sm text-foreground">{laptop.name}</p>
+                  <p className="text-sm text-foreground truncate">{laptop.name}</p>
                 </div>
                 <a
                   href={`/admin/laptops/${laptop.id}`}
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2"
                 >
                   Edit →
                 </a>
@@ -173,6 +174,7 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
