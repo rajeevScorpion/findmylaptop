@@ -114,18 +114,9 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
               className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {showSpecs ? (
-                <span className="flex items-center gap-1">Specs {<ChevronUp className="w-3 h-3" />}</span>
+                <span className="flex items-center gap-1">Hide specs <ChevronUp className="w-3 h-3" /></span>
               ) : (
-                <span className="flex items-center gap-1.5 min-w-0">
-                  <span className="truncate text-foreground/70">
-                    {[
-                      laptop.gpu && (laptop.gpu_vram_gb ? `${laptop.gpu_vram_gb}GB GPU` : laptop.gpu.split(" ").slice(-2).join(" ")),
-                      laptop.ram,
-                      laptop.storage,
-                    ].filter(Boolean).join(" · ")}
-                  </span>
-                  <ChevronDown className="w-3 h-3 shrink-0" />
-                </span>
+                <span className="flex items-center gap-1">Check specs <ChevronDown className="w-3 h-3" /></span>
               )}
             </button>
 
