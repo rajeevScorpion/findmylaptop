@@ -80,18 +80,18 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
       "Content-Type": "application/json; charset=utf-8",
       Authorization: `Bearer ${token}`,
       "x-marketplace": marketplace,
-      host: "creatorsapi.amazon",
     },
     body: JSON.stringify({
       itemIds: [asin],
       partnerTag,
       marketplace,
       resources: [
-        "ItemInfo.Title",
-        "ItemInfo.Features",
-        "ItemInfo.ByLineInfo",
-        "Offers.Listings.Price",
-        "Images.Primary.Large",
+        "itemInfo.title",
+        "itemInfo.features",
+        "itemInfo.byLineInfo",
+        "itemInfo.technicalInfo",
+        "offersV2.listings.price",
+        "images.primary.large",
       ],
     }),
   });
@@ -122,9 +122,12 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
     asin,
     title: item?.itemInfo?.title?.displayValue ?? "",
     brand: item?.itemInfo?.byLineInfo?.brand?.displayValue,
-    price: item?.offers?.listings?.[0]?.price?.displayAmount,
+    price: item?.offersV2?.listings?.[0]?.price?.displayAmount,
     imageUrl: item?.images?.primary?.large?.url,
-    features: item?.itemInfo?.features?.displayValues ?? [],
+    features: [
+      ...(item?.itemInfo?.features?.displayValues ?? []),
+      ...(item?.itemInfo?.technicalInfo?.formats?.displayValues ?? []),
+    ],
   };
 }
 
