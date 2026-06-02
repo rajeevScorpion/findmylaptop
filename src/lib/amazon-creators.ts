@@ -2,7 +2,7 @@
 // EU region covers amazon.in (IN), amazon.co.uk (GB), amazon.de (DE), etc.
 
 const TOKEN_ENDPOINT = "https://api.amazon.co.uk/auth/o2/token";
-const API_BASE = "https://creatorsapi.amazon/v1/";
+const API_BASE = "https://creatorsapi.amazon/catalog/v1/";
 
 let tokenCache: { token: string; expiresAt: number } | null = null;
 
@@ -80,10 +80,12 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
       "Content-Type": "application/json; charset=utf-8",
       Authorization: `Bearer ${token}`,
       "x-marketplace": marketplace,
+      host: "creatorsapi.amazon",
     },
     body: JSON.stringify({
       itemIds: [asin],
       partnerTag,
+      marketplace,
       resources: [
         "ItemInfo.Title",
         "ItemInfo.Features",
