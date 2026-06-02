@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://findmylaptop.in"
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://laptopfinder.cc"
   ),
   title: "Find My Laptop — Design Course Laptop Recommender",
   description:
