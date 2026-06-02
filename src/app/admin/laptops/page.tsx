@@ -1,19 +1,53 @@
 import { createClient } from "@/lib/supabase/server";
-import { Plus, Pencil } from "lucide-react";
-import { PublishToggle } from "@/components/admin/PublishToggle";
-import { DeleteLaptopButton } from "@/components/admin/DeleteLaptopButton";
+import { Plus } from "lucide-react";
+import { LaptopListWithPreview } from "@/components/admin/LaptopListWithPreview";
+import type { AdminLaptop } from "@/components/admin/LaptopListWithPreview";
 
 export default async function AdminLaptopsPage() {
   const supabase = await createClient();
 
-  const { data: laptops } = await supabase
+  const { data } = await supabase
     .from("laptops")
-    .select("id, name, brand, price_label, tier, is_published, updated_at")
+    .select("*")
     .order("updated_at", { ascending: false });
 
+  const laptops: AdminLaptop[] = (data ?? []).map((row) => ({
+    id: row.id,
+    slug: row.slug ?? "",
+    name: row.name,
+    brand: row.brand,
+    model: row.model,
+    price_approx: row.price_approx,
+    price_label: row.price_label,
+    amazon_affiliate_url: row.amazon_affiliate_url ?? "",
+    image_url: row.image_url,
+    cpu: row.cpu,
+    gpu: row.gpu,
+    gpu_vram_gb: row.gpu_vram_gb,
+    ram: row.ram,
+    ram_gb: row.ram_gb,
+    storage: row.storage,
+    storage_gb: row.storage_gb,
+    display: row.display,
+    weight: row.weight,
+    os: row.os,
+    tier: row.tier,
+    workload_tags: row.workload_tags ?? [],
+    recommended_for_courses: row.recommended_for_courses ?? [],
+    not_ideal_for: row.not_ideal_for ?? [],
+    why_recommended: row.why_recommended,
+    cautions: row.cautions,
+    upgrade_notes: row.upgrade_notes,
+    four_year_suitability: row.four_year_suitability,
+    priority_score: row.priority_score ?? 50,
+    is_published: row.is_published ?? false,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }));
+
   return (
-    <div className="space-y-5 max-w-4xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
         <h1 className="text-xl font-bold text-foreground">Laptops</h1>
         <a
           href="/admin/laptops/new"
@@ -24,78 +58,7 @@ export default async function AdminLaptopsPage() {
         </a>
       </div>
 
-      {laptops && laptops.length > 0 ? (
-        <div className="glass-card rounded-xl border overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/30 text-xs text-muted-foreground">
-                <th className="text-left px-4 py-3 font-medium">Name</th>
-                <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Price</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Updated</th>
-                <th className="text-center px-4 py-3 font-medium">Published</th>
-                <th className="text-right px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/20">
-              {laptops.map((laptop) => (
-                <tr key={laptop.id} className="hover:bg-muted/10 transition-colors">
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{laptop.name}</p>
-                      {laptop.brand && (
-                        <p className="text-xs text-muted-foreground">{laptop.brand}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="text-sm text-foreground">{laptop.price_label ?? "—"}</span>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(laptop.updated_at).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <PublishToggle
-                      laptopId={laptop.id}
-                      initialPublished={laptop.is_published}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <a
-                        href={`/admin/laptops/${laptop.id}`}
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground h-7 px-2 rounded-md hover:bg-muted/40 transition-colors"
-                      >
-                        <Pencil className="w-3 h-3" />
-                        Edit
-                      </a>
-                      <DeleteLaptopButton laptopId={laptop.id} laptopName={laptop.name} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="glass-card rounded-xl border p-10 text-center space-y-3">
-          <p className="text-sm font-medium text-foreground">No laptops yet</p>
-          <p className="text-xs text-muted-foreground">
-            Add your first laptop recommendation to get started.
-          </p>
-          <a
-            href="/admin/laptops/new"
-            className="inline-flex items-center gap-1.5 rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" />
-            Add Laptop
-          </a>
-        </div>
-      )}
+      <LaptopListWithPreview laptops={laptops} />
     </div>
   );
 }

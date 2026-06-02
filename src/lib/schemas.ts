@@ -89,6 +89,8 @@ export const processedLaptopInputSchema = z.object({
   model: z.string().optional(),
   price_approx: z.number().int().optional(),
   price_label: z.string().optional(),
+  image_url: z.string().url().optional(),
+  amazon_affiliate_url: z.string().url().optional(),
   cpu: z.string().optional(),
   gpu: z.string().optional(),
   gpu_vram_gb: z.number().optional(),

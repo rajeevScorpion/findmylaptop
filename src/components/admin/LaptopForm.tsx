@@ -119,6 +119,8 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
     if (data.model) setValue("model", data.model);
     if (data.price_approx) setValue("price_approx", data.price_approx);
     if (data.price_label) setValue("price_label", data.price_label);
+    if (data.image_url) setValue("image_url", data.image_url);
+    if (data.amazon_affiliate_url) setValue("amazon_affiliate_url", data.amazon_affiliate_url);
     if (data.cpu) setValue("cpu", data.cpu);
     if (data.gpu) setValue("gpu", data.gpu);
     if (data.gpu_vram_gb) setValue("gpu_vram_gb", data.gpu_vram_gb);
