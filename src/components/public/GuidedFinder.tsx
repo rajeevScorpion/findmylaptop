@@ -156,7 +156,10 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
 
             {/* Workload tags */}
             <div>
-              <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Workload</p>
+              <div className="flex items-baseline gap-2 mb-2">
+                <p className="text-xs font-semibold text-foreground uppercase tracking-widest">Workload</p>
+                <p className="text-xs text-muted-foreground/60">Ranks results — doesn't remove laptops</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {WORKLOAD_TAGS.map((tag) => (
                   <button
