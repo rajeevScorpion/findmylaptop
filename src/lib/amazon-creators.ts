@@ -100,10 +100,20 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
   }
 
   const data = await res.json();
-  const item = data?.itemsResult?.items?.[0];
+
+  // Try multiple known response shapes — log raw so we can debug if neither matches
+  const item =
+    data?.itemsResult?.items?.[0] ??
+    data?.items?.[0] ??
+    data?.data?.items?.[0] ??
+    null;
 
   if (!item) {
-    throw new AmazonApiError(404, `No product found for ASIN ${asin}`);
+    // Expose the raw response so we can see the actual structure
+    throw new AmazonApiError(
+      404,
+      `No product found for ASIN ${asin}. Raw response: ${JSON.stringify(data)}`
+    );
   }
 
   return {
