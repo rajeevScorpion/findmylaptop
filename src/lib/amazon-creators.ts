@@ -2,7 +2,7 @@
 // EU region covers amazon.in (IN), amazon.co.uk (GB), amazon.de (DE), etc.
 
 const TOKEN_ENDPOINT = "https://api.amazon.co.uk/auth/o2/token";
-const API_BASE = "https://creatorsapi.amazon/catalog/v1/";
+const API_BASE = "https://creatorsapi.amazon/v1/";
 
 let tokenCache: { token: string; expiresAt: number } | null = null;
 
@@ -74,20 +74,24 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
 
   const token = await getAccessToken();
 
-  const resources = [
-    "ItemInfo.Title",
-    "ItemInfo.Features",
-    "ItemInfo.ByLineInfo",
-    "Offers.Listings.Price",
-    "Images.Primary.Large",
-  ];
-
-  const params = new URLSearchParams({ partnerTag, marketplace });
-  params.append("itemIds[]", asin);
-  resources.forEach((r) => params.append("resources[]", r));
-
-  const res = await fetch(`${API_BASE}items?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const res = await fetch(`${API_BASE}getItems`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      Authorization: `Bearer ${token}`,
+      "x-marketplace": marketplace,
+    },
+    body: JSON.stringify({
+      itemIds: [asin],
+      partnerTag,
+      resources: [
+        "ItemInfo.Title",
+        "ItemInfo.Features",
+        "ItemInfo.ByLineInfo",
+        "Offers.Listings.Price",
+        "Images.Primary.Large",
+      ],
+    }),
   });
 
   if (!res.ok) {
