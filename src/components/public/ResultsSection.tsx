@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import { Laptop, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -33,6 +33,11 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
   const [compareList, setCompareList] = useState<RecommendationResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [page, setPage] = useState(1);
+  const resultsRef = useRef<HTMLElement>(null);
+
+  const scrollToResults = () => {
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const PAGE_SIZE = 9;
 
@@ -70,7 +75,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
     <>
       <GuidedFinder onFilterChange={handleFilterChange} />
 
-      <section id="results" className="px-4 pb-12 max-w-5xl mx-auto w-full">
+      <section id="results" ref={resultsRef} className="px-4 pb-12 max-w-5xl mx-auto w-full">
         {/* Results header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -129,7 +134,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
               <div className="flex items-center justify-center gap-2 mt-10">
                 {/* Prev */}
                 <button
-                  onClick={() => { setPage((p) => p - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  onClick={() => { setPage((p) => p - 1); scrollToResults(); }}
                   disabled={page === 1}
                   className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
@@ -140,7 +145,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                   <button
                     key={p}
-                    onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    onClick={() => { setPage(p); scrollToResults(); }}
                     className={`w-9 h-9 rounded-full border text-sm font-medium transition-colors ${
                       p === page
                         ? "bg-primary text-primary-foreground border-primary"
@@ -153,7 +158,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
 
                 {/* Next */}
                 <button
-                  onClick={() => { setPage((p) => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  onClick={() => { setPage((p) => p + 1); scrollToResults(); }}
                   disabled={page === totalPages}
                   className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
