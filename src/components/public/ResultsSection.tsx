@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { LazyMotion, domAnimation, m } from "framer-motion";
-import { Laptop, SlidersHorizontal } from "lucide-react";
+import { Laptop, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,11 +32,20 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
   const [sort, setSort] = useState<SortOption>("recommended");
   const [compareList, setCompareList] = useState<RecommendationResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 9;
 
   const results = useMemo(
     () => getRecommendations(laptops, filters, sort),
     [laptops, filters, sort]
   );
+
+  const totalPages = Math.ceil(results.length / PAGE_SIZE);
+  const paginated = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 when filters or sort change
+  useEffect(() => { setPage(1); }, [filters, sort]);
 
   const handleFilterChange = useCallback((f: FilterState) => {
     setFilters(f);
@@ -95,24 +104,64 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
 
         {/* Results grid */}
         {results.length > 0 ? (
-          <LazyMotion features={domAnimation}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {results.map((laptop, i) => (
-                <m.div
-                  key={laptop.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: Math.min(i * 0.06, 0.4) }}
+          <>
+            <LazyMotion features={domAnimation}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginated.map((laptop, i) => (
+                  <m.div
+                    key={laptop.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: Math.min(i * 0.06, 0.4) }}
+                  >
+                    <LaptopCard
+                      laptop={laptop}
+                      onCompareToggle={handleCompareToggle}
+                      isInCompare={compareList.some((l) => l.id === laptop.id)}
+                    />
+                  </m.div>
+                ))}
+              </div>
+            </LazyMotion>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-10">
+                {/* Prev */}
+                <button
+                  onClick={() => { setPage((p) => p - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  disabled={page === 1}
+                  className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  <LaptopCard
-                    laptop={laptop}
-                    onCompareToggle={handleCompareToggle}
-                    isInCompare={compareList.some((l) => l.id === laptop.id)}
-                  />
-                </m.div>
-              ))}
-            </div>
-          </LazyMotion>
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    className={`w-9 h-9 rounded-full border text-sm font-medium transition-colors ${
+                      p === page
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                {/* Next */}
+                <button
+                  onClick={() => { setPage((p) => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  disabled={page === totalPages}
+                  className="w-9 h-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <EmptyState />
         )}
