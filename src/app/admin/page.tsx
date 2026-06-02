@@ -85,7 +85,7 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       {/* Course coverage */}
       <div className="glass-card rounded-xl border overflow-hidden">
         <div className="px-5 py-3.5 border-b border-border/30 flex items-center justify-between">
