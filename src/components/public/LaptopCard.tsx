@@ -5,7 +5,7 @@ import { LazyMotion, domAnimation, m } from "framer-motion";
 import {
   ExternalLink, Cpu, Zap, MemoryStick, HardDrive,
   Monitor, Weight, CheckCircle2, AlertCircle, Info,
-  Plus, Check, ChevronDown, ChevronUp,
+  Plus, Check, ChevronDown, ChevronUp, GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BadgeList } from "./BadgeList";
@@ -34,6 +34,7 @@ const SUITABILITY_COLORS: Record<string, string> = {
 };
 
 export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardProps) {
+  const [showSpecs, setShowSpecs]     = useState(false);
   const [showWhy, setShowWhy]         = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showBestFor, setShowBestFor] = useState(false);
@@ -106,29 +107,58 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
           {/* Badges */}
           {laptop.badges.length > 0 && <BadgeList badges={laptop.badges} />}
 
-          {/* Specs — one row per item */}
-          <div className="flex flex-col gap-1.5">
-            {laptop.cpu && (
-              <SpecRow icon={<Cpu className="w-3.5 h-3.5" />} label="CPU" value={laptop.cpu} />
-            )}
-            {laptop.gpu && (
-              <SpecRow
-                icon={<Zap className="w-3.5 h-3.5" />}
-                label={laptop.gpu_vram_gb ? `GPU · ${laptop.gpu_vram_gb}GB` : "GPU"}
-                value={laptop.gpu}
-              />
-            )}
-            {laptop.ram && (
-              <SpecRow icon={<MemoryStick className="w-3.5 h-3.5" />} label="RAM" value={laptop.ram} />
-            )}
-            {laptop.storage && (
-              <SpecRow icon={<HardDrive className="w-3.5 h-3.5" />} label="Storage" value={laptop.storage} />
-            )}
-            {laptop.display && (
-              <SpecRow icon={<Monitor className="w-3.5 h-3.5" />} label="Display" value={laptop.display} />
-            )}
-            {laptop.weight && (
-              <SpecRow icon={<Weight className="w-3.5 h-3.5" />} label="Weight" value={laptop.weight} />
+          {/* Specs — collapsible */}
+          <div>
+            <button
+              onClick={() => setShowSpecs(!showSpecs)}
+              className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showSpecs ? (
+                <span className="flex items-center gap-1">Specs {<ChevronUp className="w-3 h-3" />}</span>
+              ) : (
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="truncate text-foreground/70">
+                    {[
+                      laptop.gpu && (laptop.gpu_vram_gb ? `${laptop.gpu_vram_gb}GB GPU` : laptop.gpu.split(" ").slice(-2).join(" ")),
+                      laptop.ram,
+                      laptop.storage,
+                    ].filter(Boolean).join(" · ")}
+                  </span>
+                  <ChevronDown className="w-3 h-3 shrink-0" />
+                </span>
+              )}
+            </button>
+
+            {showSpecs && (
+              <m.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18, ease: "easeOut" as const }}
+                className="flex flex-col gap-1.5 mt-2"
+              >
+                {laptop.cpu && (
+                  <SpecRow icon={<Cpu className="w-3.5 h-3.5" />} label="CPU" value={laptop.cpu} />
+                )}
+                {laptop.gpu && (
+                  <SpecRow
+                    icon={<Zap className="w-3.5 h-3.5" />}
+                    label={laptop.gpu_vram_gb ? `GPU · ${laptop.gpu_vram_gb}GB` : "GPU"}
+                    value={laptop.gpu}
+                  />
+                )}
+                {laptop.ram && (
+                  <SpecRow icon={<MemoryStick className="w-3.5 h-3.5" />} label="RAM" value={laptop.ram} />
+                )}
+                {laptop.storage && (
+                  <SpecRow icon={<HardDrive className="w-3.5 h-3.5" />} label="Storage" value={laptop.storage} />
+                )}
+                {laptop.display && (
+                  <SpecRow icon={<Monitor className="w-3.5 h-3.5" />} label="Display" value={laptop.display} />
+                )}
+                {laptop.weight && (
+                  <SpecRow icon={<Weight className="w-3.5 h-3.5" />} label="Weight" value={laptop.weight} />
+                )}
+              </m.div>
             )}
           </div>
 
@@ -177,28 +207,31 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
             <div>
               <button
                 onClick={() => setShowBestFor(!showBestFor)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-1.5 text-xs text-violet-700/80 hover:text-violet-700 dark:text-violet-400/80 dark:hover:text-violet-400 transition-colors"
               >
-                Best for:
+                <GraduationCap className="w-3.5 h-3.5 shrink-0" />
+                Best for these courses
                 {showBestFor
                   ? <ChevronUp className="w-3 h-3" />
                   : <ChevronDown className="w-3 h-3" />}
               </button>
               {showBestFor && (
                 <m.div
-                  initial={{ opacity: 0, y: -4 }}
+                  initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18, ease: "easeOut" as const }}
-                  className="flex flex-wrap gap-1 mt-2"
+                  transition={{ duration: 0.2, ease: "easeOut" as const }}
+                  className="mt-2 p-3 rounded-xl bg-violet-500/10 dark:bg-violet-500/5 border border-violet-500/20 dark:border-violet-500/10"
                 >
-                  {laptop.recommended_for_courses.map((course) => (
-                    <span
-                      key={course}
-                      className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary/90 border border-primary/20"
-                    >
-                      {course}
-                    </span>
-                  ))}
+                  <div className="flex flex-wrap gap-1">
+                    {laptop.recommended_for_courses.map((course) => (
+                      <span
+                        key={course}
+                        className="text-xs px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-900 dark:text-violet-200/90 border border-violet-500/25"
+                      >
+                        {course}
+                      </span>
+                    ))}
+                  </div>
                 </m.div>
               )}
             </div>
