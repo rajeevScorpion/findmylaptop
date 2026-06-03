@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, X, Send } from "lucide-react";
+import { Bot, X, Send, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LaptopMiniCard } from "./LaptopMiniCard";
@@ -34,6 +34,7 @@ interface ChatWidgetProps {
 
 export function ChatWidget({ laptops }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,55 +44,36 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Restore session from sessionStorage on mount
   useEffect(() => {
     try {
       const savedMessages = sessionStorage.getItem(STORAGE_MESSAGES);
       const savedSessionId = sessionStorage.getItem(STORAGE_SESSION_ID);
       if (savedMessages) {
         const parsed = JSON.parse(savedMessages) as ChatMessage[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-          // Mark as previously opened if real conversation exists
-          if (parsed.length > 1) setHasBeenOpened(true);
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
       }
-      if (savedSessionId) {
-        setSessionId(savedSessionId);
-      }
-    } catch {
-      // sessionStorage unavailable — start fresh
-    }
+      if (savedSessionId) setSessionId(savedSessionId);
+      // Hint hides permanently once the user has opened the chat (any prior visit)
+      if (localStorage.getItem("chip_opened") === "1") setHasBeenOpened(true);
+    } catch {}
   }, []);
 
-  // Persist messages to sessionStorage
   useEffect(() => {
-    try {
-      sessionStorage.setItem(STORAGE_MESSAGES, JSON.stringify(messages));
-    } catch {}
+    try { sessionStorage.setItem(STORAGE_MESSAGES, JSON.stringify(messages)); } catch {}
   }, [messages]);
 
-  // Persist sessionId to sessionStorage
   useEffect(() => {
     if (sessionId) {
-      try {
-        sessionStorage.setItem(STORAGE_SESSION_ID, sessionId);
-      } catch {}
+      try { sessionStorage.setItem(STORAGE_SESSION_ID, sessionId); } catch {}
     }
   }, [sessionId]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, isOpen]);
 
-  // Focus textarea when chat opens
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => textareaRef.current?.focus(), 100);
-    }
+    if (isOpen) setTimeout(() => textareaRef.current?.focus(), 100);
   }, [isOpen]);
 
   const laptopBySlug = useMemo(
@@ -115,7 +97,6 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
     setInputValue("");
     setIsLoading(true);
 
-    // Build conversation history — exclude the static greeting (it was never sent to the API)
     const historyToSend = updatedMessages
       .filter((m) => m.id !== "greeting")
       .map((m) => ({ role: m.role, content: m.content }));
@@ -124,29 +105,26 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: historyToSend,
-          sessionId: sessionId ?? undefined,
-        }),
+        body: JSON.stringify({ messages: historyToSend, sessionId: sessionId ?? undefined }),
       });
 
       if (!res.ok) throw new Error(`API error ${res.status}`);
 
       const data: ChatApiResponse = await res.json();
-
       if (!sessionId) setSessionId(data.sessionId);
       setMessagesRemaining(data.messagesRemaining);
 
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: data.message,
-        recommendedSlugs: data.recommendedSlugs,
-        suggestions: data.suggestions,
-        timestamp: Date.now(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: data.message,
+          recommendedSlugs: data.recommendedSlugs,
+          suggestions: data.suggestions,
+          timestamp: Date.now(),
+        },
+      ]);
     } catch (err) {
       console.error("Chat error:", err);
       setMessages((prev) => [
@@ -164,24 +142,57 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
     }
   }
 
-  function handleOpen() {
-    setIsOpen(true);
-    setHasBeenOpened(true);
+  function handleClose() {
+    setIsOpen(false);
+    setIsMaximized(false);
   }
 
   return (
     <>
-      {/* ── Floating trigger button ──────────────────────────────── */}
-      <div className="fixed bottom-[108px] right-4 z-40 w-12 h-12">
+      {/* ── Background blur overlay — mobile always, desktop when maximized ── */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              "fixed inset-0 bg-black/40 backdrop-blur-sm",
+              isMaximized ? "z-[39]" : "z-[39] md:hidden"
+            )}
+            onClick={handleClose}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Hand-drawn hint arrow (disappears after first open) ── */}
+      {!hasBeenOpened && (
+        <div
+          className="fixed bottom-[196px] right-[28px] z-40 pointer-events-none select-none"
+          style={{ fontFamily: "var(--font-handwriting, 'Caveat', cursive)" }}
+        >
+          <p className="text-[19px] text-foreground/70 text-right leading-snug drop-shadow-sm">
+            Find your<br />perfect laptop!
+          </p>
+        </div>
+      )}
+
+      {/* ── Floating Chip trigger button ── */}
+      <div className="fixed bottom-[116px] right-4 z-40 w-12 h-12">
         {!hasBeenOpened && (
           <span className="absolute inset-0 rounded-full animate-ping bg-violet-400/40 pointer-events-none" />
         )}
         <button
-          onClick={handleOpen}
+          onClick={() => {
+            setIsOpen(true);
+            setHasBeenOpened(true);
+            try { localStorage.setItem("chip_opened", "1"); } catch {}
+          }}
           aria-label="Open Chip laptop advisor"
-          className="absolute right-0 group h-12 w-12 hover:w-36 overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/30 flex items-center transition-[width] duration-300 ease-in-out"
+          className="absolute right-0 group h-12 w-12 hover:w-[130px] overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/30 flex items-center transition-[width] duration-300 ease-in-out"
         >
-          <span className="text-xs font-semibold whitespace-nowrap pl-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
+          <span className="text-xs font-semibold whitespace-nowrap overflow-hidden max-w-0 group-hover:max-w-[78px] transition-[max-width] duration-300 pl-0 group-hover:pl-4">
             Ask Chip
           </span>
           <span className="flex-none flex items-center justify-center w-12 h-12 ml-auto">
@@ -190,7 +201,7 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
         </button>
       </div>
 
-      {/* ── Chat window ──────────────────────────────────────────── */}
+      {/* ── Chat window ── */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -198,7 +209,12 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="fixed bottom-[170px] right-4 z-40 w-80 md:w-96 h-[520px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className={cn(
+              "z-[40] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden",
+              isMaximized
+                ? "fixed inset-3"
+                : "fixed bottom-[178px] right-4 w-80 md:w-96 h-[520px]"
+            )}
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-gradient-to-r from-violet-500/10 to-indigo-600/10 shrink-0">
@@ -207,12 +223,22 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground leading-tight">Chip</p>
-                <p className="text-[11px] text-muted-foreground leading-tight">
-                  Expert laptop advisor
-                </p>
+                <p className="text-[11px] text-muted-foreground leading-tight">Expert laptop advisor</p>
               </div>
+              {/* Maximize / Minimize */}
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={() => setIsMaximized((v) => !v)}
+                aria-label={isMaximized ? "Minimise chat" : "Maximise chat"}
+                className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isMaximized
+                  ? <Minimize2 className="w-3.5 h-3.5" />
+                  : <Maximize2 className="w-3.5 h-3.5" />
+                }
+              </button>
+              {/* Close */}
+              <button
+                onClick={handleClose}
                 aria-label="Close chat"
                 className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -224,7 +250,6 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
             <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
               {messages.map((msg) => (
                 <div key={msg.id}>
-                  {/* Bubble */}
                   <div
                     className={cn(
                       "max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap",
@@ -236,7 +261,6 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
                     {msg.content}
                   </div>
 
-                  {/* Laptop mini-cards */}
                   {msg.role === "assistant" &&
                     msg.recommendedSlugs &&
                     msg.recommendedSlugs.length > 0 && (
@@ -249,7 +273,6 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
                       </div>
                     )}
 
-                  {/* Quick-reply suggestions */}
                   {msg.role === "assistant" &&
                     msg.suggestions &&
                     msg.suggestions.length > 0 && (
@@ -269,7 +292,6 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
                 </div>
               ))}
 
-              {/* Loading dots */}
               {isLoading && (
                 <div className="flex gap-1 items-center px-3 py-2 rounded-2xl rounded-bl-sm bg-muted w-fit">
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
@@ -280,12 +302,10 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Limit warning */}
             {messagesRemaining <= 5 && messagesRemaining > 0 && (
               <div className="px-3 py-1.5 bg-amber-500/10 border-t border-amber-500/20 shrink-0">
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 text-center">
-                  {messagesRemaining} message{messagesRemaining !== 1 ? "s" : ""} remaining this
-                  session
+                  {messagesRemaining} message{messagesRemaining !== 1 ? "s" : ""} remaining this session
                 </p>
               </div>
             )}
@@ -303,9 +323,7 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
                       sendMessage(inputValue);
                     }
                   }}
-                  placeholder={
-                    messagesRemaining === 0 ? "Session limit reached" : "Ask Chip…"
-                  }
+                  placeholder={messagesRemaining === 0 ? "Session limit reached" : "Ask Chip…"}
                   disabled={isLoading || messagesRemaining === 0}
                   rows={1}
                   className="flex-1 min-h-8 max-h-24 resize-none text-xs py-2 rounded-xl border-border/60 bg-background/50"
