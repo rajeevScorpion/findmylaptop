@@ -16,14 +16,13 @@ const INITIAL_MESSAGE: ChatMessage = {
   id: "greeting",
   role: "assistant",
   content:
-    "Hi! I'm Chip 👋 Your personal laptop advisor for design school.\nTell me what you're studying and I'll help you find the best laptop for it.",
+    "Hi! I'm Chip 👋 I help designers find the right laptop — whether you're just starting out, in school, or working professionally.\n\nAre you a design aspirant, student, or working professional?",
   recommendedSlugs: [],
   suggestions: [
-    "Fashion & Lifestyle Design",
-    "Game Design or Animation",
-    "UI/UX / Product Design",
-    "Motion / Video",
-    "Not sure yet",
+    "Design Aspirant / Fresher",
+    "Design Student",
+    "Working Design Professional",
+    "Just Exploring",
   ],
   timestamp: 0,
 };
@@ -56,6 +55,14 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
       // Hint hides permanently once the user has opened the chat (any prior visit)
       if (localStorage.getItem("chip_opened") === "1") setHasBeenOpened(true);
     } catch {}
+
+    const handleOpenEvent = () => {
+      setIsOpen(true);
+      setHasBeenOpened(true);
+      try { localStorage.setItem("chip_opened", "1"); } catch {}
+    };
+    document.addEventListener("chip:open", handleOpenEvent);
+    return () => document.removeEventListener("chip:open", handleOpenEvent);
   }, []);
 
   useEffect(() => {

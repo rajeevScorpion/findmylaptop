@@ -1,7 +1,7 @@
 "use client";
 
 import { LazyMotion, domAnimation, m } from "framer-motion";
-import { Cpu, Sparkles, ChevronDown } from "lucide-react";
+import { Cpu, ChevronDown, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const fadeUp = {
@@ -37,7 +37,7 @@ export function HeroSection() {
             animate="visible"
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card text-xs text-muted-foreground border mb-2"
           >
-            Trusted recommendations for design students
+            Trusted by design students &amp; professionals
           </m.div>
 
           <m.h1
@@ -58,9 +58,9 @@ export function HeroSection() {
             animate="visible"
             className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed"
           >
-            Answer three quick questions about your course, budget, and
-            workflow — get matched to laptops that will carry you through four
-            years of design education.
+            Whether you&apos;re heading into design school or deep into
+            professional practice — answer a few quick questions and get matched
+            to hardware built for the work you actually do.
           </m.p>
 
           <m.div
@@ -93,9 +93,16 @@ export function HeroSection() {
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            className="text-xs text-muted-foreground pt-4 space-y-1"
+            className="text-xs text-muted-foreground pt-4 space-y-2"
           >
             <p>No sign-in required · No data collected · Just good advice</p>
+            <button
+              onClick={() => document.dispatchEvent(new CustomEvent("chip:open"))}
+              className="inline-flex items-center gap-1.5 text-xs text-violet-500 hover:text-violet-400 transition-colors"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              Or chat with Chip for a personalised pick
+            </button>
           </m.div>
         </div>
 

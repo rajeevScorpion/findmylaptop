@@ -4,6 +4,7 @@ import { ResultsSection } from "@/components/public/ResultsSection";
 import { HardwareExplainer } from "@/components/public/HardwareExplainer";
 import { AISection } from "@/components/public/AISection";
 import { MacGuidance } from "@/components/public/MacGuidance";
+import { TrustSection } from "@/components/public/TrustSection";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
 import { Disclaimer } from "@/components/public/Disclaimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -39,6 +40,7 @@ export default async function HomePage() {
       <HardwareExplainer />
       <AISection />
       <MacGuidance />
+      <TrustSection />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
       <Disclaimer text={settingsMap["disclaimer_text"]} />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
