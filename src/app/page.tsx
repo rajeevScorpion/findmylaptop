@@ -7,6 +7,7 @@ import { MacGuidance } from "@/components/public/MacGuidance";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
 import { Disclaimer } from "@/components/public/Disclaimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
 import type { Laptop } from "@/lib/types";
 
 export const revalidate = 300;
@@ -41,6 +42,7 @@ export default async function HomePage() {
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
       <Disclaimer text={settingsMap["disclaimer_text"]} />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
+      <ChatWidgetLoader laptops={laptops} />
     </main>
   );
 }

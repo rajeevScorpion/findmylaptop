@@ -47,3 +47,33 @@ export type SortOption =
   | "price-desc"
   | "gpu-strength"
   | "four-year";
+
+// ── Chip Chat Types ──────────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  recommendedSlugs?: string[];
+  suggestions?: string[];
+  timestamp: number;
+}
+
+export interface ChatApiRequest {
+  messages: { role: "user" | "assistant"; content: string }[];
+  sessionId?: string;
+}
+
+export interface ChatApiResponse {
+  message: string;
+  recommendedSlugs: string[];
+  suggestions: string[];
+  sessionId: string;
+  messagesRemaining: number;
+}
+
+export interface ChipJsonOutput {
+  message: string;
+  recommendedSlugs: string[];
+  suggestions: string[];
+}
