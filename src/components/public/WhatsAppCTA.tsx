@@ -20,11 +20,11 @@ export function WhatsAppCTA({ whatsappUrl, variant = "section" }: WhatsAppCTAPro
         aria-label="Ask on WhatsApp"
         className="group fixed bottom-[50px] right-4 z-30 flex items-center overflow-hidden rounded-full bg-[#25D366] text-white shadow-lg shadow-[#25D366]/30 h-12 w-12 hover:w-52 transition-[width] duration-300 ease-in-out"
       >
-        <span className="flex-none flex items-center justify-center w-12 h-12">
-          <MessageCircle className="w-[18px] h-[18px]" />
-        </span>
-        <span className="text-xs font-semibold whitespace-nowrap pr-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
+        <span className="text-xs font-semibold whitespace-nowrap pl-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
           Ask on WhatsApp
+        </span>
+        <span className="flex-none flex items-center justify-center w-12 h-12 ml-auto">
+          <MessageCircle className="w-[18px] h-[18px]" />
         </span>
       </a>
     );
