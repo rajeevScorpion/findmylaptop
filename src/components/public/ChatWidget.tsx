@@ -172,7 +172,7 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
   return (
     <>
       {/* ── Floating trigger button ──────────────────────────────── */}
-      <div className="fixed bottom-[50px] right-[72px] z-40 w-12 h-12">
+      <div className="fixed bottom-[108px] right-4 z-40 w-12 h-12">
         {!hasBeenOpened && (
           <span className="absolute inset-0 rounded-full animate-ping bg-violet-400/40 pointer-events-none" />
         )}
@@ -198,7 +198,7 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="fixed bottom-[110px] right-4 z-40 w-80 md:w-96 h-[520px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-[170px] right-4 z-40 w-80 md:w-96 h-[520px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-gradient-to-r from-violet-500/10 to-indigo-600/10 shrink-0">
