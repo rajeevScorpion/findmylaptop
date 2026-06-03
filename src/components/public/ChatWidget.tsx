@@ -172,21 +172,23 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
   return (
     <>
       {/* ── Floating trigger button ──────────────────────────────── */}
-      <button
-        onClick={handleOpen}
-        aria-label="Open Chip laptop advisor"
-        className="fixed bottom-36 right-4 z-40 flex flex-col items-center gap-0.5 group"
-      >
-        <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:scale-105 transition-transform">
-          {!hasBeenOpened && (
-            <span className="absolute inset-0 rounded-full animate-ping bg-violet-400/40 pointer-events-none" />
-          )}
-          <Bot className="w-5 h-5 text-white" />
-        </div>
-        <span className="text-[10px] font-semibold text-muted-foreground leading-none">
-          Chip
-        </span>
-      </button>
+      <div className="fixed bottom-[50px] right-[72px] z-40 w-12 h-12">
+        {!hasBeenOpened && (
+          <span className="absolute inset-0 rounded-full animate-ping bg-violet-400/40 pointer-events-none" />
+        )}
+        <button
+          onClick={handleOpen}
+          aria-label="Open Chip laptop advisor"
+          className="group h-12 w-12 hover:w-36 overflow-hidden rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-lg shadow-violet-500/30 flex items-center transition-[width] duration-300 ease-in-out"
+        >
+          <span className="flex-none flex items-center justify-center w-12 h-12">
+            <Bot className="w-[18px] h-[18px]" />
+          </span>
+          <span className="text-xs font-semibold whitespace-nowrap pr-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 delay-100">
+            Ask Chip
+          </span>
+        </button>
+      </div>
 
       {/* ── Chat window ──────────────────────────────────────────── */}
       <AnimatePresence>
@@ -196,7 +198,7 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="fixed bottom-52 right-4 z-40 w-80 md:w-96 h-[520px] glass-card rounded-2xl border shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-[110px] right-4 z-40 w-80 md:w-96 h-[520px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-gradient-to-r from-violet-500/10 to-indigo-600/10 shrink-0">
