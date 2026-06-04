@@ -62,7 +62,7 @@ export const laptopFormSchema = z.object({
   image_url: z.string().url().optional().or(z.literal("")),
   cpu: z.string().optional(),
   gpu: z.string().optional(),
-  gpu_vram_gb: z.number().min(0).optional().or(z.literal("")),
+  gpu_vram_gb: z.union([z.number().min(0), z.string(), z.literal("")]).optional(),
   ram: z.string().optional(),
   ram_gb: z.number().int().min(0).optional().or(z.literal("")),
   storage: z.string().optional(),

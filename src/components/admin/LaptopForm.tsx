@@ -28,7 +28,7 @@ type FormData = {
   image_url?: string;
   cpu?: string;
   gpu?: string;
-  gpu_vram_gb?: number | "";
+  gpu_vram_gb?: number | string | "";
   ram?: string;
   ram_gb?: number | "";
   storage?: string;
@@ -163,7 +163,9 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
       image_url: data.image_url || null,
       cpu: data.cpu || null,
       gpu: data.gpu || null,
-      gpu_vram_gb: data.gpu_vram_gb ? Number(data.gpu_vram_gb) : null,
+      gpu_vram_gb: data.gpu_vram_gb !== "" && data.gpu_vram_gb != null
+        ? (isNaN(Number(data.gpu_vram_gb)) ? null : Number(data.gpu_vram_gb))
+        : null,
       ram: data.ram || null,
       ram_gb: data.ram_gb ? Number(data.ram_gb) : null,
       storage: data.storage || null,
@@ -261,7 +263,7 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
             <Input {...register("gpu")} placeholder="NVIDIA RTX 4060" className="bg-background/50" />
           </Field>
           <Field label="GPU VRAM (GB)" error={errors.gpu_vram_gb?.message}>
-            <Input {...register("gpu_vram_gb", { valueAsNumber: true })} type="number" step="0.5" placeholder="8" className="bg-background/50" />
+            <Input {...register("gpu_vram_gb")} type="text" placeholder="e.g. 8 or Integrated" className="bg-background/50" />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
