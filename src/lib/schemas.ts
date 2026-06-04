@@ -121,4 +121,6 @@ export const filterStateSchema = z.object({
   tier: z.enum(["budget", "value", "balanced", "advanced", "premium"]).optional(),
   workloadTags: z.array(z.string()).default([]),
   searchQuery: z.string().default(""),
+  brand: z.string().optional(),
+  processorType: z.string().optional(),
 });

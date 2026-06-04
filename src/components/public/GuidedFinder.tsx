@@ -5,7 +5,7 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FilterState } from "@/lib/types";
-import { COURSES_BY_CATEGORY, BUDGET_RANGES, WORKLOAD_TAGS } from "@/lib/constants";
+import { COURSES_BY_CATEGORY, BUDGET_RANGES, WORKLOAD_TAGS, BRANDS, PROCESSOR_TYPES } from "@/lib/constants";
 
 interface GuidedFinderProps {
   onFilterChange: (filters: FilterState) => void;
@@ -20,6 +20,8 @@ const DEFAULT_FILTERS: FilterState = {
   tier: undefined,
   workloadTags: [],
   searchQuery: "",
+  brand: undefined,
+  processorType: undefined,
 };
 
 export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
@@ -43,7 +45,9 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
     filters.workloadTags.length > 0 ||
     filters.searchQuery ||
     filters.minRamGb ||
-    filters.minVramGb;
+    filters.minVramGb ||
+    filters.brand ||
+    filters.processorType;
 
   return (
     <section id="finder" className="px-4 py-10 max-w-5xl mx-auto w-full">
@@ -179,6 +183,47 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
                     {tag.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Brand + Processor — side by side on desktop */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Brand</p>
+                <div className="flex flex-wrap gap-2">
+                  {BRANDS.map((b) => (
+                    <button
+                      key={b}
+                      onClick={() => update({ brand: filters.brand === b ? undefined : b })}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        filters.brand === b
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Processor</p>
+                <div className="flex flex-wrap gap-2">
+                  {PROCESSOR_TYPES.map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => update({ processorType: filters.processorType === p.value ? undefined : p.value })}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        filters.processorType === p.value
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 

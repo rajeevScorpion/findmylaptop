@@ -111,6 +111,25 @@ export function getGpuStrengthScore(gpu: string | null | undefined): number {
   return 30;
 }
 
+export const BRANDS = [
+  "Apple",
+  "ASUS",
+  "Lenovo",
+  "HP",
+  "Dell",
+  "Acer",
+  "MSI",
+  "Samsung",
+  "LG",
+  "Razer",
+] as const;
+
+export const PROCESSOR_TYPES = [
+  { value: "intel", label: "Intel Core" },
+  { value: "amd", label: "AMD Ryzen" },
+  { value: "apple", label: "Apple Silicon" },
+] as const;
+
 export const SORT_OPTIONS = [
   { value: "recommended", label: "Best Match" },
   { value: "price-asc", label: "Price: Low to High" },

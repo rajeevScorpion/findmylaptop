@@ -225,6 +225,24 @@ export function getRecommendations(
       return false;
     }
 
+    // Brand filter
+    if (
+      filters.brand &&
+      laptop.brand?.toLowerCase() !== filters.brand.toLowerCase()
+    ) {
+      return false;
+    }
+
+    // Processor type filter
+    if (filters.processorType && laptop.cpu) {
+      const cpu = laptop.cpu.toLowerCase();
+      const match =
+        (filters.processorType === "intel" && cpu.includes("intel")) ||
+        (filters.processorType === "amd" && cpu.includes("amd")) ||
+        (filters.processorType === "apple" && (cpu.includes("apple") || cpu.includes(" m1") || cpu.includes(" m2") || cpu.includes(" m3") || cpu.includes(" m4")));
+      if (!match) return false;
+    }
+
     return true;
   });
 
