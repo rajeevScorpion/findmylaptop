@@ -46,7 +46,7 @@ export function ComparePanel({ laptops, open, onOpenChange, onRemove }: CompareP
           {laptops.length} laptop{laptops.length !== 1 ? "s" : ""} selected
         </span>
         <div className="relative shrink-0">
-          <span className="absolute inset-0 rounded-lg animate-ping bg-primary/40 pointer-events-none" />
+          <span className="absolute inset-1 rounded-md animate-ping bg-primary/20 pointer-events-none" />
           <Button size="sm" onClick={() => onOpenChange(true)} className="relative gap-1.5 bg-primary text-primary-foreground hover:opacity-90">
             Compare now
           </Button>
