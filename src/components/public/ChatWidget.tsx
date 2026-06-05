@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, X, Send, Maximize2, Minimize2 } from "lucide-react";
+import { Bot, X, Send, Maximize2, Minimize2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LaptopMiniCard } from "./LaptopMiniCard";
@@ -11,6 +11,7 @@ import type { Laptop, ChatMessage, ChatApiResponse } from "@/lib/types";
 
 const STORAGE_MESSAGES = "chip_messages";
 const STORAGE_SESSION_ID = "chip_session_id";
+const STORAGE_RATED = "chip_rated";
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: "greeting",
@@ -43,6 +44,18 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Feedback state
+  type FeedbackStage = "prompt" | "comment" | "done";
+  const [feedbackStage, setFeedbackStage] = useState<FeedbackStage | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState<boolean | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+
+  const hasRecommendation = useMemo(
+    () => messages.some((m) => m.role === "assistant" && (m.recommendedSlugs?.length ?? 0) > 0),
+    [messages]
+  );
+
   useEffect(() => {
     try {
       const savedMessages = sessionStorage.getItem(STORAGE_MESSAGES);
@@ -52,8 +65,8 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
         if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
       }
       if (savedSessionId) setSessionId(savedSessionId);
-      // Hint hides permanently once the user has opened the chat (any prior visit)
       if (localStorage.getItem("chip_opened") === "1") setHasBeenOpened(true);
+      if (sessionStorage.getItem(STORAGE_RATED) === "1") setFeedbackStage("done");
     } catch {}
 
     const handleOpenEvent = () => {
@@ -78,6 +91,19 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
   useEffect(() => {
     if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, isOpen]);
+
+  // Show feedback prompt once the first recommendation appears (and not already rated)
+  useEffect(() => {
+    if (hasRecommendation && feedbackStage === null) {
+      try {
+        if (sessionStorage.getItem(STORAGE_RATED) !== "1") {
+          setFeedbackStage("prompt");
+        }
+      } catch {
+        setFeedbackStage("prompt");
+      }
+    }
+  }, [hasRecommendation, feedbackStage]);
 
   useEffect(() => {
     if (isOpen) setTimeout(() => textareaRef.current?.focus(), 100);
@@ -147,6 +173,51 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function submitFeedback(rating: boolean, comment?: string) {
+    if (!sessionId || feedbackSubmitting) return;
+    setFeedbackSubmitting(true);
+
+    const allSlugs = messages.flatMap((m) => m.recommendedSlugs ?? []);
+    const uniqueSlugs = [...new Set(allSlugs)];
+    const transcript = messages
+      .filter((m) => m.id !== "greeting")
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    try {
+      await fetch("/api/chat/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          rating,
+          comment: comment?.trim() || undefined,
+          transcript,
+          recommended_slugs: uniqueSlugs,
+          message_count: transcript.length,
+        }),
+      });
+      try { sessionStorage.setItem(STORAGE_RATED, "1"); } catch {}
+    } catch {
+      // non-critical — don't surface errors to user
+    } finally {
+      setFeedbackSubmitting(false);
+      setFeedbackStage("done");
+    }
+  }
+
+  function handleThumbsClick(positive: boolean) {
+    setFeedbackRating(positive);
+    setFeedbackStage("comment");
+  }
+
+  async function handleFeedbackSubmit() {
+    await submitFeedback(feedbackRating!, feedbackComment);
+  }
+
+  async function handleFeedbackSkip() {
+    await submitFeedback(feedbackRating!);
   }
 
   function handleClose() {
@@ -314,6 +385,70 @@ export function ChatWidget({ laptops }: ChatWidgetProps) {
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 text-center">
                   {messagesRemaining} message{messagesRemaining !== 1 ? "s" : ""} remaining this session
                 </p>
+              </div>
+            )}
+
+            {/* Feedback strip — visible once at least one recommendation has appeared */}
+            {hasRecommendation && feedbackStage !== null && (
+              <div className="px-3 py-2 border-t border-border/30 bg-muted/30 shrink-0">
+                {feedbackStage === "prompt" && (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-muted-foreground">Was Chip helpful?</p>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => handleThumbsClick(true)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] border border-border/50 hover:border-emerald-500/60 hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors"
+                      >
+                        <ThumbsUp className="w-3 h-3" />
+                        Yes
+                      </button>
+                      <button
+                        onClick={() => handleThumbsClick(false)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] border border-border/50 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                      >
+                        <ThumbsDown className="w-3 h-3" />
+                        No
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {feedbackStage === "comment" && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground">
+                      {feedbackRating ? "Glad to hear it! Anything we could do better?" : "Sorry about that. What went wrong?"}
+                    </p>
+                    <Textarea
+                      value={feedbackComment}
+                      onChange={(e) => setFeedbackComment(e.target.value)}
+                      placeholder="Optional..."
+                      rows={2}
+                      className="text-xs resize-none rounded-lg border-border/50 bg-background/50"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={handleFeedbackSkip}
+                        disabled={feedbackSubmitting}
+                        className="text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
+                      >
+                        Skip
+                      </button>
+                      <button
+                        onClick={handleFeedbackSubmit}
+                        disabled={feedbackSubmitting}
+                        className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-opacity"
+                      >
+                        {feedbackSubmitting ? "Sending…" : "Send"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {feedbackStage === "done" && (
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    Thanks for the feedback — it helps Chip improve.
+                  </p>
+                )}
               </div>
             )}
 
