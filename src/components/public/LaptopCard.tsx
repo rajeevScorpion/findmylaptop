@@ -35,7 +35,7 @@ const SUITABILITY_COLORS: Record<string, string> = {
 
 export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardProps) {
   const [showSpecs, setShowSpecs]     = useState(false);
-  const [showWhy, setShowWhy]         = useState(false);
+  const [showWhy, setShowWhy]         = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [showBestFor, setShowBestFor] = useState(false);
 
@@ -107,7 +107,36 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
           {/* Badges */}
           {laptop.badges.length > 0 && <BadgeList badges={laptop.badges} />}
 
-          {/* Specs — collapsible */}
+          {/* Why this laptop — expanded by default */}
+          {laptop.why_recommended && (
+            <div>
+              <button
+                onClick={() => setShowWhy(!showWhy)}
+                className="flex items-center gap-1.5 text-xs text-emerald-700/80 hover:text-emerald-700 dark:text-emerald-400/80 dark:hover:text-emerald-400 transition-colors"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                Why this laptop?
+                {showWhy
+                  ? <ChevronUp className="w-3 h-3" />
+                  : <ChevronDown className="w-3 h-3" />}
+              </button>
+
+              {showWhy && (
+                <m.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" as const }}
+                  className="mt-2 p-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 dark:border-emerald-500/10"
+                >
+                  <p className="text-xs text-emerald-900 dark:text-emerald-200/90 leading-relaxed">
+                    {laptop.why_recommended}
+                  </p>
+                </m.div>
+              )}
+            </div>
+          )}
+
+          {/* Check specs — collapsible */}
           <div>
             <button
               onClick={() => setShowSpecs(!showSpecs)}
@@ -153,47 +182,7 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
             )}
           </div>
 
-          {/* 4-year suitability */}
-          {laptop.four_year_suitability && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">4-year suitability:</span>
-              <span className={`font-medium ${SUITABILITY_COLORS[laptop.four_year_suitability] ?? ""}`}>
-                {FOUR_YEAR_LABELS[laptop.four_year_suitability]}
-              </span>
-            </div>
-          )}
-
-          {/* Why this laptop — collapsed by default */}
-          {laptop.why_recommended && (
-            <div>
-              <button
-                onClick={() => setShowWhy(!showWhy)}
-                className="flex items-center gap-1.5 text-xs text-emerald-700/80 hover:text-emerald-700 dark:text-emerald-400/80 dark:hover:text-emerald-400 transition-colors"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                Why this laptop?
-                {showWhy
-                  ? <ChevronUp className="w-3 h-3" />
-                  : <ChevronDown className="w-3 h-3" />}
-              </button>
-
-              {showWhy && (
-                <m.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, ease: "easeOut" as const }}
-                  className="mt-2 p-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 dark:border-emerald-500/10"
-                >
-                  <p className="text-xs text-emerald-900 dark:text-emerald-200/90 leading-relaxed">
-                    {laptop.why_recommended}
-                  </p>
-                </m.div>
-              )}
-            </div>
-          )}
-
-          {/* Cautions + upgrade notes + courses */}
-          {/* Best for — own collapsible */}
+          {/* Best for these courses — collapsible */}
           {laptop.recommended_for_courses.length > 0 && (
             <div>
               <button
@@ -228,7 +217,16 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
             </div>
           )}
 
-          {/* Cautions + upgrade notes */}
+          {/* Cautions & Additional Details — toggle then content */}
+          {hasDetails && (
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+            >
+              {showDetails ? "Hide cautions & details ↑" : "Cautions & Additional Details ↓"}
+            </button>
+          )}
+
           {showDetails && (
             <m.div
               initial={{ opacity: 0, y: -6 }}
@@ -251,14 +249,14 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
             </m.div>
           )}
 
-          {/* Toggle cautions / details */}
-          {hasDetails && (
-            <button
-              onClick={() => setShowDetails(!showDetails)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
-            >
-              {showDetails ? "Show less ↑" : "Show cautions & details ↓"}
-            </button>
+          {/* 4-year suitability */}
+          {laptop.four_year_suitability && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">4-year suitability:</span>
+              <span className={`font-medium ${SUITABILITY_COLORS[laptop.four_year_suitability] ?? ""}`}>
+                {FOUR_YEAR_LABELS[laptop.four_year_suitability]}
+              </span>
+            </div>
           )}
 
           {/* Actions */}
