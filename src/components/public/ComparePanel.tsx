@@ -43,11 +43,14 @@ export function ComparePanel({ laptops, open, onOpenChange, onRemove }: CompareP
       {/* Trigger bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 glass-card border-t border-border/40 backdrop-blur-md">
         <span className="text-sm font-medium text-foreground">
-          {laptops.length} laptop{laptops.length !== 1 ? "s" : ""} selected for comparison
+          {laptops.length} laptop{laptops.length !== 1 ? "s" : ""} selected
         </span>
-        <Button size="sm" onClick={() => onOpenChange(true)} className="gap-1.5 bg-primary text-primary-foreground hover:opacity-90">
-          Compare now
-        </Button>
+        <div className="relative shrink-0">
+          <span className="absolute inset-0 rounded-lg animate-ping bg-primary/40 pointer-events-none" />
+          <Button size="sm" onClick={() => onOpenChange(true)} className="relative gap-1.5 bg-primary text-primary-foreground hover:opacity-90">
+            Compare now
+          </Button>
+        </div>
       </div>
 
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -241,7 +244,10 @@ function LaptopCompareCard({
 function SpecRow({ icon, label, value, valueClass }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex gap-2 py-1.5 border-b border-border/10 last:border-0 min-w-0">
-      <span className="flex items-center gap-1 text-muted-foreground text-xs w-16 shrink-0">{icon}{label}</span>
+      <span className="flex items-center gap-1 text-muted-foreground text-xs w-5 sm:w-16 shrink-0">
+        {icon}
+        <span className="hidden sm:inline">{label}</span>
+      </span>
       <span className={`text-xs font-medium text-foreground leading-snug min-w-0 break-words ${valueClass ?? ""}`}>{value}</span>
     </div>
   );

@@ -65,9 +65,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
         return next;
       }
       if (prev.length >= 3) return prev;
-      const next = [...prev, laptop];
-      setShowCompare(true);
-      return next;
+      return [...prev, laptop];
     });
   }, []);
 
