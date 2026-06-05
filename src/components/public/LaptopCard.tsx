@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import {
   ExternalLink, Cpu, Zap, MemoryStick, HardDrive,
   Monitor, Weight, CheckCircle2, AlertCircle, Info,
-  Plus, Check, ChevronDown, ChevronUp, GraduationCap,
+  Plus, Check, ChevronDown, ChevronUp, GraduationCap, Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BadgeList } from "./BadgeList";
@@ -16,6 +16,7 @@ interface LaptopCardProps {
   laptop: RecommendationResult;
   onCompareToggle: (laptop: RecommendationResult) => void;
   isInCompare: boolean;
+  isHighlighted?: boolean;
 }
 
 const TIER_GLOW: Record<string, string> = {
@@ -33,19 +34,48 @@ const SUITABILITY_COLORS: Record<string, string> = {
   basic:     "text-muted-foreground",
 };
 
-export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardProps) {
+export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted = false }: LaptopCardProps) {
   const [showSpecs, setShowSpecs]     = useState(false);
   const [showWhy, setShowWhy]         = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [showBestFor, setShowBestFor] = useState(false);
+  const [copied, setCopied]           = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const glowColor = TIER_GLOW[laptop.tier ?? ""] ?? "#a78bfa";
   const hasDetails = laptop.cautions || laptop.upgrade_notes;
 
+  useEffect(() => {
+    if (isHighlighted && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [isHighlighted]);
+
+  async function handleShare() {
+    const url = `${window.location.origin}/laptop/${laptop.slug}`;
+    const shareData = {
+      title: laptop.name,
+      text: laptop.why_recommended ?? `Check out the ${laptop.name}`,
+      url,
+    };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {}
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
   return (
     <LazyMotion features={domAnimation}>
       <m.div
-        className="laptop-card glass-card rounded-2xl border overflow-hidden flex flex-col group relative"
+        ref={cardRef}
+        className={`laptop-card glass-card rounded-2xl border overflow-hidden flex flex-col group relative transition-shadow duration-700 ${isHighlighted ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
         whileHover={{ y: -5 }}
         transition={{ type: "spring", stiffness: 280, damping: 22 }}
       >
@@ -278,6 +308,15 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare }: LaptopCardP
             >
               {isInCompare ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
               Compare
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              className={`shrink-0 w-7 h-7 p-0 border-border/60 ${copied ? "text-emerald-500 border-emerald-500/40" : ""}`}
+              title={copied ? "Link copied!" : "Share this laptop"}
+            >
+              <Share2 className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>

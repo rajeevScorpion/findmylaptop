@@ -33,7 +33,18 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
   const [compareList, setCompareList] = useState<RecommendationResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [page, setPage] = useState(1);
+  const [highlightSlug, setHighlightSlug] = useState<string | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
+
+  // Read ?highlight= from URL client-side (avoids Suspense requirement on prerendered page)
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get("highlight");
+    if (slug) {
+      setHighlightSlug(slug);
+      const t = setTimeout(() => setHighlightSlug(null), 3500);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   const scrollToResults = () => {
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -121,6 +132,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
                       laptop={laptop}
                       onCompareToggle={handleCompareToggle}
                       isInCompare={compareList.some((l) => l.id === laptop.id)}
+                      isHighlighted={laptop.slug === highlightSlug}
                     />
                   </m.div>
                 ))}
