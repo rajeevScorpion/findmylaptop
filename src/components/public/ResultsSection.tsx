@@ -183,6 +183,7 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
               return next;
             })
           }
+          onClearAll={() => { setCompareList([]); setShowCompare(false); }}
         />
       )}
     </>

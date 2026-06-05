@@ -15,6 +15,7 @@ interface ComparePanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRemove: (id: string) => void;
+  onClearAll: () => void;
 }
 
 type Sections = { specs: boolean; courses: boolean; notes: boolean };
@@ -31,7 +32,7 @@ const SUITABILITY_COLORS: Record<string, string> = {
   basic:     "text-muted-foreground",
 };
 
-export function ComparePanel({ laptops, open, onOpenChange, onRemove }: ComparePanelProps) {
+export function ComparePanel({ laptops, open, onOpenChange, onRemove, onClearAll }: ComparePanelProps) {
   const visible = laptops.slice(0, 3);
   const [sections, setSections] = useState<Sections>({ specs: true, courses: false, notes: false });
 
@@ -45,11 +46,16 @@ export function ComparePanel({ laptops, open, onOpenChange, onRemove }: CompareP
         <span className="text-sm font-medium text-foreground">
           {laptops.length} laptop{laptops.length !== 1 ? "s" : ""} selected
         </span>
-        <div className="relative shrink-0">
-          <span className="absolute inset-1 rounded-md animate-ping bg-primary/20 pointer-events-none" />
-          <Button size="sm" onClick={() => onOpenChange(true)} className="relative gap-1.5 bg-primary text-primary-foreground hover:opacity-90">
-            Compare now
+        <div className="flex items-center gap-2 shrink-0">
+          <Button size="sm" variant="ghost" onClick={onClearAll} className="text-xs text-muted-foreground hover:text-foreground">
+            Clear
           </Button>
+          <div className="relative">
+            <span className="absolute inset-1 rounded-md animate-ping bg-primary/20 pointer-events-none" />
+            <Button size="sm" onClick={() => onOpenChange(true)} className="relative gap-1.5 bg-primary text-primary-foreground hover:opacity-90">
+              Compare now
+            </Button>
+          </div>
         </div>
       </div>
 
