@@ -61,9 +61,18 @@ export interface AmazonProduct {
   title: string;
   brand?: string;
   price?: string;
+  availability?: string;
   imageUrl?: string;
   features: string[];
   asin: string;
+}
+
+/** Parses a display price like "₹89,990" → 89990. Returns null if unparseable. */
+export function parsePriceToInt(displayAmount?: string): number | null {
+  if (!displayAmount) return null;
+  const digits = displayAmount.replace(/[^\d]/g, "");
+  const n = parseInt(digits, 10);
+  return isNaN(n) ? null : n;
 }
 
 export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
@@ -91,6 +100,8 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
         "itemInfo.byLineInfo",
         "itemInfo.technicalInfo",
         "offersV2.listings.price",
+        "offersV2.listings.availability.message",
+        "offersV2.listings.availability.type",
         "images.primary.large",
       ],
     }),
@@ -118,11 +129,13 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
     );
   }
 
+  const listing = item?.offersV2?.listings?.[0];
   return {
     asin,
     title: item?.itemInfo?.title?.displayValue ?? "",
     brand: item?.itemInfo?.byLineInfo?.brand?.displayValue,
-    price: item?.offersV2?.listings?.[0]?.price?.displayAmount,
+    price: listing?.price?.displayAmount,
+    availability: listing?.availability?.message ?? listing?.availability?.type,
     imageUrl: item?.images?.primary?.large?.url,
     features: [
       ...(item?.itemInfo?.features?.displayValues ?? []),
