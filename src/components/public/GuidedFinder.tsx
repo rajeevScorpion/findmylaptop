@@ -78,41 +78,45 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
 
         {/* Course category */}
         <div>
-          <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-widest">Your Course</p>
+          <p className="text-xs font-semibold text-foreground uppercase tracking-widest">Your Programme / Domain</p>
+          <p className="text-xs text-muted-foreground/60 mt-0.5 mb-2.5">
+            {filters.courseCategory
+              ? "Now narrow by specialisation, or clear to pick a different programme"
+              : "Select your programme, then narrow by specialisation"}
+          </p>
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              {Object.keys(COURSES_BY_CATEGORY).map((cat) => (
+              {filters.courseCategory ? (
                 <button
-                  key={cat}
-                  onClick={() =>
-                    update({
-                      courseCategory: filters.courseCategory === cat ? undefined : cat,
-                      course: undefined,
-                    })
-                  }
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    filters.courseCategory === cat
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground"
-                  }`}
+                  onClick={() => update({ courseCategory: undefined, course: undefined })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-primary text-primary-foreground border-primary"
                 >
-                  {cat}
+                  {filters.courseCategory}
+                  <X className="w-3 h-3 opacity-80" />
                 </button>
-              ))}
+              ) : (
+                Object.keys(COURSES_BY_CATEGORY).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => update({ courseCategory: cat, course: undefined })}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium border border-border/60 text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+                  >
+                    {cat}
+                  </button>
+                ))
+              )}
             </div>
 
-            {filters.courseCategory && (
-              <div className="flex flex-wrap gap-2 pl-2">
+            {filters.courseCategory && (COURSES_BY_CATEGORY[filters.courseCategory] ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-2 pl-3 border-l-2 border-primary/25">
                 {(COURSES_BY_CATEGORY[filters.courseCategory] ?? []).map((course) => (
                   <button
                     key={course}
-                    onClick={() =>
-                      update({ course: filters.course === course ? undefined : course })
-                    }
-                    className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                    onClick={() => update({ course: filters.course === course ? undefined : course })}
+                    className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
                       filters.course === course
-                        ? "bg-primary/20 text-primary border-primary/50"
-                        : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground"
+                        ? "bg-primary/15 text-primary border-primary/40 font-medium"
+                        : "border-border/40 text-muted-foreground/80 hover:border-border hover:text-foreground"
                     }`}
                   >
                     {course}
