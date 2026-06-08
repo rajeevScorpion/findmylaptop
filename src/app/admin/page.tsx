@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Laptop, CheckCircle2, FileText, Plus } from "lucide-react";
 import { COURSES_BY_CATEGORY, TIER_LABELS } from "@/lib/constants";
-import { RefreshPricesButton } from "@/components/admin/RefreshPricesButton";
 
 const TIER_PILL_COLORS: Record<string, string> = {
   budget:   "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
@@ -65,16 +64,13 @@ export default async function AdminDashboardPage() {
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
         </div>
-        <div className="flex items-start gap-2">
-          <a
-            href="/admin/laptops/new"
-            className="inline-flex items-center gap-1.5 rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" />
-            Add Laptop
-          </a>
-          <RefreshPricesButton />
-        </div>
+        <a
+          href="/admin/laptops/new"
+          className="inline-flex items-center gap-1.5 rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+        >
+          <Plus className="w-4 h-4" />
+          Add Laptop
+        </a>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Cpu, LayoutDashboard, Laptop, Settings, LogOut, Menu, X, MessageSquare } from "lucide-react";
+import { Cpu, LayoutDashboard, Laptop, Settings, LogOut, Menu, X, MessageSquare, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/laptops", label: "Laptops", icon: Laptop, exact: false },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, exact: false },
+  { href: "/admin/refresh-prices", label: "Refresh Prices", icon: RefreshCw, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ];
 
