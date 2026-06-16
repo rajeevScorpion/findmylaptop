@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil, Laptop, Plus } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Pencil, Laptop, Plus, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { PublishToggle } from "@/components/admin/PublishToggle";
 import { DeleteLaptopButton } from "@/components/admin/DeleteLaptopButton";
 import { LaptopCard } from "@/components/public/LaptopCard";
@@ -58,8 +58,40 @@ interface LaptopListWithPreviewProps {
   laptops: AdminLaptop[];
 }
 
+type SortColumn = "name" | "price" | "updated" | "published";
+type SortDir = "asc" | "desc";
+
+function SortIcon({ column, sort }: { column: SortColumn; sort: { col: SortColumn; dir: SortDir } | null }) {
+  if (!sort || sort.col !== column) return <ChevronsUpDown className="w-3 h-3 opacity-40" />;
+  return sort.dir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+}
+
 export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sort, setSort] = useState<{ col: SortColumn; dir: SortDir } | null>(null);
+
+  function toggleSort(col: SortColumn) {
+    setSort((prev) =>
+      prev?.col === col
+        ? prev.dir === "asc"
+          ? { col, dir: "desc" }
+          : null
+        : { col, dir: "asc" }
+    );
+  }
+
+  const sorted = useMemo(() => {
+    if (!sort) return laptops;
+    return [...laptops].sort((a, b) => {
+      let cmp = 0;
+      if (sort.col === "name") cmp = a.name.localeCompare(b.name);
+      else if (sort.col === "price") cmp = (a.price_approx ?? 0) - (b.price_approx ?? 0);
+      else if (sort.col === "updated") cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+      else if (sort.col === "published") cmp = Number(a.is_published) - Number(b.is_published);
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
+  }, [laptops, sort]);
+
   const selected = laptops.find((l) => l.id === selectedId) ?? null;
 
   if (laptops.length === 0) {
@@ -89,15 +121,27 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/30 text-xs text-muted-foreground">
-                <th className="text-left px-4 py-3 font-medium">Name</th>
-                <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Price</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Updated</th>
-                <th className="text-center px-4 py-3 font-medium">Published</th>
+                {(["name", "price", "updated", "published"] as SortColumn[]).map((col) => {
+                  const labels: Record<SortColumn, string> = { name: "Name", price: "Price", updated: "Updated", published: "Published" };
+                  const hidden: Record<SortColumn, string> = { name: "", price: "hidden sm:table-cell", updated: "hidden md:table-cell", published: "" };
+                  const align: Record<SortColumn, string> = { name: "text-left", price: "text-left", updated: "text-left", published: "text-center" };
+                  return (
+                    <th key={col} className={`px-4 py-3 font-medium ${hidden[col]}`}>
+                      <button
+                        onClick={() => toggleSort(col)}
+                        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${align[col] === "text-center" ? "mx-auto" : ""}`}
+                      >
+                        {labels[col]}
+                        <SortIcon column={col} sort={sort} />
+                      </button>
+                    </th>
+                  );
+                })}
                 <th className="text-right px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
-              {laptops.map((laptop) => {
+              {sorted.map((laptop) => {
                 const isSelected = laptop.id === selectedId;
                 return (
                   <tr
