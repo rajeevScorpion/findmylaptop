@@ -45,16 +45,17 @@ export async function GET(request: NextRequest) {
           justifyContent: "center",
           background: "#ffffff",
           fontFamily: "sans-serif",
+          ...(hasImage
+            ? {
+                backgroundImage: `url(${imageData})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }
+            : {}),
         }}
       >
-        {hasImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={imageData!}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            alt=""
-          />
-        ) : (
+        {!hasImage && (
           <div
             style={{
               display: "flex",

@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Laptop not found — Find My Laptop" };
   }
 
-  const title = `${laptop.name} — Find My Laptop`;
+  const title = `${laptop.name} — laptopfinder.cc`;
   const description = laptop.why_recommended
     ? laptop.why_recommended.slice(0, 160)
     : `${laptop.brand ?? ""} ${laptop.name} — personalised laptop recommendations for designers.`.trim();
