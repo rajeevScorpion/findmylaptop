@@ -66,7 +66,9 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
     }
     const text = lines.join("\n");
 
-    const shareData = { title: laptop.name, text, url };
+    // Note: no `url` field — WhatsApp/others append it separately, which
+    // would duplicate the link we already put in `text`.
+    const shareData = { title: laptop.name, text };
     try {
       if (navigator.share && navigator.canShare?.(shareData)) {
         await navigator.share(shareData);
