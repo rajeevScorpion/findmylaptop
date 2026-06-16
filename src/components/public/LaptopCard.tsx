@@ -53,11 +53,20 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
 
   async function handleShare() {
     const url = `${window.location.origin}/laptop/${laptop.slug}`;
-    const shareData = {
-      title: laptop.name,
-      text: laptop.why_recommended ?? `Check out the ${laptop.name}`,
-      url,
-    };
+
+    // Shorten the description to ~3 lines, cut on a word boundary.
+    let blurb = (laptop.why_recommended ?? `Check out the ${laptop.name}`).trim();
+    if (blurb.length > 140) {
+      blurb = blurb.slice(0, 140).replace(/\s+\S*$/, "") + "…";
+    }
+
+    const lines = [blurb, "", `Find more at: ${url}`];
+    if (laptop.amazon_affiliate_url) {
+      lines.push(`Check on Amazon: ${laptop.amazon_affiliate_url}`);
+    }
+    const text = lines.join("\n");
+
+    const shareData = { title: laptop.name, text, url };
     try {
       if (navigator.share && navigator.canShare?.(shareData)) {
         await navigator.share(shareData);
@@ -65,7 +74,7 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
       }
     } catch {}
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}

@@ -45,28 +45,28 @@ export async function GET(request: NextRequest) {
           width: "100%",
           height: "100%",
           display: "flex",
-          background: "linear-gradient(135deg, #0f0f18 0%, #1a1025 100%)",
+          background: "#ffffff",
           fontFamily: "sans-serif",
         }}
       >
-        {/* Laptop image — left column */}
+        {/* Laptop image — left column on white */}
         {hasImage && (
           <div
             style={{
-              width: 520,
+              width: 560,
               height: 630,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "rgba(255,255,255,0.02)",
-              borderRight: "1px solid rgba(255,255,255,0.07)",
-              padding: 40,
+              background: "#ffffff",
+              borderRight: "1px solid #ececec",
+              padding: 50,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageData!}
-              style={{ maxWidth: 440, maxHeight: 550, objectFit: "contain" }}
+              style={{ maxWidth: 460, maxHeight: 530, objectFit: "contain" }}
               alt=""
             />
           </div>
@@ -79,7 +79,8 @@ export async function GET(request: NextRequest) {
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            padding: hasImage ? "48px 52px" : "64px 96px",
+            background: "#ffffff",
+            padding: hasImage ? "48px 56px" : "64px 96px",
           }}
         >
           {/* Site badge */}
@@ -100,13 +101,13 @@ export async function GET(request: NextRequest) {
             >
               Lf
             </div>
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", letterSpacing: 2 }}>
+            <span style={{ fontSize: 13, color: "#9ca3af", letterSpacing: 2 }}>
               FIND MY LAPTOP
             </span>
           </div>
 
           {brand ? (
-            <div style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", marginBottom: 10 }}>
+            <div style={{ fontSize: 15, color: "#6b7280", marginBottom: 10 }}>
               {brand}
             </div>
           ) : null}
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
             style={{
               fontSize: hasImage ? 30 : 40,
               fontWeight: 700,
-              color: "white",
+              color: "#111827",
               lineHeight: 1.2,
               marginBottom: 18,
             }}
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
             style={{
               marginTop: "auto",
               fontSize: 13,
-              color: "rgba(255,255,255,0.3)",
+              color: "#9ca3af",
               paddingTop: 32,
             }}
           >
