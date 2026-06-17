@@ -92,10 +92,13 @@ export const blogContentDocSchema = z.object({
 
 export const blogAudienceSchema = z.array(z.string()).default([]);
 
+export const targetLengthSchema = z.enum(["short", "medium", "long"]).default("medium");
+
 export const blogGenerateInputSchema = z.object({
   generationType: z.enum([
     "outline",
     "draft",
+    "full",
     "metadata",
     "faqs",
     "section",
@@ -107,6 +110,14 @@ export const blogGenerateInputSchema = z.object({
   secondaryKeywords: z.array(z.string()).optional().default([]),
   templateType: z.string().optional().default("buying_guide"),
   includeProducts: z.boolean().optional().default(false),
+  // Desired article length; drives word-count guidance + max_tokens.
+  targetLength: targetLengthSchema,
+  // Admin's near-full concept/source text. When present, the AI preserves it
+  // closely and only fine-tunes/structures it (it does not write from scratch).
+  // Also reused to pass the current article body as context for metadata.
+  sourceText: z.string().optional(),
+  // Category names the model may suggest from (never invents new ones).
+  availableCategories: z.array(z.string()).optional(),
   // For "section" rewrites: the text to improve.
   sectionText: z.string().optional(),
   // Optional grounded product facts passed from the DB (never invented by AI).
@@ -143,6 +154,24 @@ export const metadataSchema = z.object({
   meta_description: z.string(),
   og_title: z.string().optional(),
   og_description: z.string().optional(),
+  primary_keyword: z.string().optional(),
+  secondary_keywords: z.array(z.string()).optional(),
+  suggested_category: z.string().optional(),
+});
+
+// "Generate all" — a comprehensive single-call result.
+export const fullSchema = z.object({
+  title: z.string(),
+  slug: z.string().optional(),
+  excerpt: z.string().optional(),
+  primary_keyword: z.string().optional(),
+  secondary_keywords: z.array(z.string()).optional(),
+  meta_title: z.string().optional(),
+  meta_description: z.string().optional(),
+  og_title: z.string().optional(),
+  og_description: z.string().optional(),
+  suggested_category: z.string().optional(),
+  content: blogContentDocSchema,
 });
 
 export const faqsSchema = z.object({

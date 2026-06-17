@@ -137,8 +137,19 @@ export interface BlogPost {
   published_at: string | null;
   last_reviewed_at: string | null;
   needs_update_at: string | null;
+  ai_inputs: AiInputs | null;
   created_at: string;
   updated_at: string;
+}
+
+// Persisted AI-panel inputs (column added in migration 015).
+export interface AiInputs {
+  topic?: string;
+  brief?: string;
+  sourceText?: string;
+  targetLength?: "short" | "medium" | "long";
+  audience?: string;
+  template?: string;
 }
 
 export interface BlogCategory {

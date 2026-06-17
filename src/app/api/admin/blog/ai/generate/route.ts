@@ -3,9 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBlogFlags } from "@/lib/flags";
 import { blogGenerateInputSchema } from "@/lib/blog/schemas";
+import { getCategories } from "@/lib/blog/queries";
 import {
   generateBlogOutline,
   generateBlogDraft,
+  generateBlogFull,
   generateBlogMetadata,
   generateBlogFaqs,
   improveBlogSection,
@@ -89,6 +91,17 @@ export async function POST(request: NextRequest) {
   }
   const input = parsedInput.data;
 
+  // For category-aware generations, supply the existing category names so the
+  // model can only ever *suggest* one of the admin's real categories.
+  if (input.generationType === "full" || input.generationType === "metadata") {
+    try {
+      const categories = await getCategories();
+      input.availableCategories = categories.map((c) => c.name);
+    } catch {
+      // Non-fatal — generation proceeds without a category suggestion.
+    }
+  }
+
   // 4. Generate
   try {
     let result: { data: unknown; usage: AiUsage };
@@ -98,6 +111,9 @@ export async function POST(request: NextRequest) {
         break;
       case "draft":
         result = await generateBlogDraft(input);
+        break;
+      case "full":
+        result = await generateBlogFull(input);
         break;
       case "metadata":
         result = await generateBlogMetadata(input);

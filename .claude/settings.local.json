@@ -42,7 +42,8 @@
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
       "Bash(curl -s -o /tmp/og_test.png -w \"HTTP %{http_code} | type=%{content_type} | size=%{size_download} bytes\\\\n\" \"http://localhost:3000/api/og?slug=asus-rog-strix-g16-2024-7e7b084f\")",
       "PowerShell(npx tsc --noEmit -p tsconfig.json)",
-      "PowerShell(npx tsc --noEmit)"
+      "PowerShell(npx tsc --noEmit)",
+      "Bash(git commit -q -m 'feat: AI writer round 2 — length control, concept ingestion, generate-all, keyword+category generation, persisted inputs *)"
     ]
   }
 }

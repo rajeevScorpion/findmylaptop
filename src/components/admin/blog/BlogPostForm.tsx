@@ -13,7 +13,14 @@ import { BlockRenderer } from "@/components/blog/BlockRenderer";
 import { slugify } from "@/lib/blog/slug";
 import { buildToc, syncHeadingIds } from "@/lib/blog/toc";
 import { readingTimeMinutes } from "@/lib/blog/slug";
-import type { Block, BlogCategory, BlogContentDoc, BlogPost, BlogStatus } from "@/lib/blog/types";
+import type { AiInputs, Block, BlogCategory, BlogContentDoc, BlogPost, BlogStatus } from "@/lib/blog/types";
+
+type TargetLength = "short" | "medium" | "long";
+const LENGTH_LABELS: { value: TargetLength; label: string }[] = [
+  { value: "short", label: "Short (~500 words)" },
+  { value: "medium", label: "Medium (~700 words)" },
+  { value: "long", label: "Long (~900 words)" },
+];
 
 const TEMPLATES = [
   "course_buying_guide",
@@ -67,24 +74,78 @@ export function BlogPostForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // AI panel state
-  const [aiTopic, setAiTopic] = useState("");
-  const [aiBrief, setAiBrief] = useState("");
-  const [aiAudience, setAiAudience] = useState("students, parents");
-  const [aiTemplate, setAiTemplate] = useState(TEMPLATES[0]);
+  // AI panel state — initialised from the post's persisted ai_inputs so the
+  // topic/brief/length/source text survive save + reload.
+  const ai = (post?.ai_inputs ?? {}) as AiInputs;
+  const [aiTopic, setAiTopic] = useState(ai.topic ?? "");
+  const [aiBrief, setAiBrief] = useState(ai.brief ?? "");
+  const [aiSourceText, setAiSourceText] = useState(ai.sourceText ?? "");
+  const [aiAudience, setAiAudience] = useState(ai.audience ?? "students, parents");
+  const [aiTemplate, setAiTemplate] = useState(ai.template ?? TEMPLATES[0]);
+  const [aiLength, setAiLength] = useState<TargetLength>(ai.targetLength ?? "medium");
   const [aiIncludeProducts, setAiIncludeProducts] = useState(false);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
 
   const onTitleChange = (v: string) => {
     setTitle(v);
     if (!slugTouched) setSlug(slugify(v));
   };
 
-  async function callAi(generationType: "outline" | "draft" | "faqs" | "metadata") {
+  // Map an AI keyword payload onto the SEO fields (shared by draft-full + metadata).
+  function applySeo(result: {
+    meta_title?: string;
+    meta_description?: string;
+    primary_keyword?: string;
+    secondary_keywords?: string[];
+    suggested_category?: string;
+  }) {
+    if (result.meta_title) setMetaTitle(result.meta_title);
+    if (result.meta_description) setMetaDescription(result.meta_description);
+    if (result.primary_keyword) setPrimaryKeyword(result.primary_keyword);
+    if (result.secondary_keywords?.length)
+      setSecondaryKeywords(result.secondary_keywords.join(", "));
+    if (result.suggested_category) setSuggestedCategory(result.suggested_category);
+  }
+
+  // Apply the AI's category suggestion by matching the name to a real category.
+  function applySuggestedCategory() {
+    if (!suggestedCategory) return;
+    const match = categories.find(
+      (c) => c.name.toLowerCase() === suggestedCategory.toLowerCase()
+    );
+    if (match) setCategoryId(match.id);
+  }
+
+  // Plain text of the current blocks — passed as context so metadata/keywords
+  // reflect the real article (not just the topic).
+  function currentArticleText(): string {
+    return blocks
+      .map((b) => {
+        if (b.type === "paragraph") return b.text;
+        if (b.type === "heading") return b.text;
+        if (b.type === "bullets" || b.type === "numbered") return b.items.join(" ");
+        if (b.type === "card" || b.type === "callout") return `${b.title ?? ""} ${b.content}`;
+        return "";
+      })
+      .join("\n")
+      .trim();
+  }
+
+  type GenType = "outline" | "draft" | "full" | "faqs" | "metadata";
+
+  async function callAi(generationType: GenType) {
     setAiError(null);
     setAiBusy(generationType);
     try {
+      // For metadata, pass the current article body as sourceText context so
+      // keywords reflect the content; for draft/full pass the admin's concept.
+      const sourceText =
+        generationType === "metadata"
+          ? aiSourceText || currentArticleText() || undefined
+          : aiSourceText || undefined;
+
       const res = await fetch("/api/admin/blog/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,6 +157,8 @@ export function BlogPostForm({
           primaryKeyword,
           secondaryKeywords: secondaryKeywords.split(",").map((s) => s.trim()).filter(Boolean),
           templateType: aiTemplate,
+          targetLength: aiLength,
+          sourceText,
           includeProducts: aiIncludeProducts,
         }),
       });
@@ -105,10 +168,11 @@ export function BlogPostForm({
         return;
       }
       const result = json.result;
-      if (generationType === "draft") {
+      if (generationType === "draft" || generationType === "full") {
         if (result.title && !title) onTitleChange(result.title);
         if (result.excerpt) setExcerpt(result.excerpt);
         setBlocks((result.content?.blocks ?? []) as Block[]);
+        if (generationType === "full") applySeo(result);
         if (status === "draft") setStatus("ai_generated");
       } else if (generationType === "outline") {
         // Turn the outline into heading + empty paragraph blocks for editing.
@@ -133,8 +197,7 @@ export function BlogPostForm({
           return [...prev, faq];
         });
       } else if (generationType === "metadata") {
-        setMetaTitle(result.meta_title ?? metaTitle);
-        setMetaDescription(result.meta_description ?? metaDescription);
+        applySeo(result);
       }
     } catch {
       setAiError("Network error. Please retry.");
@@ -177,6 +240,14 @@ export function BlogPostForm({
       canonical_url: canonicalUrl || null,
       og_image_url: ogImageUrl || null,
       category_id: categoryId || null,
+      ai_inputs: {
+        topic: aiTopic,
+        brief: aiBrief,
+        sourceText: aiSourceText,
+        targetLength: aiLength,
+        audience: aiAudience,
+        template: aiTemplate,
+      },
       updated_by: userEmail,
     };
 
@@ -254,9 +325,15 @@ export function BlogPostForm({
               <Label className={labelCls}>Brief (optional)</Label>
               <Textarea className={inputCls} rows={2} value={aiBrief} onChange={(e) => setAiBrief(e.target.value)} placeholder="Target Indian students and parents. Use simple language." />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className={labelCls}>Your full concept / draft text (optional)</Label>
+              <Textarea className={inputCls} rows={5} value={aiSourceText} onChange={(e) => setAiSourceText(e.target.value)}
+                placeholder="Paste your own near-complete text here. The AI will preserve your facts and stance, fix the writing, and structure it into blocks — it won't invent product specs or prices." />
+              <p className="text-[11px] text-muted-foreground">When provided, the AI fine-tunes your text instead of writing from scratch.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1.5">
-                <Label className={labelCls}>Audience (comma separated)</Label>
+                <Label className={labelCls}>Audience</Label>
                 <Input className={inputCls} value={aiAudience} onChange={(e) => setAiAudience(e.target.value)} />
               </div>
               <div className="space-y-1.5">
@@ -266,13 +343,27 @@ export function BlogPostForm({
                   {TEMPLATES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                 </select>
               </div>
+              <div className="space-y-1.5">
+                <Label className={labelCls}>Length</Label>
+                <select className="w-full bg-background/50 border border-input rounded-md text-sm h-9 px-2"
+                  value={aiLength} onChange={(e) => setAiLength(e.target.value as TargetLength)}>
+                  {LENGTH_LABELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                </select>
+              </div>
             </div>
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input type="checkbox" checked={aiIncludeProducts} onChange={(e) => setAiIncludeProducts(e.target.checked)} disabled={!productBlocksEnabled} />
               Include product blocks {productBlocksEnabled ? "" : "(disabled by admin)"}
             </label>
             {aiError && <p className="text-xs text-destructive bg-destructive/10 p-2 rounded">{aiError}</p>}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" disabled={Boolean(aiBusy)}
+                onClick={() => callAi("full")}
+                className="gap-1.5 bg-primary text-primary-foreground hover:opacity-90">
+                {aiBusy === "full" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Generate all
+              </Button>
+              <span className="text-[11px] text-muted-foreground">or step-by-step:</span>
               {(["outline", "draft", "faqs", "metadata"] as const).map((g) => (
                 <Button key={g} type="button" variant="outline" size="sm" disabled={Boolean(aiBusy)}
                   onClick={() => callAi(g)} className="gap-1.5 capitalize">
@@ -331,6 +422,18 @@ export function BlogPostForm({
               <option value="">— None —</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
+            {suggestedCategory && (
+              <p className="text-[11px] text-muted-foreground">
+                AI suggests: <span className="text-foreground">{suggestedCategory}</span>
+                {categories.some((c) => c.name.toLowerCase() === suggestedCategory.toLowerCase()) ? (
+                  <button type="button" onClick={applySuggestedCategory} className="ml-1.5 text-primary hover:underline">
+                    Apply
+                  </button>
+                ) : (
+                  <span className="ml-1.5">(no matching category)</span>
+                )}
+              </p>
+            )}
           </div>
           {error && <p className="text-xs text-destructive bg-destructive/10 p-2 rounded">{error}</p>}
           <Button onClick={handleSave} disabled={saving} className="w-full gap-2 bg-primary text-primary-foreground hover:opacity-90">

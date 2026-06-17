@@ -13,6 +13,8 @@ Run in this order:
 | 1 | `011_create_blog.sql` | Creates `blog_posts`, `blog_categories`, `blog_tags`, `blog_post_tags`, `ai_generation_logs`. Reuses the existing `handle_updated_at()` trigger. Touches no existing table. |
 | 2 | `012_blog_rls.sql` | Enables RLS + policies (anon reads only `status='published'`; authenticated reads all). Mirrors `005_rls_policies.sql`. |
 | 3 | `013_seed_blog_flags.sql` | Seeds 6 feature-flag rows into the existing `settings` table (`ON CONFLICT DO NOTHING`). |
+| 4 | `014_seed_blog_categories.sql` | Seeds 7 starter categories into `blog_categories` (`ON CONFLICT (slug) DO NOTHING`). |
+| 5 | `015_add_ai_inputs.sql` | Adds a nullable `ai_inputs JSONB` column to `blog_posts` (additive). |
 
 ### Defaults seeded
 
@@ -30,9 +32,11 @@ blog_auto_sitemap_enabled=true
 Run the rollbacks in **reverse** order:
 
 ```
-013_seed_blog_flags_rollback.sql   -- deletes only the 6 flag keys
-012_blog_rls_rollback.sql          -- drops only the blog RLS policies
-011_create_blog_rollback.sql       -- drops only the 5 blog tables
+015_add_ai_inputs_rollback.sql        -- drops only the ai_inputs column
+014_seed_blog_categories_rollback.sql -- deletes only the 7 seeded categories
+013_seed_blog_flags_rollback.sql      -- deletes only the 6 flag keys
+012_blog_rls_rollback.sql             -- drops only the blog RLS policies
+011_create_blog_rollback.sql          -- drops only the 5 blog tables
 ```
 
 `011_create_blog_rollback.sql` intentionally does **not** drop
