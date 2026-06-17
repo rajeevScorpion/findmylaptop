@@ -6,6 +6,7 @@ import { AISection } from "@/components/public/AISection";
 import { MacGuidance } from "@/components/public/MacGuidance";
 import { TrustSection } from "@/components/public/TrustSection";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
+import { VisitCounter } from "@/components/public/VisitCounter";
 import { Disclaimer } from "@/components/public/Disclaimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
@@ -42,6 +43,7 @@ export default async function HomePage() {
       <MacGuidance />
       <TrustSection />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
+      <VisitCounter />
       <Disclaimer text={settingsMap["disclaimer_text"]} />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
       <ChatWidgetLoader laptops={laptops} />
