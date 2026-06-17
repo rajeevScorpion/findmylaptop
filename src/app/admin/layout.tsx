@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { getBlogFlags } from "@/lib/flags";
 
 function isAdminEmail(email: string): boolean {
   const adminEmails = (process.env.ADMIN_EMAILS ?? "")
@@ -46,9 +47,11 @@ export default async function AdminLayout({
     );
   }
 
+  const flags = await getBlogFlags();
+
   return (
     <div className="min-h-screen flex bg-background">
-      <AdminSidebar userEmail={user.email ?? ""} />
+      <AdminSidebar userEmail={user.email ?? ""} blogEnabled={flags.blog_enabled} />
       <main className="flex-1 pt-16 px-4 pb-6 lg:pt-8 lg:px-8 lg:pb-8 ml-0 lg:ml-56">
         {children}
       </main>
