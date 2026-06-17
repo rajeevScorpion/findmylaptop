@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ThumbsUp, ThumbsDown, MessageSquare, ArrowLeft } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageSquare, ArrowLeft, MessagesSquare } from "lucide-react";
 
 export interface FeedbackRow {
   id: string;
   session_id: string;
-  rating: boolean;
+  rating: boolean | null;
   comment: string | null;
   transcript: { role: string; content: string }[] | null;
   recommended_slugs: string[];
@@ -25,16 +25,24 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
-function RatingIcon({ positive, size = "sm" }: { positive: boolean; size?: "sm" | "md" }) {
+function RatingIcon({ rating, size = "sm" }: { rating: boolean | null; size?: "sm" | "md" }) {
   const dim = size === "md" ? "w-7 h-7" : "w-6 h-6";
   const icon = size === "md" ? "w-3.5 h-3.5" : "w-3 h-3";
+  const tone =
+    rating === true
+      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+      : rating === false
+        ? "bg-red-500/15 text-red-500"
+        : "bg-muted text-muted-foreground";
   return (
-    <span className={`shrink-0 flex items-center justify-center ${dim} rounded-full ${
-      positive
-        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-        : "bg-red-500/15 text-red-500"
-    }`}>
-      {positive ? <ThumbsUp className={icon} /> : <ThumbsDown className={icon} />}
+    <span className={`shrink-0 flex items-center justify-center ${dim} rounded-full ${tone}`}>
+      {rating === true ? (
+        <ThumbsUp className={icon} />
+      ) : rating === false ? (
+        <ThumbsDown className={icon} />
+      ) : (
+        <MessagesSquare className={icon} />
+      )}
     </span>
   );
 }
@@ -53,12 +61,14 @@ function TranscriptView({ row, onBack }: { row: FeedbackRow; onBack?: () => void
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
           </button>
         )}
-        <RatingIcon positive={row.rating} size="md" />
+        <RatingIcon rating={row.rating} size="md" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground leading-snug">
             {row.comment
               ? `"${row.comment}"`
-              : <span className="text-muted-foreground font-normal italic">No comment left</span>}
+              : <span className="text-muted-foreground font-normal italic">
+                  {row.rating === null ? "Not rated" : "No comment left"}
+                </span>}
           </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             {row.message_count} messages · {timeAgo(row.created_at)}
@@ -109,7 +119,7 @@ export function FeedbackPanel({ feedback }: { feedback: FeedbackRow[] }) {
   if (feedback.length === 0) {
     return (
       <div className="glass-card rounded-xl border p-10 text-center text-muted-foreground text-sm">
-        No feedback yet. Once users rate a Chip session, it will appear here.
+        No conversations yet. Once someone chats with Chip, it will appear here.
       </div>
     );
   }
@@ -137,12 +147,14 @@ export function FeedbackPanel({ feedback }: { feedback: FeedbackRow[] }) {
                   : "border-transparent hover:bg-muted/30"
               }`}
             >
-              <RatingIcon positive={row.rating} />
+              <RatingIcon rating={row.rating} />
               <div className="flex-1 min-w-0">
                 {row.comment ? (
                   <p className="text-xs text-foreground leading-snug line-clamp-2">"{row.comment}"</p>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">No comment</p>
+                  <p className="text-xs text-muted-foreground italic">
+                    {row.rating === null ? "Not rated" : "No comment"}
+                  </p>
                 )}
                 <div className="flex items-center gap-1.5 mt-1">
                   <MessageSquare className="w-2.5 h-2.5 text-muted-foreground/50" />

@@ -84,6 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // ── Session management ──────────────────────────────────────────
   let sessionId: string;
   let messageCount: number;
+  let existingSlugs: string[] = [];
 
   if (!incomingSessionId) {
     sessionId = crypto.randomUUID();
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } else {
     const { data, error } = await supabase
       .from("chat_sessions")
-      .select("message_count")
+      .select("message_count, recommended_slugs")
       .eq("session_id", incomingSessionId)
       .single();
 
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } else {
       sessionId = incomingSessionId;
       messageCount = data.message_count;
+      existingSlugs = data.recommended_slugs ?? [];
     }
   }
 
@@ -220,12 +222,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "AI response failed" }, { status: 502 });
   }
 
-  // ── Increment message count ────────────────────────────────────
+  // ── Persist transcript + accumulated recommendations ───────────
+  // `messages` is the full history (sans greeting) ending with the latest
+  // user turn; append Chip's reply to capture the complete conversation.
+  const transcript = [
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
+    { role: "assistant" as const, content: chipResponse.message },
+  ];
+  const accumulatedSlugs = [...new Set([...existingSlugs, ...chipResponse.recommendedSlugs])];
+
   await supabase
     .from("chat_sessions")
     .update({
       message_count: messageCount + 1,
       last_message_at: new Date().toISOString(),
+      transcript,
+      recommended_slugs: accumulatedSlugs,
     })
     .eq("session_id", sessionId);
 
