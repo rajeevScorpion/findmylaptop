@@ -93,15 +93,26 @@ export function HeroSection() {
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            className="text-xs text-muted-foreground pt-4 space-y-2"
+            className="pt-4 space-y-4"
           >
-            <p>No sign-in required · No data collected · Just good advice</p>
+            <p className="text-xs text-muted-foreground">
+              No sign-in required · No data collected · Just good advice
+            </p>
             <button
               onClick={() => document.dispatchEvent(new CustomEvent("chip:open"))}
-              className="inline-flex items-center gap-1.5 text-xs text-violet-500 hover:text-violet-400 transition-colors"
+              className="group inline-flex items-center gap-3 mx-auto rounded-2xl border border-violet-500/20 bg-card px-5 py-3 shadow-lg shadow-violet-500/10 ring-1 ring-violet-500/5 transition-all hover:-translate-y-0.5 hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-500/20"
             >
-              <MessageCircle className="w-3.5 h-3.5" />
-              Or chat with Chip for a personalised pick
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-violet-500 transition-colors group-hover:bg-violet-500/20">
+                <MessageCircle className="w-4 h-4" />
+              </span>
+              <span className="text-left">
+                <span className="block text-sm font-medium text-foreground">
+                  Chat with Chip
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Get a personalised pick in seconds
+                </span>
+              </span>
             </button>
           </m.div>
         </div>
