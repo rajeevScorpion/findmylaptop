@@ -12,6 +12,8 @@ import { BadgeList } from "./BadgeList";
 import type { RecommendationResult } from "@/lib/types";
 import { FOUR_YEAR_LABELS, TIER_LABELS } from "@/lib/constants";
 
+type CardSection = "why" | "specs" | "bestfor" | "details";
+
 interface LaptopCardProps {
   laptop: RecommendationResult;
   onCompareToggle: (laptop: RecommendationResult) => void;
@@ -35,11 +37,12 @@ const SUITABILITY_COLORS: Record<string, string> = {
 };
 
 export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted = false }: LaptopCardProps) {
-  const [showSpecs, setShowSpecs]     = useState(false);
-  const [showWhy, setShowWhy]         = useState(true);
-  const [showDetails, setShowDetails] = useState(false);
-  const [showBestFor, setShowBestFor] = useState(false);
+  // Only one section open at a time (accordion) to keep the card compact.
+  const [openSection, setOpenSection] = useState<CardSection | null>(null);
   const [copied, setCopied]           = useState(false);
+
+  const toggleSection = (section: CardSection) =>
+    setOpenSection((prev) => (prev === section ? null : section));
   const cardRef = useRef<HTMLDivElement>(null);
 
   const glowColor = TIER_GLOW[laptop.tier ?? ""] ?? "#a78bfa";
@@ -152,17 +155,17 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
           {laptop.why_recommended && (
             <div>
               <button
-                onClick={() => setShowWhy(!showWhy)}
+                onClick={() => toggleSection("why")}
                 className="flex items-center gap-1.5 text-xs text-emerald-700/80 hover:text-emerald-700 dark:text-emerald-400/80 dark:hover:text-emerald-400 transition-colors"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 Why this laptop?
-                {showWhy
+                {openSection === "why"
                   ? <ChevronUp className="w-3 h-3" />
                   : <ChevronDown className="w-3 h-3" />}
               </button>
 
-              {showWhy && (
+              {openSection === "why" && (
                 <m.div
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -180,17 +183,17 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
           {/* Check specs — collapsible */}
           <div>
             <button
-              onClick={() => setShowSpecs(!showSpecs)}
+              onClick={() => toggleSection("specs")}
               className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              {showSpecs ? (
+              {openSection === "specs" ? (
                 <span className="flex items-center gap-1">Hide specs <ChevronUp className="w-3 h-3" /></span>
               ) : (
                 <span className="flex items-center gap-1">Check specs <ChevronDown className="w-3 h-3" /></span>
               )}
             </button>
 
-            {showSpecs && (
+            {openSection === "specs" && (
               <m.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -227,16 +230,16 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
           {laptop.recommended_for_courses.length > 0 && (
             <div>
               <button
-                onClick={() => setShowBestFor(!showBestFor)}
+                onClick={() => toggleSection("bestfor")}
                 className="flex items-center gap-1.5 text-xs text-violet-700/80 hover:text-violet-700 dark:text-violet-400/80 dark:hover:text-violet-400 transition-colors"
               >
                 <GraduationCap className="w-3.5 h-3.5 shrink-0" />
                 Best for these courses
-                {showBestFor
+                {openSection === "bestfor"
                   ? <ChevronUp className="w-3 h-3" />
                   : <ChevronDown className="w-3 h-3" />}
               </button>
-              {showBestFor && (
+              {openSection === "bestfor" && (
                 <m.div
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -261,14 +264,14 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
           {/* Cautions & Additional Details — toggle then content */}
           {hasDetails && (
             <button
-              onClick={() => setShowDetails(!showDetails)}
+              onClick={() => toggleSection("details")}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
             >
-              {showDetails ? "Hide cautions & details ↑" : "Cautions & Additional Details ↓"}
+              {openSection === "details" ? "Hide cautions & details ↑" : "Cautions & Additional Details ↓"}
             </button>
           )}
 
-          {showDetails && (
+          {openSection === "details" && (
             <m.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}

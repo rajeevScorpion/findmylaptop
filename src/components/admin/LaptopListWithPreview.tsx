@@ -209,9 +209,10 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
         )}
       </div>
 
-      {/* Preview panel */}
+      {/* Preview panel — sticky; grows to the card's natural height and
+          stays pinned while the page scrolls */}
       {selected && (
-        <div className="w-72 shrink-0 sticky top-6">
+        <div className="w-80 shrink-0 sticky top-6">
           <LaptopCard
             laptop={toPreviewResult(selected)}
             onCompareToggle={() => {}}
