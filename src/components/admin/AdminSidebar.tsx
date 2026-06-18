@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Cpu, LayoutDashboard, Laptop, Settings, LogOut, Menu, X, MessageSquare, RefreshCw } from "lucide-react";
+import { Cpu, LayoutDashboard, Laptop, Settings, LogOut, Menu, X, MessageSquare, RefreshCw, FileText } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/laptops", label: "Laptops", icon: Laptop, exact: false },
+  { href: "/admin/blog", label: "Blog", icon: FileText, exact: false, flag: "blog" as const },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, exact: false },
   { href: "/admin/refresh-prices", label: "Refresh Prices", icon: RefreshCw, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
@@ -16,9 +17,10 @@ const NAV = [
 
 interface AdminSidebarProps {
   userEmail: string;
+  blogEnabled?: boolean;
 }
 
-export function AdminSidebar({ userEmail }: AdminSidebarProps) {
+export function AdminSidebar({ userEmail, blogEnabled = false }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -48,7 +50,7 @@ export function AdminSidebar({ userEmail }: AdminSidebarProps) {
 
       {/* Nav links */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV.map(({ href, label, icon: Icon, exact }) => (
+        {NAV.filter((item) => ("flag" in item ? blogEnabled : true)).map(({ href, label, icon: Icon, exact }) => (
           <a
             key={href}
             href={href}

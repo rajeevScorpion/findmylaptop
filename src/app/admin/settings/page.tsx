@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminSettingsForm } from "@/components/admin/AdminSettingsForm";
+import { BlogFlagsForm } from "@/components/admin/blog/BlogFlagsForm";
+import { getBlogFlags } from "@/lib/flags";
 
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
@@ -8,6 +10,8 @@ export default async function AdminSettingsPage() {
   const settingsMap = Object.fromEntries(
     (settings ?? []).map((s: { key: string; value: string }) => [s.key, s.value])
   );
+
+  const flags = await getBlogFlags();
 
   return (
     <div className="space-y-5 max-w-xl">
@@ -21,6 +25,7 @@ export default async function AdminSettingsPage() {
         whatsappUrl={settingsMap["whatsapp_url"] ?? ""}
         disclaimerText={settingsMap["disclaimer_text"] ?? ""}
       />
+      <BlogFlagsForm initial={flags} />
     </div>
   );
 }
