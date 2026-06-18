@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Save, Sparkles, Eye, Pencil } from "lucide-react";
+import { Loader2, Save, Sparkles, Eye, Pencil, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { slugify } from "@/lib/blog/slug";
 import { buildToc, syncHeadingIds } from "@/lib/blog/toc";
 import { readingTimeMinutes } from "@/lib/blog/slug";
 import type { AiInputs, Block, BlogCategory, BlogContentDoc, BlogPost, BlogStatus } from "@/lib/blog/types";
+import type { Laptop } from "@/lib/types";
 
 type TargetLength = "short" | "medium" | "long";
 const LENGTH_LABELS: { value: TargetLength; label: string }[] = [
@@ -44,6 +45,35 @@ interface BlogPostFormProps {
 const inputCls = "bg-background/50";
 const labelCls = "text-xs text-muted-foreground";
 
+// Reconcile AI-generated blocks with the existing content so a post never ends
+// up with more than one product grid. Keeps only the first product block the AI
+// emits; reuses the editor's previously configured intent/limit when present;
+// and preserves a manually-added product block if the AI emits none.
+function reconcileProductBlock(prev: Block[], aiBlocks: Block[]): Block[] {
+  const prevProduct = prev.find((b) => b.type === "product_grid_placeholder");
+
+  let kept = false;
+  const result: Block[] = [];
+  for (const b of aiBlocks) {
+    if (b.type === "product_grid_placeholder") {
+      if (kept) continue; // drop AI duplicates
+      kept = true;
+      result.push(
+        prevProduct?.type === "product_grid_placeholder"
+          ? { ...b, data: { ...b.data, ...prevProduct.data } }
+          : b
+      );
+    } else {
+      result.push(b);
+    }
+  }
+
+  // AI produced no product block but the editor had one — keep it.
+  if (!kept && prevProduct) result.push(prevProduct);
+
+  return result;
+}
+
 export function BlogPostForm({
   post,
   categories,
@@ -70,6 +100,13 @@ export function BlogPostForm({
   );
 
   const [tab, setTab] = useState<"edit" | "preview">("edit");
+  // Number of product cards to show when inserting a product block into an
+  // already-written post (1–5).
+  const [productCount, setProductCount] = useState(3);
+  // Published laptops for a truthful preview of product blocks. Fetched lazily
+  // the first time the editor opens the preview tab.
+  const [previewLaptops, setPreviewLaptops] = useState<Laptop[]>([]);
+  const [laptopsLoaded, setLaptopsLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -87,6 +124,40 @@ export function BlogPostForm({
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tab !== "preview" || laptopsLoaded || !productBlocksEnabled) return;
+    setLaptopsLoaded(true);
+    const supabase = createClient();
+    supabase
+      .from("laptops")
+      .select("*")
+      .eq("is_published", true)
+      .order("priority_score", { ascending: false })
+      .then(({ data }) => setPreviewLaptops((data ?? []) as Laptop[]));
+  }, [tab, laptopsLoaded, productBlocksEnabled]);
+
+  // Add or update the post's product block. A post has a single product grid:
+  // if one already exists we just update its card count (avoiding duplicates);
+  // otherwise we append one, prefilling its intent from the keyword/title.
+  function addProductBlock(count: number) {
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.type === "product_grid_placeholder");
+      if (idx >= 0) {
+        return prev.map((b, i) =>
+          i === idx && b.type === "product_grid_placeholder"
+            ? { ...b, data: { ...b.data, limit: count } }
+            : b
+        );
+      }
+      const intent = (primaryKeyword || title).trim().toLowerCase();
+      return [
+        ...prev,
+        { type: "product_grid_placeholder", data: { filterIntent: intent, limit: count } },
+      ];
+    });
+    setTab("edit");
+  }
 
   const onTitleChange = (v: string) => {
     setTitle(v);
@@ -171,7 +242,9 @@ export function BlogPostForm({
       if (generationType === "draft" || generationType === "full") {
         if (result.title && !title) onTitleChange(result.title);
         if (result.excerpt) setExcerpt(result.excerpt);
-        setBlocks((result.content?.blocks ?? []) as Block[]);
+        setBlocks((prev) =>
+          reconcileProductBlock(prev, (result.content?.blocks ?? []) as Block[])
+        );
         if (generationType === "full") applySeo(result);
         if (status === "draft") setStatus("ai_generated");
       } else if (generationType === "outline") {
@@ -377,10 +450,39 @@ export function BlogPostForm({
 
         {/* Content blocks / preview */}
         <div className="glass-card rounded-xl border p-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-medium text-foreground">Content</h3>
-            <div className="flex items-center rounded-lg border border-border/60 p-0.5 text-xs">
-              <button type="button" onClick={() => setTab("edit")}
+            <div className="flex items-center gap-2">
+              {productBlocksEnabled && (
+                <div className="flex items-center gap-1.5 rounded-lg border border-border/60 px-1.5 py-0.5">
+                  <select
+                    aria-label="Number of product cards"
+                    className="bg-transparent text-xs h-7 px-1 focus:outline-none"
+                    value={productCount}
+                    onChange={(e) => setProductCount(Number(e.target.value))}
+                  >
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>
+                        {n} {n === 1 ? "card" : "cards"}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addProductBlock(productCount)}
+                    className="gap-1.5 h-7"
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    {blocks.some((b) => b.type === "product_grid_placeholder")
+                      ? "Update products"
+                      : "Add products"}
+                  </Button>
+                </div>
+              )}
+              <div className="flex items-center rounded-lg border border-border/60 p-0.5 text-xs">
+                <button type="button" onClick={() => setTab("edit")}
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md ${tab === "edit" ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}>
                 <Pencil className="w-3.5 h-3.5" /> Edit
               </button>
@@ -388,6 +490,7 @@ export function BlogPostForm({
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md ${tab === "preview" ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}>
                 <Eye className="w-3.5 h-3.5" /> Preview
               </button>
+              </div>
             </div>
           </div>
           {tab === "edit" ? (
@@ -397,7 +500,7 @@ export function BlogPostForm({
               {blocks.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Nothing to preview yet.</p>
               ) : (
-                <BlockRenderer blocks={previewDoc.blocks} adminPreview productBlocksEnabled={productBlocksEnabled} />
+                <BlockRenderer blocks={previewDoc.blocks} laptops={previewLaptops} adminPreview productBlocksEnabled={productBlocksEnabled} />
               )}
             </div>
           )}

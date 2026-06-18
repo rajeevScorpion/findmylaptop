@@ -43,7 +43,7 @@ function emptyBlock(type: BlockType): Block {
     case "cta":
       return { type: "cta", variant: "finder", title: "", body: "", href: "/", label: "" };
     case "product_grid_placeholder":
-      return { type: "product_grid_placeholder", data: { filterIntent: "", limit: 4 } };
+      return { type: "product_grid_placeholder", data: { filterIntent: "", limit: 3 } };
   }
 }
 
@@ -261,9 +261,9 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (b: Block) =
           <Input className={inputCls} placeholder="Filter intent (e.g. coding_under_60000)"
             value={block.data.filterIntent ?? ""}
             onChange={(e) => onChange({ ...block, data: { ...block.data, filterIntent: e.target.value } })} />
-          <Input className={`${inputCls} max-w-[90px]`} type="number" placeholder="Limit"
-            value={block.data.limit ?? 4}
-            onChange={(e) => onChange({ ...block, data: { ...block.data, limit: Number(e.target.value) } })} />
+          <Input className={`${inputCls} max-w-[90px]`} type="number" min={1} max={5} placeholder="Limit"
+            value={block.data.limit ?? 3}
+            onChange={(e) => onChange({ ...block, data: { ...block.data, limit: Math.max(1, Math.min(5, Number(e.target.value))) } })} />
         </div>
       );
     default:

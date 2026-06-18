@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock, CalendarDays } from "lucide-react";
+import { Clock, CalendarDays } from "lucide-react";
 import { getBlogFlags } from "@/lib/flags";
 import { getPublishedPosts } from "@/lib/blog/queries";
+import { createClient } from "@/lib/supabase/server";
+import { SiteHeader } from "@/components/public/SiteHeader";
+import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
+import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
+import { BlogHero } from "@/components/blog/BlogHero";
+import { ShareButton } from "@/components/blog/ShareButton";
+import type { Laptop } from "@/lib/types";
 
 export const revalidate = 300;
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://laptopfinder.cc";
 
 export const metadata: Metadata = {
   title: "Laptop Buying Guides & Tips — laptopfinder.cc",
@@ -31,24 +40,33 @@ export default async function BlogIndexPage() {
 
   const posts = await getPublishedPosts();
 
+  const supabase = await createClient();
+  const { data: laptopsRaw } = await supabase
+    .from("laptops")
+    .select("*")
+    .eq("is_published", true)
+    .order("priority_score", { ascending: false });
+  const { data: settings } = await supabase.from("settings").select("key, value");
+  const settingsMap = Object.fromEntries(
+    (settings ?? []).map((s: { key: string; value: string }) => [s.key, s.value])
+  );
+  const laptops: Laptop[] = (laptopsRaw ?? []) as Laptop[];
+
   return (
-    <div className="min-h-screen bg-background text-foreground px-4 py-16">
-      <div className="max-w-4xl mx-auto">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to LaptopFinder
-        </Link>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Hero band — soft gradient spans behind both the nav and the hero */}
+      <section className="relative w-full overflow-hidden">
+        <div className="absolute top-0 left-0 w-72 h-72 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
 
-        <header className="mb-10">
-          <h1 className="text-3xl font-bold text-foreground">Laptop buying guides</h1>
-          <p className="mt-2 text-muted-foreground">
-            Simple, honest advice to help you choose the right laptop in India.
-          </p>
-        </header>
+        <div className="relative z-10 px-4 pt-16 max-w-6xl mx-auto">
+          <SiteHeader className="mb-10" />
+        </div>
 
+        <BlogHero />
+      </section>
+
+      <div className="px-4 pb-20 max-w-6xl mx-auto">
         {posts.length === 0 ? (
           <div className="glass-card rounded-2xl border p-8 text-center text-muted-foreground">
             No guides published yet. Check back soon.
@@ -56,11 +74,17 @@ export default async function BlogIndexPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {posts.map((post) => (
-              <Link
+              <div
                 key={post.id}
-                href={`/blog/${post.slug}`}
-                className="laptop-card glass-card rounded-2xl border p-5 flex flex-col gap-3 hover:border-border transition-colors"
+                className="laptop-card glass-card rounded-2xl border p-5 flex flex-col gap-3 hover:border-border transition-colors relative"
               >
+                {/* Stretched overlay link makes the whole card clickable */}
+                <Link
+                  href={`/blog/${post.slug}`}
+                  aria-label={post.title}
+                  className="absolute inset-0 rounded-2xl"
+                />
+
                 <h2 className="text-base font-semibold text-foreground leading-snug">
                   {post.title}
                 </h2>
@@ -82,12 +106,20 @@ export default async function BlogIndexPage() {
                       {post.reading_time_minutes} min read
                     </span>
                   ) : null}
+                  <ShareButton
+                    url={`${SITE_URL}/blog/${post.slug}`}
+                    title={post.title}
+                    className="relative z-10 ml-auto"
+                  />
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
       </div>
+
+      <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
+      <ChatWidgetLoader laptops={laptops} />
     </div>
   );
 }

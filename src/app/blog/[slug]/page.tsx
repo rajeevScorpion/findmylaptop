@@ -5,8 +5,14 @@ import { ArrowLeft, Clock, CalendarDays, ListTree } from "lucide-react";
 import { getBlogFlags } from "@/lib/flags";
 import { getPublishedPostBySlug, getRelatedPosts } from "@/lib/blog/queries";
 import { BlockRenderer } from "@/components/blog/BlockRenderer";
+import { ShareButton } from "@/components/blog/ShareButton";
 import { buildToc } from "@/lib/blog/toc";
 import type { BlogContentDoc, Block, FaqItem } from "@/lib/blog/types";
+import { createClient } from "@/lib/supabase/server";
+import { SiteHeader } from "@/components/public/SiteHeader";
+import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
+import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
+import type { Laptop } from "@/lib/types";
 
 export const revalidate = 300;
 
@@ -27,7 +33,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description =
     post.meta_description || post.excerpt || `${post.title} — a LaptopFinder buying guide.`;
   const canonical = post.canonical_url || `/blog/${post.slug}`;
-  const ogImage = post.og_image_url;
+  // Use the post's own OG image when set, otherwise fall back to the
+  // site-wide landing page cover so shares always render a preview image.
+  const ogImage = post.og_image_url || "/sharing-cover.png";
 
   return {
     title,
@@ -38,13 +46,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: post.og_description || description,
       type: "article",
       url: canonical,
-      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630, alt: post.title }] } : {}),
+      images: [{ url: ogImage, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: post.og_title || title,
       description: post.og_description || description,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      images: [ogImage],
     },
   };
 }
@@ -69,6 +77,18 @@ export default async function BlogPostPage({ params }: Props) {
   const doc = (post.content_json as BlogContentDoc | null) ?? { type: "doc", blocks: [] };
   const toc = post.toc_json?.length ? post.toc_json : buildToc(doc);
   const related = await getRelatedPosts({ id: post.id, category_id: post.category_id });
+
+  const supabase = await createClient();
+  const { data: laptopsRaw } = await supabase
+    .from("laptops")
+    .select("*")
+    .eq("is_published", true)
+    .order("priority_score", { ascending: false });
+  const { data: settings } = await supabase.from("settings").select("key, value");
+  const settingsMap = Object.fromEntries(
+    (settings ?? []).map((s: { key: string; value: string }) => [s.key, s.value])
+  );
+  const laptops: Laptop[] = (laptopsRaw ?? []) as Laptop[];
 
   // FAQ items (for schema) only from visible FAQ blocks.
   const faqItems: FaqItem[] = doc.blocks
@@ -129,6 +149,8 @@ export default async function BlogPostPage({ params }: Props) {
       ))}
 
       <div className="max-w-5xl mx-auto">
+        <SiteHeader showCta className="mb-8" />
+
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
           <Link href="/blog" className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors">
@@ -167,10 +189,12 @@ export default async function BlogPostPage({ params }: Props) {
                   {post.reading_time_minutes} min read
                 </span>
               ) : null}
+              <ShareButton url={`${SITE_URL}/blog/${post.slug}`} title={post.title} className="ml-auto" />
             </div>
 
             <BlockRenderer
               blocks={doc.blocks}
+              laptops={laptops}
               productBlocksEnabled={flags.blog_product_blocks_enabled}
             />
 
@@ -224,6 +248,9 @@ export default async function BlogPostPage({ params }: Props) {
           )}
         </div>
       </div>
+
+      <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
+      <ChatWidgetLoader laptops={laptops} />
     </div>
   );
 }

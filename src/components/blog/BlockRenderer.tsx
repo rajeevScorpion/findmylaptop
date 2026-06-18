@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Cpu,
   ArrowRight,
+  ShoppingBag,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -20,6 +21,9 @@ import type {
   FaqBlock,
   UnknownBlock,
 } from "@/lib/blog/types";
+import type { Laptop as LaptopProduct } from "@/lib/types";
+import { LaptopMiniCard } from "@/components/public/LaptopMiniCard";
+import { selectProductsForIntent } from "@/lib/blog/product-intent";
 
 // Curated icon map — AI/admin supply an icon name string; unknown names fall
 // back to a neutral icon. Keeps lucide tree-shakeable and avoids dynamic eval.
@@ -131,8 +135,40 @@ function CtaView({ block }: { block: CtaBlock }) {
   );
 }
 
+function ProductGridView({
+  picks,
+  intent,
+  adminPreview,
+}: {
+  picks: LaptopProduct[];
+  intent?: string;
+  adminPreview: boolean;
+}) {
+  return (
+    <div className="my-8">
+      <div className="flex items-center gap-2 mb-3">
+        <ShoppingBag className="w-4 h-4 text-primary shrink-0" />
+        <p className="text-sm font-semibold text-foreground">Recommended laptops</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {picks.map((laptop) => (
+          <LaptopMiniCard key={laptop.id} laptop={laptop} />
+        ))}
+      </div>
+      {adminPreview && (
+        <p className="mt-2 text-[11px] italic text-muted-foreground">
+          Auto-selected from intent: “{intent || "—"}”. Updates automatically as your catalog
+          changes.
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface BlockRendererProps {
   blocks: unknown[];
+  // Published laptops used to populate product blocks from their stored intent.
+  laptops?: LaptopProduct[];
   // In admin preview we render a labelled placeholder for unknown/disabled
   // blocks; on the public page they are skipped silently.
   adminPreview?: boolean;
@@ -154,6 +190,7 @@ const KNOWN_TYPES = new Set<Block["type"]>([
 
 export function BlockRenderer({
   blocks,
+  laptops = [],
   adminPreview = false,
   productBlocksEnabled = false,
 }: BlockRendererProps) {
@@ -263,24 +300,52 @@ export function BlockRenderer({
           case "cta":
             return <CtaView key={i} block={block as CtaBlock} />;
           case "product_grid_placeholder": {
-            // Future-ready: render nothing public-side until product integration
-            // exists. Admin preview shows a labelled placeholder so the slot is
-            // visible. Never renders hallucinated product data.
-            if (!adminPreview) return null;
+            // Renders real, published LaptopFinder products selected from the
+            // block's stored editorial intent. Never renders hallucinated data —
+            // when nothing matches (or the feature is off) it stays hidden on the
+            // public page and shows an explanatory note only in admin preview.
             const b = block as Extract<Block, { type: "product_grid_placeholder" }>;
+
+            if (!productBlocksEnabled) {
+              if (!adminPreview) return null;
+              return (
+                <div
+                  key={i}
+                  className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 my-6 text-xs text-muted-foreground"
+                >
+                  <p className="font-medium text-foreground mb-1">Product cards placeholder</p>
+                  <p>
+                    Intent: {b.data?.filterIntent ?? "—"} · limit: {b.data?.limit ?? "—"}. Product
+                    blocks are disabled by admin; hidden on the public page.
+                  </p>
+                </div>
+              );
+            }
+
+            const picks = selectProductsForIntent(laptops, b.data?.filterIntent, b.data?.limit);
+            if (picks.length === 0) {
+              if (!adminPreview) return null;
+              return (
+                <div
+                  key={i}
+                  className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 my-6 text-xs text-muted-foreground"
+                >
+                  <p className="font-medium text-foreground mb-1">Product cards placeholder</p>
+                  <p>
+                    Intent: {b.data?.filterIntent ?? "—"} · limit: {b.data?.limit ?? "—"}. No
+                    published laptops to show yet — add laptops to populate this block.
+                  </p>
+                </div>
+              );
+            }
+
             return (
-              <div
+              <ProductGridView
                 key={i}
-                className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 my-6 text-xs text-muted-foreground"
-              >
-                <p className="font-medium text-foreground mb-1">Product cards placeholder</p>
-                <p>
-                  Intent: {b.data?.filterIntent ?? "—"} · limit: {b.data?.limit ?? "—"}.{" "}
-                  {productBlocksEnabled
-                    ? "Will render real LaptopFinder products once wired up."
-                    : "Product blocks are disabled by admin; hidden on the public page."}
-                </p>
-              </div>
+                picks={picks}
+                intent={b.data?.filterIntent}
+                adminPreview={adminPreview}
+              />
             );
           }
           default:
