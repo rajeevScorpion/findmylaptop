@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
 
 interface AdminSettingsFormProps {
   whatsappUrl: string;
   disclaimerText: string;
+  voiceInputEnabled: boolean;
 }
 
-export function AdminSettingsForm({ whatsappUrl, disclaimerText }: AdminSettingsFormProps) {
+export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabled }: AdminSettingsFormProps) {
   const [waUrl, setWaUrl] = useState(whatsappUrl);
   const [disclaimer, setDisclaimer] = useState(disclaimerText);
+  const [voiceEnabled, setVoiceEnabled] = useState(voiceInputEnabled);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +33,7 @@ export function AdminSettingsForm({ whatsappUrl, disclaimerText }: AdminSettings
     const updates = [
       { key: "whatsapp_url", value: waUrl },
       { key: "disclaimer_text", value: disclaimer },
+      { key: "voice_input_enabled", value: voiceEnabled ? "true" : "false" },
     ];
 
     for (const update of updates) {
@@ -81,6 +85,24 @@ export function AdminSettingsForm({ whatsappUrl, disclaimerText }: AdminSettings
             onChange={(e) => setDisclaimer(e.target.value)}
             rows={4}
             className="bg-background/50 resize-y text-xs"
+          />
+        </div>
+      </div>
+
+      <div className="glass-card rounded-xl border p-5 space-y-4">
+        <h3 className="text-sm font-medium text-foreground">Chat (Chip)</h3>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm text-foreground">Voice input</p>
+            <p className="text-xs text-muted-foreground">
+              Shows a mic button in the chat. Tapping it records the user&rsquo;s voice, transcribes
+              it with Whisper, and sends the message automatically.
+            </p>
+          </div>
+          <Switch
+            checked={voiceEnabled}
+            onCheckedChange={(v: boolean) => setVoiceEnabled(v)}
+            className="mt-1 shrink-0"
           />
         </div>
       </div>

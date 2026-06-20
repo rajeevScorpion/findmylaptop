@@ -55,7 +55,7 @@ export default async function HomePage() {
       <VisitCounter />
       <Disclaimer text={settingsMap["disclaimer_text"]} />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
-      <ChatWidgetLoader laptops={laptops} />
+      <ChatWidgetLoader laptops={laptops} voiceEnabled={settingsMap["voice_input_enabled"] !== "false"} />
     </main>
   );
 }

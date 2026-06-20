@@ -8,6 +8,12 @@ const ChatWidget = dynamic(
   { ssr: false }
 );
 
-export function ChatWidgetLoader({ laptops }: { laptops: Laptop[] }) {
-  return <ChatWidget laptops={laptops} />;
+export function ChatWidgetLoader({
+  laptops,
+  voiceEnabled = true,
+}: {
+  laptops: Laptop[];
+  voiceEnabled?: boolean;
+}) {
+  return <ChatWidget laptops={laptops} voiceEnabled={voiceEnabled} />;
 }

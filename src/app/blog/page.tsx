@@ -119,7 +119,7 @@ export default async function BlogIndexPage() {
       </div>
 
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
-      <ChatWidgetLoader laptops={laptops} />
+      <ChatWidgetLoader laptops={laptops} voiceEnabled={settingsMap["voice_input_enabled"] !== "false"} />
     </div>
   );
 }

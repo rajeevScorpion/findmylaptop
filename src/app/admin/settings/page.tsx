@@ -24,6 +24,7 @@ export default async function AdminSettingsPage() {
       <AdminSettingsForm
         whatsappUrl={settingsMap["whatsapp_url"] ?? ""}
         disclaimerText={settingsMap["disclaimer_text"] ?? ""}
+        voiceInputEnabled={settingsMap["voice_input_enabled"] !== "false"}
       />
       <BlogFlagsForm initial={flags} />
     </div>
