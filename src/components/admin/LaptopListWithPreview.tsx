@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Pencil, Laptop, Plus, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Pencil, Laptop, Plus, ChevronUp, ChevronDown, ChevronsUpDown, Info } from "lucide-react";
 import { PublishToggle } from "@/components/admin/PublishToggle";
+import { InlinePriceEdit } from "@/components/admin/InlinePriceEdit";
 import { DeleteLaptopButton } from "@/components/admin/DeleteLaptopButton";
 import { LaptopCard } from "@/components/public/LaptopCard";
 import type { RecommendationResult } from "@/lib/types";
@@ -127,13 +128,23 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
                   const align: Record<SortColumn, string> = { name: "text-left", price: "text-left", updated: "text-left", published: "text-center" };
                   return (
                     <th key={col} className={`px-4 py-3 font-medium ${hidden[col]}`}>
-                      <button
-                        onClick={() => toggleSort(col)}
-                        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${align[col] === "text-center" ? "mx-auto" : ""}`}
-                      >
-                        {labels[col]}
-                        <SortIcon column={col} sort={sort} />
-                      </button>
+                      <span className={`inline-flex items-center gap-1 ${align[col] === "text-center" ? "mx-auto" : ""}`}>
+                        <button
+                          onClick={() => toggleSort(col)}
+                          className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                        >
+                          {labels[col]}
+                          <SortIcon column={col} sort={sort} />
+                        </button>
+                        {col === "price" && (
+                          <Info
+                            className="w-3 h-3 opacity-50 hover:opacity-90 transition-opacity cursor-help"
+                            aria-label="Click a price to edit it"
+                          >
+                            <title>Click a price to edit it</title>
+                          </Info>
+                        )}
+                      </span>
                     </th>
                   );
                 })}
@@ -161,8 +172,15 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className="text-sm text-foreground">{laptop.price_label ?? "—"}</span>
+                    <td
+                      className="px-4 py-3 hidden sm:table-cell"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <InlinePriceEdit
+                        laptopId={laptop.id}
+                        initialPrice={laptop.price_approx ?? null}
+                        initialLabel={laptop.price_label ?? null}
+                      />
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span className="text-xs text-muted-foreground">

@@ -43,7 +43,22 @@
       "Bash(curl -s -o /tmp/og_test.png -w \"HTTP %{http_code} | type=%{content_type} | size=%{size_download} bytes\\\\n\" \"http://localhost:3000/api/og?slug=asus-rog-strix-g16-2024-7e7b084f\")",
       "PowerShell(npx tsc --noEmit -p tsconfig.json)",
       "PowerShell(npx tsc --noEmit)",
-      "Bash(git commit -q -m 'feat: AI writer round 2 — length control, concept ingestion, generate-all, keyword+category generation, persisted inputs *)"
+      "Bash(git commit -q -m 'feat: AI writer round 2 — length control, concept ingestion, generate-all, keyword+category generation, persisted inputs *)",
+      "PowerShell(git rev-list --left-right --count origin/master...feature/ai-seo-blog-cms 2>$null)",
+      "PowerShell(git fetch origin)",
+      "PowerShell(git checkout master)",
+      "PowerShell(git merge --no-ff feature/ai-seo-blog-cms -m \"Merge branch 'feature/ai-seo-blog-cms' into master\")",
+      "PowerShell(git stash push -m \"wip local claude settings\" -- .claude/settings.local.json)",
+      "PowerShell(git stash pop)",
+      "PowerShell(git --no-pager diff .claude/settings.local.json; Write-Output \"=== stash diff ===\"; git --no-pager stash show -p stash@{0})",
+      "PowerShell(git stash drop stash@{0}; Write-Output \"--- final ---\"; git --no-pager log --oneline -3; git status --short)",
+      "PowerShell(git stash drop \"stash@{0}\")",
+      "PowerShell(git branch -d feature/ai-seo-blog-cms)",
+      "PowerShell(git push origin --delete feature/ai-seo-blog-cms)",
+      "Bash(git commit -q -m ' *)"
+    ],
+    "additionalDirectories": [
+      "D:\\AiCoding\\findmylaptop\\.git"
     ]
   }
 }
