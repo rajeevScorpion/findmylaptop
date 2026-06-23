@@ -11,6 +11,43 @@ export type DomainId = "design" | "technology" | "management";
 
 export type DomainFlagKey = "domain_tech_enabled" | "domain_mgmt_enabled";
 
+/**
+ * Lucide icon names usable in the "changing landscape" cards. AISection maps
+ * each name to its imported icon component, so this stays a plain string union
+ * (no lucide import needed in this config module).
+ */
+export type LandscapeIconName =
+  | "Sparkles"
+  | "Layers"
+  | "Film"
+  | "Gamepad2"
+  | "Cpu"
+  | "BrainCircuit"
+  | "Code2"
+  | "Database"
+  | "Smartphone"
+  | "ShieldCheck"
+  | "Cloud"
+  | "Briefcase"
+  | "TrendingUp"
+  | "BarChart3"
+  | "Megaphone"
+  | "Boxes"
+  | "Package";
+
+/** Compute-intensity label shown on each landscape card (drives its colour). */
+export type LandscapeHorizon = "Moderate" | "Significant" | "Very High" | "Critical";
+
+export interface LandscapeDiscipline {
+  icon: LandscapeIconName;
+  iconClass: string;
+  /** The discipline / field / specialisation this card describes. */
+  discipline: string;
+  /** How its workflow is shifting and what that means for hardware. */
+  shift: string;
+  horizon: LandscapeHorizon;
+}
+
 export interface DomainConfig {
   id: DomainId;
   label: string;
@@ -50,6 +87,20 @@ export interface DomainConfig {
     greeting: string;
     /** Initial suggestion chips offered with the greeting. */
     roleSuggestions: string[];
+  };
+  /**
+   * "The changing landscape" section — domain-specific discipline cards
+   * explaining how each field's workflow is evolving and what that means for
+   * laptop choice. Rendered by AISection.
+   */
+  landscape: {
+    /** Small uppercase eyebrow above the heading. */
+    eyebrow: string;
+    heading: string;
+    intro: string;
+    disciplines: LandscapeDiscipline[];
+    /** Body of the "A note on planning" callout (the label is fixed). */
+    planningNote: string;
   };
 }
 
@@ -95,6 +146,64 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
         "Just Exploring",
       ],
     },
+    landscape: {
+      eyebrow: "The changing landscape",
+      heading: "Design education is computationally evolving",
+      intro:
+        "Design students are no longer using laptops only for documentation, browsing, and basic layout work. Across disciplines, AI-assisted ideation, 3D visualisation, video workflows, simulation, and real-time rendering are becoming part of creative education. The right laptop should be chosen not only for the first semester, but for the full design-learning journey.",
+      disciplines: [
+        {
+          icon: "Sparkles",
+          iconClass: "text-amber-500 dark:text-amber-400",
+          discipline: "Communication, Fashion, Brand",
+          shift:
+            "AI-assisted ideation, text-to-image generation, mockup creation, and brand toolkit automation are entering design workflows. 2D-heavy work remains manageable on mid-range hardware, but generative tools increasingly benefit from a capable GPU.",
+          horizon: "Moderate",
+        },
+        {
+          icon: "Layers",
+          iconClass: "text-sky-500 dark:text-sky-400",
+          discipline: "Product, Interaction, Interior",
+          shift:
+            "3D visualisation, parametric modelling, simulation tools, and real-time rendering previews are increasingly used across these disciplines. Expect Blender, Rhino, or SketchUp to be part of the toolkit within the first year.",
+          horizon: "Significant",
+        },
+        {
+          icon: "Film",
+          iconClass: "text-violet-500 dark:text-violet-400",
+          discipline: "Animation, Film, Motion",
+          shift:
+            "GPU rendering (Cycles, V-Ray, Arnold), AI-assisted in-betweening, motion capture processing, and video grading workflows demand heavy compute. 8GB+ VRAM and fast multi-core CPUs are not optional for sustained use.",
+          horizon: "Very High",
+        },
+        {
+          icon: "Gamepad2",
+          iconClass: "text-emerald-500 dark:text-emerald-400",
+          discipline: "Game Art, Game Design, Programming",
+          shift:
+            "Real-time rendering engines (Unreal 5, Unity), procedural asset creation, shader development, and live game testing are the core workflow. RTX 4060 is a practical minimum; 4070 is strongly preferred for Unreal 5 work.",
+          horizon: "Very High",
+        },
+        {
+          icon: "Cpu",
+          iconClass: "text-rose-500 dark:text-rose-400",
+          discipline: "Transportation & Mobility Design",
+          shift:
+            "Surfacing, photorealistic rendering, fluid simulation, and structural analysis tools are computationally intensive. These disciplines sit at the high end of hardware requirements — plan for the highest practical GPU tier in your budget.",
+          horizon: "Very High",
+        },
+        {
+          icon: "BrainCircuit",
+          iconClass: "text-indigo-500 dark:text-indigo-400",
+          discipline: "AI in Creative Practice",
+          shift:
+            "Running local diffusion models, fine-tuning workflows, generative design scripting, and GPU-accelerated inference require 8GB+ VRAM as a baseline. This discipline has the highest compute requirements of any design course.",
+          horizon: "Critical",
+        },
+      ],
+      planningNote:
+        "Students do not always need the most expensive laptop. But they should buy with a 3–4 year academic journey in mind. A well-chosen ₹90,000 laptop with 16GB RAM, an RTX 4060, and an upgradeable slot will serve most students better than a ₹1,20,000 thin laptop with soldered 16GB RAM and an RTX 4050.",
+    },
   },
 
   technology: {
@@ -139,6 +248,64 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
         "Just Exploring",
       ],
     },
+    landscape: {
+      eyebrow: "The changing landscape",
+      heading: "Tech education is computationally evolving",
+      intro:
+        "Tech students quickly move beyond a single editor and a browser. Containers, large datasets, local model training, virtual machines, and game engines all become part of coursework — and each pushes a different part of the machine. The right laptop should carry you from your first course through internships and real production work.",
+      disciplines: [
+        {
+          icon: "Code2",
+          iconClass: "text-sky-500 dark:text-sky-400",
+          discipline: "Web & Full-Stack Development",
+          shift:
+            "VS Code, Node, Docker, local databases, and a browser with dozens of tabs run side by side all day. This is RAM- and CPU-bound work; a dedicated GPU is rarely needed, but 16GB RAM and a fast SSD make a real difference.",
+          horizon: "Moderate",
+        },
+        {
+          icon: "Database",
+          iconClass: "text-cyan-500 dark:text-cyan-400",
+          discipline: "Data Science & Analytics",
+          shift:
+            "Python, Jupyter, pandas, and SQL over progressively larger datasets reward memory and multi-core CPUs. Most work is fine on a strong CPU; a GPU only starts to matter once you move into deep learning.",
+          horizon: "Significant",
+        },
+        {
+          icon: "BrainCircuit",
+          iconClass: "text-indigo-500 dark:text-indigo-400",
+          discipline: "Machine Learning & AI",
+          shift:
+            "Training and fine-tuning with PyTorch or TensorFlow, CUDA acceleration, and running models locally are the most demanding workloads here. An NVIDIA GPU with 8GB+ VRAM and 32GB RAM saves hours of waiting.",
+          horizon: "Critical",
+        },
+        {
+          icon: "Smartphone",
+          iconClass: "text-emerald-500 dark:text-emerald-400",
+          discipline: "Mobile App Development",
+          shift:
+            "Android Studio and iOS emulators are heavy on RAM and CPU, and emulator counts grow as projects do. Apple Silicon is excellent for iOS; for Android, prioritise 16GB+ RAM and a capable multi-core CPU.",
+          horizon: "Significant",
+        },
+        {
+          icon: "ShieldCheck",
+          iconClass: "text-rose-500 dark:text-rose-400",
+          discipline: "Cybersecurity, DevOps & Cloud",
+          shift:
+            "Running several VMs at once, local Kubernetes clusters, and security labs demands lots of RAM, virtualization support, and a strong multi-core CPU. 32GB RAM and a fast SSD are well worth it for sustained lab work.",
+          horizon: "Very High",
+        },
+        {
+          icon: "Gamepad2",
+          iconClass: "text-amber-500 dark:text-amber-400",
+          discipline: "Game Programming",
+          shift:
+            "Unreal Engine and Unity with frequent C++ or shader compilation lean on the GPU, CPU, and VRAM together. RTX-class graphics, a fast multi-core CPU, and 16GB+ RAM keep build and iteration times sane.",
+          horizon: "Very High",
+        },
+      ],
+      planningNote:
+        "You don't always need the most expensive machine. Buy for a 3–4 year journey: 16GB RAM, a fast multi-core CPU, and a quick SSD matter more day-to-day than a top GPU. Step up to 32GB RAM if you'll run many containers or VMs, and add a strong NVIDIA GPU only if machine learning, CUDA, or game-engine work is on your path.",
+    },
   },
 
   management: {
@@ -181,6 +348,64 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
         "Working Professional",
         "Just Exploring",
       ],
+    },
+    landscape: {
+      eyebrow: "The changing landscape",
+      heading: "Business education is going data-driven",
+      intro:
+        "Management work runs on spreadsheets, decks, and dashboards — but it is increasingly data-driven, with BI tools, large financial models, and even light scripting entering the classroom. The right laptop is one you can carry all day, that lasts through back-to-back sessions, and that never stutters during a presentation.",
+      disciplines: [
+        {
+          icon: "Briefcase",
+          iconClass: "text-sky-500 dark:text-sky-400",
+          discipline: "General MBA & Strategy",
+          shift:
+            "Office apps, video calls, case readings, and a browser full of tabs are the everyday load. Raw power matters far less here than all-day battery, a light chassis, and a comfortable keyboard for long days.",
+          horizon: "Moderate",
+        },
+        {
+          icon: "TrendingUp",
+          iconClass: "text-emerald-500 dark:text-emerald-400",
+          discipline: "Finance & FinTech",
+          shift:
+            "Large, multi-tab Excel models, Power BI, and the occasional Python or R script reward memory and a fast CPU. 16GB RAM and a modern multi-core processor keep heavy workbooks responsive.",
+          horizon: "Significant",
+        },
+        {
+          icon: "BarChart3",
+          iconClass: "text-cyan-500 dark:text-cyan-400",
+          discipline: "Business Analytics",
+          shift:
+            "Tableau or Power BI, SQL, and some Python over real datasets are now standard. A strong CPU and 16GB+ RAM matter most; a dedicated GPU is rarely needed for typical coursework.",
+          horizon: "Significant",
+        },
+        {
+          icon: "Megaphone",
+          iconClass: "text-violet-500 dark:text-violet-400",
+          discipline: "Marketing & Digital",
+          shift:
+            "Office, Canva, light photo and video editing, and many open tabs call for balanced specs and a good screen. A bright, colour-accurate display helps more than extra raw horsepower.",
+          horizon: "Moderate",
+        },
+        {
+          icon: "Boxes",
+          iconClass: "text-amber-500 dark:text-amber-400",
+          discipline: "Operations & Supply Chain",
+          shift:
+            "Excel at scale plus simulation and optimisation tools lean on the CPU and memory. A capable multi-core processor and 16GB RAM keep models and solvers moving without long waits.",
+          horizon: "Significant",
+        },
+        {
+          icon: "Package",
+          iconClass: "text-rose-500 dark:text-rose-400",
+          discipline: "Product Management",
+          shift:
+            "Viewing Figma, writing docs, and reading analytics dashboards span a wide app mix. Prioritise a portable, balanced machine with a good screen and solid battery over peak performance.",
+          horizon: "Moderate",
+        },
+      ],
+      planningNote:
+        "You rarely need a powerful laptop for management work. Prioritise a light chassis, all-day battery, a comfortable keyboard, and a sharp screen for long reading and presentations. 16GB RAM and a modern CPU handle Excel, BI tools, and dozens of tabs with ease — a gaming-grade GPU is seldom worth the added weight and shorter battery life.",
     },
   },
 };

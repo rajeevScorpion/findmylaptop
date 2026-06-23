@@ -73,7 +73,7 @@ export async function DomainLanding({ domain }: { domain: DomainConfig }) {
         finderNote={domain.finder.note}
       />
       <HardwareExplainer />
-      <AISection />
+      <AISection landscape={domain.landscape} />
       <MacGuidance />
       <TrustSection />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
