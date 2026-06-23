@@ -15,7 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { laptopFormSchema } from "@/lib/schemas";
 import { generateSlug } from "@/lib/recommendationEngine";
 import { WORKLOAD_TAGS, TIER_LABELS } from "@/lib/constants";
-import { DOMAIN_ORDER, type DomainId } from "@/lib/domains";
+import { type DomainId } from "@/lib/domains";
 import type { DomainTaxonomy } from "@/lib/taxonomy";
 import type { Laptop, ProcessedLaptopInput } from "@/lib/types";
 
@@ -229,32 +229,12 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
-      {/* AI Processing */}
-      <ProcessWithAI onProcessed={handleAIProcessed} />
-
-      {/* Domain */}
-      <Section title="Domain">
-        <p className="text-xs text-muted-foreground -mt-1">
-          Which audience this laptop is listed for. Controls which landing page
-          and Chip catalog it appears in.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {DOMAIN_ORDER.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => setValue("domain", d.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                watchedDomain === d.id
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border/60 text-muted-foreground hover:border-border"
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </Section>
+      {/* AI Processing — includes the Domain selector (pick before extracting) */}
+      <ProcessWithAI
+        onProcessed={handleAIProcessed}
+        domain={watchedDomain}
+        onDomainChange={(d) => setValue("domain", d)}
+      />
 
       {/* Basic info */}
       <Section title="Basic Information">

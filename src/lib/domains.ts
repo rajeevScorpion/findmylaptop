@@ -138,6 +138,22 @@ export interface DomainConfig {
     /** Body of the "Practical advice" footer callout (the label is fixed). */
     footer: string;
   };
+  /**
+   * Per-domain steering for the admin AI spec-extraction prompt ("Add Laptop").
+   * The objective spec fields and output format are shared across domains; these
+   * strings tailor the *reasoning* fields (why/cautions/4-year/priority) so a
+   * laptop is judged by what actually matters to this audience.
+   */
+  extraction: {
+    /** Who the laptop is judged for, e.g. "design students". */
+    audience: string;
+    /** What why_recommended should emphasise. */
+    whyFocus: string;
+    /** What cautions should call out (and what NOT to over-penalise). */
+    cautionsFocus: string;
+    /** Basis for the four_year_suitability rating. */
+    suitabilityBasis: string;
+  };
 }
 
 export const DOMAINS: Record<DomainId, DomainConfig> = {
@@ -273,6 +289,15 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       ],
       footer:
         "Students who already own a MacBook or iPad may use them initially and decide after understanding their specific course workload. Heavy 3D, animation, game, AI, and computational design workflows will benefit from a Windows machine with an NVIDIA RTX GPU sooner — but even lighter disciplines benefit the moment you want to run AI tools natively.",
+    },
+    extraction: {
+      audience: "design students",
+      whyFocus:
+        "Focus on GPU and VRAM, RAM, and a colour-accurate display, plus practical creative-workflow benefits (3D, rendering, video, generative AI tools).",
+      cautionsFocus:
+        "Mention a weak GPU if VRAM < 6GB, soldered/non-upgradeable RAM, thermal throttling in thin laptops with powerful GPUs, heavy weight, an older CPU, or poor display colour accuracy.",
+      suitabilityBasis:
+        "based on sustained GPU/3D/rendering headroom for 4 years of design education",
     },
   },
 
@@ -411,6 +436,15 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       footer:
         "Cloud and remote development — GitHub Codespaces, dev containers, and remote SSH — let a lighter, cheaper laptop punch well above its weight by offloading heavy compute. Buy for a 3–4 year journey: prioritise RAM, CPU, and SSD now, and add a strong NVIDIA GPU only when your field genuinely calls for it.",
     },
+    extraction: {
+      audience: "tech students and developers",
+      whyFocus:
+        "Focus on RAM, CPU cores, and SSD speed first, plus OS/Unix-shell fit. Mention a discrete NVIDIA GPU only when it helps ML/CUDA or game-engine work — a strong GPU is not required for web, backend, data, or mobile development.",
+      cautionsFocus:
+        "Mention only-8GB RAM (too little for containers, VMs, and IDEs), a slow or small SSD, soldered/non-upgradeable RAM, or a weak CPU. Flag a missing NVIDIA GPU only for ML or game-engine paths — do NOT penalise a missing discrete GPU for general development.",
+      suitabilityBasis:
+        "based on RAM, CPU, and SSD headroom for 4 years of engineering/CS work (GPU only if ML or game-dev is the path)",
+    },
   },
 
   management: {
@@ -545,6 +579,15 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       ],
       footer:
         "Prioritise weight, battery life, and a good screen over raw power — you'll carry this everywhere and present from it constantly. 16GB RAM and a modern CPU handle Excel, BI tools, and dozens of tabs with ease. Reach for Windows (or a cloud/VM workaround) the moment your electives lean into Windows-only analytics or finance tools.",
+    },
+    extraction: {
+      audience: "business and management (MBA) students",
+      whyFocus:
+        "Focus on portability (light weight), all-day battery, a comfortable keyboard, and a sharp screen, plus enough RAM and CPU for large Excel models and BI tools. A discrete GPU is rarely needed.",
+      cautionsFocus:
+        "Mention heavy weight, poor battery life, only-8GB RAM for heavy Excel/BI work, a dim or low-resolution screen, or — for macOS machines — that some business tools (Power BI Desktop, certain Excel add-ins, SPSS) are Windows-only. Do NOT over-value a gaming GPU.",
+      suitabilityBasis:
+        "based on portability, battery, and smooth Excel/BI performance for a 2-year MBA (raw GPU power rarely matters)",
     },
   },
 };

@@ -6,13 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { DOMAIN_ORDER, type DomainId } from "@/lib/domains";
 import type { ProcessedLaptopInput } from "@/lib/types";
 
 interface ProcessWithAIProps {
   onProcessed: (data: ProcessedLaptopInput) => void;
+  /** Active domain — steers the extraction prompt's reasoning per audience. */
+  domain: DomainId;
+  onDomainChange: (domain: DomainId) => void;
 }
 
-export function ProcessWithAI({ onProcessed }: ProcessWithAIProps) {
+export function ProcessWithAI({ onProcessed, domain, onDomainChange }: ProcessWithAIProps) {
   const [urlInput, setUrlInput] = useState("");
   const [rawInput, setRawInput] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
@@ -31,7 +35,7 @@ export function ProcessWithAI({ onProcessed }: ProcessWithAIProps) {
       const res = await fetch("/api/admin/fetch-amazon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput.trim() }),
+        body: JSON.stringify({ url: urlInput.trim(), domain }),
       });
 
       const body = await res.json().catch(() => ({}));
@@ -62,7 +66,7 @@ export function ProcessWithAI({ onProcessed }: ProcessWithAIProps) {
       const res = await fetch("/api/admin/process-laptop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawInput }),
+        body: JSON.stringify({ rawInput, domain }),
       });
 
       if (!res.ok) {
@@ -84,6 +88,30 @@ export function ProcessWithAI({ onProcessed }: ProcessWithAIProps) {
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-primary" />
         <p className="text-sm font-medium text-foreground">Process with AI</p>
+      </div>
+
+      {/* Domain — picked before extracting so the AI reasons for the right audience */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Domain</Label>
+        <div className="flex flex-wrap gap-2">
+          {DOMAIN_ORDER.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => onDomainChange(d.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                domain === d.id
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border/60 text-muted-foreground hover:border-border"
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground/70">
+          Pick this first — the AI tailors its reasoning, course tags, and verdict to this audience.
+        </p>
       </div>
 
       {/* URL fetch */}
