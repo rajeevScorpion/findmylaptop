@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const courseSchema = z.object({
   id: z.string().uuid(),
+  domain: z.enum(["design", "technology", "management"]).default("design"),
   category: z.string(),
   name: z.string(),
   workload_level: z.enum(["light", "balanced", "heavy"]),
@@ -10,12 +11,16 @@ export const courseSchema = z.object({
   recommended_ram: z.string().nullable().optional(),
   recommended_storage: z.string().nullable().optional(),
   recommended_display: z.string().nullable().optional(),
+  sort_order: z.number().int().default(0),
+  is_active: z.boolean().default(true),
   created_at: z.string(),
+  updated_at: z.string().nullable().optional(),
 });
 
 export const laptopSchema = z.object({
   id: z.string().uuid(),
   slug: z.string(),
+  domain: z.enum(["design", "technology", "management"]).default("design"),
   name: z.string().min(1, "Name is required"),
   brand: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
@@ -54,6 +59,7 @@ export const laptopSchema = z.object({
 // Schema for creating/editing a laptop (omits server-managed fields)
 export const laptopFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  domain: z.enum(["design", "technology", "management"]).default("design"),
   brand: z.string().optional(),
   model: z.string().optional(),
   price_approx: z.number().int().min(0).optional().or(z.literal("")),

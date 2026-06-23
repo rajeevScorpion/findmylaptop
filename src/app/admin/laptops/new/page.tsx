@@ -1,7 +1,9 @@
 import { LaptopForm } from "@/components/admin/LaptopForm";
 import { ChevronLeft } from "lucide-react";
+import { getAllTaxonomies } from "@/lib/taxonomy";
 
-export default function AdminNewLaptopPage() {
+export default async function AdminNewLaptopPage() {
+  const taxonomies = await getAllTaxonomies();
   return (
     <div className="space-y-5">
       <div>
@@ -17,7 +19,7 @@ export default function AdminNewLaptopPage() {
           Paste Amazon details and use AI to extract specs, or fill in manually.
         </p>
       </div>
-      <LaptopForm />
+      <LaptopForm taxonomies={taxonomies} />
     </div>
   );
 }

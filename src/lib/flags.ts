@@ -39,6 +39,49 @@ function toBool(value: string | undefined, fallback: boolean): boolean {
   return value.trim().toLowerCase() === "true";
 }
 
+// ── Domain feature flags ───────────────────────────────────────────────────
+// Gate the Technology / Management tabs and routes. Stored as 'true'/'false'
+// text rows in `settings` (seeded by migration 020). Design is always on and
+// has no flag. Default OFF so a settings outage never exposes an unfinished
+// domain and never affects the live Design experience.
+
+export type DomainFlagKey = "domain_tech_enabled" | "domain_mgmt_enabled";
+
+export type DomainFlags = Record<DomainFlagKey, boolean>;
+
+export const DOMAIN_FLAG_KEYS: DomainFlagKey[] = [
+  "domain_tech_enabled",
+  "domain_mgmt_enabled",
+];
+
+const DOMAIN_SAFE_DEFAULTS: DomainFlags = {
+  domain_tech_enabled: false,
+  domain_mgmt_enabled: false,
+};
+
+export const getDomainFlags = cache(async (): Promise<DomainFlags> => {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("settings")
+      .select("key, value")
+      .in("key", DOMAIN_FLAG_KEYS);
+
+    if (error || !data) return { ...DOMAIN_SAFE_DEFAULTS };
+
+    const map = Object.fromEntries(
+      data.map((r: { key: string; value: string }) => [r.key, r.value])
+    );
+
+    return {
+      domain_tech_enabled: toBool(map["domain_tech_enabled"], false),
+      domain_mgmt_enabled: toBool(map["domain_mgmt_enabled"], false),
+    };
+  } catch {
+    return { ...DOMAIN_SAFE_DEFAULTS };
+  }
+});
+
 // Cached per-request. Uses the admin (service-role) client so the read is not
 // affected by RLS, mirroring how other server pages read settings.
 export const getBlogFlags = cache(async (): Promise<BlogFlags> => {

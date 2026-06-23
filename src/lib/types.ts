@@ -62,6 +62,7 @@ export interface ChatMessage {
 export interface ChatApiRequest {
   messages: { role: "user" | "assistant"; content: string }[];
   sessionId?: string;
+  domain?: "design" | "technology" | "management";
 }
 
 export interface ChatApiResponse {

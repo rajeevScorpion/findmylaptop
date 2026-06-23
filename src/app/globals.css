@@ -120,6 +120,33 @@
   --sidebar-ring: oklch(0.78 0.15 60 / 50%);
 }
 
+/* ── Per-domain accent theming ──
+   The DomainLanding wrapper sets data-domain="…". Because every component reads
+   --primary / --ring, overriding them here re-themes the tab bar, hero CTA,
+   finder chips, and result highlights for Technology and Management. Design
+   keeps the root (amber) palette. */
+[data-domain="technology"] {
+  --primary: oklch(0.55 0.19 255);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.55 0.19 255 / 40%);
+}
+.dark [data-domain="technology"] {
+  --primary: oklch(0.72 0.16 255);
+  --primary-foreground: oklch(0.12 0 0);
+  --ring: oklch(0.72 0.16 255 / 50%);
+}
+
+[data-domain="management"] {
+  --primary: oklch(0.56 0.14 162);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.56 0.14 162 / 40%);
+}
+.dark [data-domain="management"] {
+  --primary: oklch(0.72 0.13 162);
+  --primary-foreground: oklch(0.12 0 0);
+  --ring: oklch(0.72 0.13 162 / 50%);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

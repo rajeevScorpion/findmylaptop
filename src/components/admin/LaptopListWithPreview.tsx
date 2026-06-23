@@ -12,6 +12,7 @@ import type { RecommendationResult } from "@/lib/types";
 export interface AdminLaptop {
   id: string;
   slug: string;
+  domain?: "design" | "technology" | "management";
   name: string;
   brand?: string | null;
   model?: string | null;
@@ -46,6 +47,7 @@ export interface AdminLaptop {
 function toPreviewResult(laptop: AdminLaptop): RecommendationResult {
   return {
     ...laptop,
+    domain: laptop.domain ?? "design",
     last_checked: null,
     raw_input: null,
     openai_processed_json: null,
