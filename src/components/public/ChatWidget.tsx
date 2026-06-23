@@ -386,9 +386,11 @@ export function ChatWidget({ laptops, voiceEnabled = true }: ChatWidgetProps) {
             className={cn(
               "z-[40] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden",
               isMaximized
-                // Mobile: near-fullscreen. Desktop: centered column, ~1/3 width, padded top/bottom.
+                // Mobile: near-fullscreen, but top starts below the fixed top nav (logo / Blog / theme
+                // toggle, all z-50) so the chat header + close button clear it. Desktop: centered column,
+                // ~1/3 width, padded top/bottom.
                 // mx-auto (not translate) centers it — framer sets an inline transform that would override translate-x.
-                ? "fixed inset-3 md:inset-y-10 md:left-0 md:right-0 md:mx-auto md:w-1/3 md:min-w-[400px] md:max-w-[560px]"
+                ? "fixed inset-x-3 top-16 bottom-3 md:inset-y-10 md:left-0 md:right-0 md:mx-auto md:w-1/3 md:min-w-[400px] md:max-w-[560px]"
                 : "fixed bottom-[178px] right-4 w-80 md:w-96 h-[520px]"
             )}
           >
