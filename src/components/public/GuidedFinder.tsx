@@ -64,7 +64,7 @@ export function GuidedFinder({
     filters.processorType;
 
   return (
-    <section id="finder" className="px-4 py-10 max-w-5xl mx-auto w-full">
+    <section id="finder" className="px-4 pt-4 pb-10 max-w-5xl mx-auto w-full">
       <div className="glass-card rounded-2xl p-6 border space-y-6">
         <div className="flex items-center justify-between">
           <div>

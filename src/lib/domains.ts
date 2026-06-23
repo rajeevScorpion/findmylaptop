@@ -48,6 +48,30 @@ export interface LandscapeDiscipline {
   horizon: LandscapeHorizon;
 }
 
+/**
+ * Lucide icon names usable in the per-domain advisory section. AdvisorySection
+ * maps each name to its imported icon component, keeping this config module free
+ * of component imports.
+ */
+export type AdvisoryIconName =
+  | "Apple"
+  | "Monitor"
+  | "Cpu"
+  | "Terminal"
+  | "MemoryStick"
+  | "Tablet"
+  | "TriangleAlert"
+  | "Cloud"
+  | "Laptop";
+
+export interface AdvisoryCard {
+  icon: AdvisoryIconName;
+  iconClass: string;
+  title: string;
+  /** One or more paragraphs of body copy for the card. */
+  paragraphs: string[];
+}
+
 export interface DomainConfig {
   id: DomainId;
   label: string;
@@ -101,6 +125,18 @@ export interface DomainConfig {
     disciplines: LandscapeDiscipline[];
     /** Body of the "A note on planning" callout (the label is fixed). */
     planningNote: string;
+  };
+  /**
+   * Domain-specific advisory section (rendered by AdvisorySection) — practical
+   * "what about the machine you might already have / the common shortcut?"
+   * guidance, tailored per domain.
+   */
+  advisory: {
+    heading: string;
+    subheading: string;
+    cards: AdvisoryCard[];
+    /** Body of the "Practical advice" footer callout (the label is fixed). */
+    footer: string;
   };
 }
 
@@ -204,6 +240,40 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       planningNote:
         "Students do not always need the most expensive laptop. But they should buy with a 3–4 year academic journey in mind. A well-chosen ₹90,000 laptop with 16GB RAM, an RTX 4060, and an upgradeable slot will serve most students better than a ₹1,20,000 thin laptop with soldered 16GB RAM and an RTX 4050.",
     },
+    advisory: {
+      heading: "Already have a MacBook or iPad?",
+      subheading: "Here's how to think about it for design education.",
+      cards: [
+        {
+          icon: "Apple",
+          iconClass: "text-foreground/60",
+          title: "MacBook Air / Pro (M-series)",
+          paragraphs: [
+            "MacBooks are excellent for writing, note-taking, web browsing, Figma, Sketch, light Adobe work, photography, and video editing in Final Cut. They run cool and quiet, and battery life is outstanding. If you already own one, it will serve you well for communication design, UI/UX, fashion communication, and brand management courses.",
+            "However, for 3D modelling (Blender, Rhino, 3ds Max), game development (Unreal Engine), rendering with CUDA/NVIDIA acceleration, AI workflows with NVIDIA GPUs, and most simulation tools used in animation, game, product, interior, and transportation design — a Windows laptop with an NVIDIA RTX GPU is generally the safer, more capable choice. The design industry largely runs these tools on Windows with NVIDIA hardware.",
+          ],
+        },
+        {
+          icon: "Cpu",
+          iconClass: "text-violet-500 dark:text-violet-400",
+          title: "Windows + NVIDIA RTX — native AI advantage",
+          paragraphs: [
+            "NVIDIA's CUDA platform is the backbone of nearly every serious AI and creative computing tool — Stable Diffusion, ComfyUI, Blender Cycles, DaVinci Resolve, Topaz, and most local LLM runners (Ollama, llama.cpp) all run significantly faster, or exclusively, on CUDA. Apple Silicon has its own ML acceleration, but CUDA compatibility remains the industry standard and the gap widens as models grow larger.",
+            "Regardless of your design discipline — even if you are studying communication or fashion — if you want to run local AI models, explore generative image workflows, automate tasks with AI scripts, or experiment with creative coding and diffusion tools, an NVIDIA RTX GPU gives you direct access to the full ecosystem without workarounds. This is increasingly relevant across every design field, not just the compute-heavy ones.",
+          ],
+        },
+        {
+          icon: "Monitor",
+          iconClass: "text-foreground/60",
+          title: "iPad",
+          paragraphs: [
+            "An iPad with Apple Pencil is a valuable companion for sketching, note-taking, ideation, and mood boarding. It is not a replacement for a laptop for design coursework. Use it alongside your main laptop, not instead of one.",
+          ],
+        },
+      ],
+      footer:
+        "Students who already own a MacBook or iPad may use them initially and decide after understanding their specific course workload. Heavy 3D, animation, game, AI, and computational design workflows will benefit from a Windows machine with an NVIDIA RTX GPU sooner — but even lighter disciplines benefit the moment you want to run AI tools natively.",
+    },
   },
 
   technology: {
@@ -306,6 +376,41 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       planningNote:
         "You don't always need the most expensive machine. Buy for a 3–4 year journey: 16GB RAM, a fast multi-core CPU, and a quick SSD matter more day-to-day than a top GPU. Step up to 32GB RAM if you'll run many containers or VMs, and add a strong NVIDIA GPU only if machine learning, CUDA, or game-engine work is on your path.",
     },
+    advisory: {
+      heading: "Mac, Windows, or Linux for coding?",
+      subheading: "Here's how to think about your operating system and specs.",
+      cards: [
+        {
+          icon: "Terminal",
+          iconClass: "text-emerald-500 dark:text-emerald-400",
+          title: "macOS / Linux — a Unix shell by default",
+          paragraphs: [
+            "A Unix-based shell is the comfortable default for web, backend, DevOps, and cloud work — the terminal, package managers, Docker, and most tutorials assume it. A MacBook (M-series) is an excellent, quiet, long-battery choice here, and Linux runs beautifully on the right hardware.",
+            "If your path is web development, backend and APIs, data work, or cloud, a Mac or Linux machine is friction-free. Apple Silicon is also outstanding for iOS and mobile development.",
+          ],
+        },
+        {
+          icon: "Cpu",
+          iconClass: "text-blue-500 dark:text-blue-400",
+          title: "Windows + WSL2 — and where NVIDIA pulls ahead",
+          paragraphs: [
+            "Windows has closed most of the gap thanks to WSL2, which runs a real Linux environment alongside Windows — perfectly fine for the vast majority of coursework, and often the most flexible single machine.",
+            "The one place Windows with an NVIDIA GPU clearly pulls ahead is machine learning and game-engine development: CUDA acceleration is effectively required for serious local model training, and Unreal or Unity build best on a strong GPU. If ML/AI or game dev is on your path, lean Windows + NVIDIA.",
+          ],
+        },
+        {
+          icon: "MemoryStick",
+          iconClass: "text-foreground/60",
+          title: "What actually matters: RAM, CPU, SSD — GPU only sometimes",
+          paragraphs: [
+            "For most developers, RAM matters more than anything else — VMs, containers, multiple IDEs, and a browser full of tabs all live in memory. Aim for 16GB minimum, 32GB if you'll run many containers or VMs, paired with a fast multi-core CPU and a quick SSD.",
+            "A dedicated GPU is optional unless you're doing ML/CUDA or game development — don't pay for one you won't use. The money is better spent on RAM and a better screen.",
+          ],
+        },
+      ],
+      footer:
+        "Cloud and remote development — GitHub Codespaces, dev containers, and remote SSH — let a lighter, cheaper laptop punch well above its weight by offloading heavy compute. Buy for a 3–4 year journey: prioritise RAM, CPU, and SSD now, and add a strong NVIDIA GPU only when your field genuinely calls for it.",
+    },
   },
 
   management: {
@@ -406,6 +511,40 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       ],
       planningNote:
         "You rarely need a powerful laptop for management work. Prioritise a light chassis, all-day battery, a comfortable keyboard, and a sharp screen for long reading and presentations. 16GB RAM and a modern CPU handle Excel, BI tools, and dozens of tabs with ease — a gaming-grade GPU is seldom worth the added weight and shorter battery life.",
+    },
+    advisory: {
+      heading: "Already have a MacBook or iPad?",
+      subheading: "Here's how to think about it for business school.",
+      cards: [
+        {
+          icon: "Apple",
+          iconClass: "text-foreground/60",
+          title: "MacBook / iPad for most MBA work",
+          paragraphs: [
+            "For the everyday business workload — Office, email, browser, presentations, video calls, and light analytics — a MacBook (M-series) is more than enough, and its portability and all-day battery are genuine assets for a mobile, presentation-heavy programme.",
+            "If you already own one, it will carry you through most of an MBA comfortably. General management, strategy, marketing, and product specialisations rarely need anything Mac can't do.",
+          ],
+        },
+        {
+          icon: "TriangleAlert",
+          iconClass: "text-amber-500 dark:text-amber-400",
+          title: "The Windows-only software trap",
+          paragraphs: [
+            "There's one catch worth knowing before you commit to Mac-only: some business tools run on Windows only. Power BI Desktop is the most common — it has no native macOS version. Certain Excel add-ins (heavy Power Pivot / Solver setups, @RISK, Crystal Ball), SPSS, and some ERP / SAP lab tools also assume Windows.",
+            "This mostly bites Finance and Business Analytics specialisations. If that's your direction, plan for a Windows machine, a virtual machine (Parallels), or your school's lab and cloud computers to cover those tools.",
+          ],
+        },
+        {
+          icon: "Tablet",
+          iconClass: "text-foreground/60",
+          title: "iPad — great companion, not a primary machine",
+          paragraphs: [
+            "An iPad with a keyboard is excellent for reading cases, taking notes, and light review on the move. But it isn't a substitute for a laptop when it comes to serious spreadsheet modelling, BI dashboards, or analytics coursework. Use it alongside your main machine, not instead of one.",
+          ],
+        },
+      ],
+      footer:
+        "Prioritise weight, battery life, and a good screen over raw power — you'll carry this everywhere and present from it constantly. 16GB RAM and a modern CPU handle Excel, BI tools, and dozens of tabs with ease. Reach for Windows (or a cloud/VM workaround) the moment your electives lean into Windows-only analytics or finance tools.",
     },
   },
 };

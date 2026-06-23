@@ -228,15 +228,34 @@
 
 /* ── Grid pattern overlay ── */
 .grid-pattern {
+  position: relative;
+}
+
+/* Grid lines live on a masked layer so they fade out softly toward the
+   edges (especially the bottom) instead of ending in a hard seam. */
+.grid-pattern::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   background-image: linear-gradient(oklch(0 0 0 / 4%) 1px, transparent 1px),
     linear-gradient(90deg, oklch(0 0 0 / 4%) 1px, transparent 1px);
   background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 85% 75% at 50% 35%,
+    #000 35%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 85% 75% at 50% 35%,
+    #000 35%,
+    transparent 100%
+  );
 }
 
-.dark .grid-pattern {
+.dark .grid-pattern::before {
   background-image: linear-gradient(oklch(1 0 0 / 3%) 1px, transparent 1px),
     linear-gradient(90deg, oklch(1 0 0 / 3%) 1px, transparent 1px);
-  background-size: 40px 40px;
 }
 
 /* ── Badge color variants ── */

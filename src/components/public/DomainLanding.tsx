@@ -8,7 +8,7 @@ import { ResultsSection } from "@/components/public/ResultsSection";
 import { DomainTabs } from "@/components/public/DomainTabs";
 import { HardwareExplainer } from "@/components/public/HardwareExplainer";
 import { AISection } from "@/components/public/AISection";
-import { MacGuidance } from "@/components/public/MacGuidance";
+import { AdvisorySection } from "@/components/public/AdvisorySection";
 import { TrustSection } from "@/components/public/TrustSection";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
 import { VisitCounter } from "@/components/public/VisitCounter";
@@ -74,7 +74,7 @@ export async function DomainLanding({ domain }: { domain: DomainConfig }) {
       />
       <HardwareExplainer />
       <AISection landscape={domain.landscape} />
-      <MacGuidance />
+      <AdvisorySection advisory={domain.advisory} />
       <TrustSection />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
       <VisitCounter />
