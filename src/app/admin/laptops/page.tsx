@@ -14,6 +14,7 @@ export default async function AdminLaptopsPage() {
   const laptops: AdminLaptop[] = (data ?? []).map((row) => ({
     id: row.id,
     slug: row.slug ?? "",
+    domain: row.domain ?? "design",
     name: row.name,
     brand: row.brand,
     model: row.model,

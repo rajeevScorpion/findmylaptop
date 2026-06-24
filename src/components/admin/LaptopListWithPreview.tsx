@@ -7,7 +7,20 @@ import { FeatureToggle } from "@/components/admin/FeatureToggle";
 import { InlinePriceEdit } from "@/components/admin/InlinePriceEdit";
 import { DeleteLaptopButton } from "@/components/admin/DeleteLaptopButton";
 import { LaptopCard } from "@/components/public/LaptopCard";
+import { DOMAINS, type DomainId } from "@/lib/domains";
 import type { RecommendationResult } from "@/lib/types";
+
+// Per-domain chip styling using each domain's accent (the same oklch hues that
+// theme its route via --primary in globals.css): design = orange, technology =
+// blue, management = green. Light/dark text variants mirror the CSS overrides.
+const DOMAIN_CHIP: Record<DomainId, string> = {
+  design:
+    "bg-[oklch(0.65_0.17_55_/_0.12)] text-[oklch(0.65_0.17_55)] dark:text-[oklch(0.78_0.15_60)]",
+  technology:
+    "bg-[oklch(0.55_0.19_255_/_0.12)] text-[oklch(0.55_0.19_255)] dark:text-[oklch(0.72_0.16_255)]",
+  management:
+    "bg-[oklch(0.56_0.14_162_/_0.12)] text-[oklch(0.56_0.14_162)] dark:text-[oklch(0.72_0.13_162)]",
+};
 
 // Minimal shape we need from the DB for the list + preview
 export interface AdminLaptop {
@@ -63,7 +76,7 @@ interface LaptopListWithPreviewProps {
   laptops: AdminLaptop[];
 }
 
-type SortColumn = "name" | "price" | "updated" | "published";
+type SortColumn = "name" | "domain" | "price" | "updated" | "published";
 type SortDir = "asc" | "desc";
 
 function SortIcon({ column, sort }: { column: SortColumn; sort: { col: SortColumn; dir: SortDir } | null }) {
@@ -90,6 +103,7 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
     return [...laptops].sort((a, b) => {
       let cmp = 0;
       if (sort.col === "name") cmp = a.name.localeCompare(b.name);
+      else if (sort.col === "domain") cmp = (a.domain ?? "design").localeCompare(b.domain ?? "design");
       else if (sort.col === "price") cmp = (a.price_approx ?? 0) - (b.price_approx ?? 0);
       else if (sort.col === "updated") cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
       else if (sort.col === "published") cmp = Number(a.is_published) - Number(b.is_published);
@@ -126,10 +140,10 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/30 text-xs text-muted-foreground">
-                {(["name", "price", "updated", "published"] as SortColumn[]).map((col) => {
-                  const labels: Record<SortColumn, string> = { name: "Name", price: "Price", updated: "Updated", published: "Published" };
-                  const hidden: Record<SortColumn, string> = { name: "", price: "hidden sm:table-cell", updated: "hidden md:table-cell", published: "" };
-                  const align: Record<SortColumn, string> = { name: "text-left", price: "text-left", updated: "text-left", published: "text-center" };
+                {(["name", "domain", "price", "updated", "published"] as SortColumn[]).map((col) => {
+                  const labels: Record<SortColumn, string> = { name: "Name", domain: "Domain", price: "Price", updated: "Updated", published: "Published" };
+                  const hidden: Record<SortColumn, string> = { name: "", domain: "", price: "hidden sm:table-cell", updated: "hidden md:table-cell", published: "" };
+                  const align: Record<SortColumn, string> = { name: "text-left", domain: "text-left", price: "text-left", updated: "text-left", published: "text-center" };
                   return (
                     <th key={col} className={`px-4 py-3 font-medium ${hidden[col]}`}>
                       <span className={`inline-flex items-center gap-1 ${align[col] === "text-center" ? "mx-auto" : ""}`}>
@@ -176,6 +190,18 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
                           <p className="text-xs text-muted-foreground">{laptop.brand}</p>
                         )}
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const d = (laptop.domain ?? "design") as DomainId;
+                        return (
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${DOMAIN_CHIP[d]}`}
+                          >
+                            {DOMAINS[d].label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td
                       className="px-4 py-3 hidden sm:table-cell"
