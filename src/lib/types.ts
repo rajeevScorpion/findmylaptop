@@ -5,23 +5,14 @@ import type {
   filterStateSchema,
   processedLaptopInputSchema,
 } from "./schemas";
+import type { ALL_WORKLOAD_TAGS } from "./domains";
 
 export type LaptopTier = "budget" | "value" | "balanced" | "advanced" | "premium";
 export type WorkloadLevel = "light" | "balanced" | "heavy";
 export type FourYearSuitability = "basic" | "good" | "strong" | "excellent";
-export type WorkloadTag =
-  | "2d"
-  | "uiux"
-  | "video"
-  | "fashion"
-  | "interior"
-  | "product"
-  | "animation"
-  | "game"
-  | "3d"
-  | "ai"
-  | "coding"
-  | "rendering";
+// Workload tags are defined per-domain in domains.ts; this is the union of every
+// known tag value across all domains (the single source of truth).
+export type WorkloadTag = (typeof ALL_WORKLOAD_TAGS)[number]["value"];
 
 export type Laptop = z.infer<typeof laptopSchema>;
 export type Course = z.infer<typeof courseSchema>;
@@ -62,6 +53,7 @@ export interface ChatMessage {
 export interface ChatApiRequest {
   messages: { role: "user" | "assistant"; content: string }[];
   sessionId?: string;
+  domain?: "design" | "technology" | "management";
 }
 
 export interface ChatApiResponse {

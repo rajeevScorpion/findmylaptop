@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getBlogFlags } from "@/lib/flags";
+import { getBlogFlags, getDomainFlags } from "@/lib/flags";
 import { getPublishedPostSlugs } from "@/lib/blog/queries";
+import { DOMAIN_ORDER } from "@/lib/domains";
 
 export const revalidate = 3600;
 
@@ -11,6 +12,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
   ];
+
+  // Per-domain landing pages — Design always, the others only when enabled.
+  const domainFlags = await getDomainFlags();
+  for (const d of DOMAIN_ORDER) {
+    if (d.flagKey && !domainFlags[d.flagKey]) continue;
+    entries.push({ url: `${SITE_URL}${d.route}`, changeFrequency: "weekly", priority: 0.9 });
+  }
 
   // Published laptop detail pages.
   try {

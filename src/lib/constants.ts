@@ -71,20 +71,8 @@ export const FOUR_YEAR_LABELS: Record<string, string> = {
   excellent: "Excellent",
 };
 
-export const WORKLOAD_TAGS = [
-  { value: "2d", label: "2D Design" },
-  { value: "uiux", label: "UI/UX" },
-  { value: "video", label: "Video Editing" },
-  { value: "fashion", label: "Fashion" },
-  { value: "interior", label: "Interior Design" },
-  { value: "product", label: "Product Design" },
-  { value: "animation", label: "Animation" },
-  { value: "game", label: "Game Dev" },
-  { value: "3d", label: "3D Modeling" },
-  { value: "ai", label: "AI Workflows" },
-  { value: "coding", label: "Coding" },
-  { value: "rendering", label: "Rendering" },
-] as const;
+// Workload tags are now defined per-domain in domains.ts (DomainConfig.workloadTags)
+// and aggregated as ALL_WORKLOAD_TAGS.
 
 export const GPU_STRENGTH_ORDER: Record<string, number> = {
   "rtx 4090": 100,

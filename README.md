@@ -77,9 +77,21 @@ supabase/migrations/002_create_laptops.sql
 supabase/migrations/003_create_settings.sql
 supabase/migrations/004_seed_courses.sql
 supabase/migrations/005_rls_policies.sql
+... (006–016 — chat, feedback, blog, voice flag, etc.)
+supabase/migrations/017_add_laptop_domain.sql       # multi-domain: laptop.domain
+supabase/migrations/018_courses_taxonomy.sql        # courses → admin-managed taxonomy
+supabase/migrations/019_seed_domain_taxonomies.sql  # seed tech/management programmes
+supabase/migrations/020_seed_domain_flags.sql       # domain_tech/mgmt_enabled flags
 ```
 
 Copy the contents of each file and paste into the SQL editor, then click **Run**.
+Each migration `0NN_*.sql` has a matching `0NN_*_rollback.sql` to undo it (run
+in reverse order if needed).
+
+> **Multi-domain (Design / Technology / Management):** migrations 017–020 add the
+> domain dimension. Technology and Management ship **disabled** — turn each on in
+> **Admin → Settings → Domains** once its laptops and programmes are ready.
+> Manage each domain's programmes in **Admin → Taxonomy**.
 
 ---
 

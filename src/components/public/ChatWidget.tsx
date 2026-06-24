@@ -8,35 +8,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { LaptopMiniCard } from "./LaptopMiniCard";
 import { cn } from "@/lib/utils";
 import type { Laptop, ChatMessage, ChatApiResponse } from "@/lib/types";
+import { DOMAINS, type DomainId } from "@/lib/domains";
 
 const STORAGE_MESSAGES = "chip_messages";
 const STORAGE_SESSION_ID = "chip_session_id";
 const STORAGE_RATED = "chip_rated";
 
-const INITIAL_MESSAGE: ChatMessage = {
-  id: "greeting",
-  role: "assistant",
-  content:
-    "Hi! I'm Chip 👋 I help designers find the right laptop — whether you're just starting out, in school, or working professionally.\n\nAre you a design aspirant, student, or working professional?",
-  recommendedSlugs: [],
-  suggestions: [
-    "Design Aspirant / Fresher",
-    "Design Student",
-    "Working Design Professional",
-    "Just Exploring",
-  ],
-  timestamp: 0,
-};
+function makeInitialMessage(domain: DomainId): ChatMessage {
+  const chip = DOMAINS[domain].chip;
+  return {
+    id: "greeting",
+    role: "assistant",
+    content: chip.greeting,
+    recommendedSlugs: [],
+    suggestions: chip.roleSuggestions,
+    timestamp: 0,
+  };
+}
 
 interface ChatWidgetProps {
   laptops: Laptop[];
   voiceEnabled?: boolean;
+  domain?: DomainId;
 }
 
-export function ChatWidget({ laptops, voiceEnabled = true }: ChatWidgetProps) {
+export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: ChatWidgetProps) {
+  const initialMessage = useMemo(() => makeInitialMessage(domain), [domain]);
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -155,7 +155,7 @@ export function ChatWidget({ laptops, voiceEnabled = true }: ChatWidgetProps) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: historyToSend, sessionId: sessionId ?? undefined }),
+        body: JSON.stringify({ messages: historyToSend, sessionId: sessionId ?? undefined, domain }),
       });
 
       if (!res.ok) throw new Error(`API error ${res.status}`);

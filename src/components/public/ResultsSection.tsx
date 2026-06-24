@@ -15,11 +15,17 @@ import { LaptopCard } from "./LaptopCard";
 import { GuidedFinder } from "./GuidedFinder";
 import { ComparePanel } from "./ComparePanel";
 import type { Laptop as LaptopType, FilterState, RecommendationResult, SortOption } from "@/lib/types";
+import type { DomainTaxonomy } from "@/lib/taxonomy";
+import type { WorkloadTagOption } from "@/lib/domains";
 import { getRecommendations } from "@/lib/recommendationEngine";
 import { SORT_OPTIONS } from "@/lib/constants";
 
 interface ResultsSectionProps {
   laptops: LaptopType[];
+  taxonomy: DomainTaxonomy;
+  workloadTags: readonly WorkloadTagOption[];
+  finderSubtitle?: string;
+  finderNote?: string;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -27,7 +33,7 @@ const DEFAULT_FILTERS: FilterState = {
   searchQuery: "",
 };
 
-export function ResultsSection({ laptops }: ResultsSectionProps) {
+export function ResultsSection({ laptops, taxonomy, workloadTags, finderSubtitle, finderNote }: ResultsSectionProps) {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>("recommended");
   const [compareList, setCompareList] = useState<RecommendationResult[]>([]);
@@ -53,8 +59,8 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
   const PAGE_SIZE = 9;
 
   const results = useMemo(
-    () => getRecommendations(laptops, filters, sort),
-    [laptops, filters, sort]
+    () => getRecommendations(laptops, filters, sort, taxonomy.coursesByCategory),
+    [laptops, filters, sort, taxonomy.coursesByCategory]
   );
 
   const totalPages = Math.ceil(results.length / PAGE_SIZE);
@@ -82,7 +88,14 @@ export function ResultsSection({ laptops }: ResultsSectionProps) {
 
   return (
     <>
-      <GuidedFinder onFilterChange={handleFilterChange} />
+      <GuidedFinder
+        onFilterChange={handleFilterChange}
+        categories={taxonomy.categories}
+        coursesByCategory={taxonomy.coursesByCategory}
+        workloadTags={workloadTags}
+        finderSubtitle={finderSubtitle}
+        finderNote={finderNote}
+      />
 
       <section id="results" ref={resultsRef} className="px-4 pb-12 max-w-5xl mx-auto w-full">
         {/* Results header */}

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LaptopForm } from "@/components/admin/LaptopForm";
 import { ChevronLeft } from "lucide-react";
+import { getAllTaxonomies } from "@/lib/taxonomy";
 import type { Laptop } from "@/lib/types";
 
 export default async function AdminEditLaptopPage({
@@ -22,6 +23,8 @@ export default async function AdminEditLaptopPage({
     notFound();
   }
 
+  const taxonomies = await getAllTaxonomies();
+
   return (
     <div className="space-y-5">
       <div>
@@ -38,7 +41,7 @@ export default async function AdminEditLaptopPage({
           <span className="text-foreground font-medium">{laptop.name}</span>.
         </p>
       </div>
-      <LaptopForm laptop={laptop as Laptop} />
+      <LaptopForm laptop={laptop as Laptop} taxonomies={taxonomies} />
     </div>
   );
 }

@@ -14,12 +14,15 @@ import { ProcessWithAI } from "./ProcessWithAI";
 import { createClient } from "@/lib/supabase/client";
 import { laptopFormSchema } from "@/lib/schemas";
 import { generateSlug } from "@/lib/recommendationEngine";
-import { COURSES_BY_CATEGORY, WORKLOAD_TAGS, TIER_LABELS } from "@/lib/constants";
+import { TIER_LABELS } from "@/lib/constants";
+import { DOMAINS, type DomainId } from "@/lib/domains";
+import type { DomainTaxonomy } from "@/lib/taxonomy";
 import type { Laptop, ProcessedLaptopInput } from "@/lib/types";
 
 // Use input type so zodResolver's inferred type matches (arrays with .default([]) can be undefined on input)
 type FormData = {
   name: string;
+  domain: DomainId;
   amazon_affiliate_url: string;
   brand?: string;
   model?: string;
@@ -51,14 +54,14 @@ type FormData = {
 
 interface LaptopFormProps {
   laptop?: Laptop;
+  /** DB-backed taxonomy per domain, used to tag recommended courses. */
+  taxonomies: Record<DomainId, DomainTaxonomy>;
 }
 
-export function LaptopForm({ laptop }: LaptopFormProps) {
+export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  const allCourses = Object.values(COURSES_BY_CATEGORY).flat();
 
   const {
     register,
@@ -72,6 +75,7 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
     defaultValues: laptop
       ? {
           name: laptop.name,
+          domain: (laptop.domain ?? "design") as DomainId,
           brand: laptop.brand ?? "",
           model: laptop.model ?? "",
           price_approx: laptop.price_approx ?? undefined,
@@ -101,6 +105,7 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
           raw_input: laptop.raw_input ?? "",
         }
       : {
+          domain: "design",
           workload_tags: [],
           recommended_for_courses: [],
           not_ideal_for: [],
@@ -112,6 +117,9 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
   const watchedTags = watch("workload_tags") ?? [];
   const watchedCourses = watch("recommended_for_courses") ?? [];
   const watchedPublished = watch("is_published");
+  const watchedDomain = (watch("domain") ?? "design") as DomainId;
+  const domainCourses = taxonomies[watchedDomain]?.coursesByCategory ?? {};
+  const domainWorkloadTags = DOMAINS[watchedDomain].workloadTags;
 
   const handleAIProcessed = (data: ProcessedLaptopInput) => {
     if (data.name) setValue("name", data.name);
@@ -155,6 +163,7 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
       ...(newId ? { id: newId } : {}),
       slug,
       name: data.name,
+      domain: data.domain,
       brand: data.brand || null,
       model: data.model || null,
       price_approx: data.price_approx ? Number(data.price_approx) : null,
@@ -221,8 +230,12 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
-      {/* AI Processing */}
-      <ProcessWithAI onProcessed={handleAIProcessed} />
+      {/* AI Processing — includes the Domain selector (pick before extracting) */}
+      <ProcessWithAI
+        onProcessed={handleAIProcessed}
+        domain={watchedDomain}
+        onDomainChange={(d) => setValue("domain", d)}
+      />
 
       {/* Basic info */}
       <Section title="Basic Information">
@@ -318,7 +331,7 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
       {/* Workload tags */}
       <Section title="Workload Tags">
         <div className="flex flex-wrap gap-2">
-          {WORKLOAD_TAGS.map((tag) => (
+          {domainWorkloadTags.map((tag) => (
             <button
               key={tag.value}
               type="button"
@@ -337,8 +350,14 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
 
       {/* Recommended courses */}
       <Section title="Recommended For Courses">
+        {Object.keys(domainCourses).length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No programmes defined for this domain yet. Add them under{" "}
+            <a href="/admin/taxonomy" className="text-primary hover:underline">Taxonomy</a>.
+          </p>
+        ) : (
         <div className="space-y-3">
-          {Object.entries(COURSES_BY_CATEGORY).map(([cat, courses]) => (
+          {Object.entries(domainCourses).map(([cat, courses]) => (
             <div key={cat}>
               <p className="text-xs text-muted-foreground mb-1.5">{cat}</p>
               <div className="flex flex-wrap gap-2">
@@ -360,6 +379,7 @@ export function LaptopForm({ laptop }: LaptopFormProps) {
             </div>
           ))}
         </div>
+        )}
       </Section>
 
       {/* Recommendation text */}

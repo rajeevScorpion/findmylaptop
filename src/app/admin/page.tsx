@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Laptop, CheckCircle2, FileText, Plus } from "lucide-react";
-import { COURSES_BY_CATEGORY, TIER_LABELS } from "@/lib/constants";
+import { TIER_LABELS } from "@/lib/constants";
+import { getAllTaxonomies } from "@/lib/taxonomy";
+import { DOMAIN_ORDER } from "@/lib/domains";
 
 const TIER_PILL_COLORS: Record<string, string> = {
   budget:   "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
@@ -17,8 +19,10 @@ export default async function AdminDashboardPage() {
 
   const { data: laptops } = await supabase
     .from("laptops")
-    .select("id, is_published, updated_at, name, recommended_for_courses, tier")
+    .select("id, is_published, updated_at, name, recommended_for_courses, tier, domain")
     .order("updated_at", { ascending: false });
+
+  const taxonomies = await getAllTaxonomies();
 
   const total = laptops?.length ?? 0;
   const published = laptops?.filter((l) => l.is_published).length ?? 0;
@@ -32,24 +36,31 @@ export default async function AdminDashboardPage() {
       })
     : "—";
 
-  // Build course coverage from published laptops only
-  const coverage: Record<string, { count: number; tiers: Set<string> }> = {};
-  for (const courses of Object.values(COURSES_BY_CATEGORY)) {
-    for (const course of courses) {
-      coverage[course] = { count: 0, tiers: new Set() };
+  // Build course coverage per domain from published laptops only. Course names
+  // can repeat across domains, so coverage is scoped per domain.
+  type Cov = { count: number; tiers: Set<string> };
+  const publishedLaptops = laptops?.filter((l) => l.is_published) ?? [];
+  const coverageByDomain: Record<string, Record<string, Cov>> = {};
+  for (const d of DOMAIN_ORDER) {
+    const cov: Record<string, Cov> = {};
+    for (const courses of Object.values(taxonomies[d.id].coursesByCategory)) {
+      for (const course of courses) cov[course] = { count: 0, tiers: new Set() };
     }
-  }
-  for (const laptop of laptops?.filter((l) => l.is_published) ?? []) {
-    for (const course of laptop.recommended_for_courses ?? []) {
-      if (coverage[course]) {
-        coverage[course].count++;
-        if (laptop.tier) coverage[course].tiers.add(laptop.tier);
+    for (const laptop of publishedLaptops.filter((l) => (l.domain ?? "design") === d.id)) {
+      for (const course of laptop.recommended_for_courses ?? []) {
+        if (cov[course]) {
+          cov[course].count++;
+          if (laptop.tier) cov[course].tiers.add(laptop.tier);
+        }
       }
     }
+    coverageByDomain[d.id] = cov;
   }
 
-  const totalCourses = Object.keys(coverage).length;
-  const coveredCourses = Object.values(coverage).filter((c) => c.count > 0).length;
+  // Domains that actually have programmes defined (skip empty tech/mgmt).
+  const domainsWithCourses = DOMAIN_ORDER.filter(
+    (d) => taxonomies[d.id].categories.length > 0
+  );
 
   const STATS = [
     { label: "Total Laptops", value: total, icon: <Laptop className="w-5 h-5 text-primary" /> },
@@ -86,64 +97,74 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-      {/* Course coverage */}
-      <div className="glass-card rounded-xl border overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-border/30 flex items-center justify-between">
-          <p className="text-sm font-medium text-foreground">Course Coverage</p>
-          <p className="text-xs text-muted-foreground">
-            {coveredCourses}/{totalCourses} courses covered
-          </p>
-        </div>
+      {/* Course coverage — one card per domain that has programmes */}
+      <div className="space-y-6">
+      {domainsWithCourses.map((d) => {
+        const cov = coverageByDomain[d.id];
+        const coursesByCategory = taxonomies[d.id].coursesByCategory;
+        const totalCourses = Object.keys(cov).length;
+        const coveredCourses = Object.values(cov).filter((c) => c.count > 0).length;
+        return (
+        <div key={d.id} className="glass-card rounded-xl border overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-border/30 flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">{d.label} — Course Coverage</p>
+            <p className="text-xs text-muted-foreground">
+              {coveredCourses}/{totalCourses} covered
+            </p>
+          </div>
 
-        <div className="divide-y divide-border/20">
-          {Object.entries(COURSES_BY_CATEGORY).map(([category, courses]) => (
-            <div key={category}>
-              <p className="px-5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-                {category}
-              </p>
-              {courses.map((course) => {
-                const { count, tiers } = coverage[course] ?? { count: 0, tiers: new Set() };
-                const countColor =
-                  count >= 3
-                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                    : count >= 1
-                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                    : "bg-red-500/15 text-red-600 dark:text-red-400";
+          <div className="divide-y divide-border/20">
+            {Object.entries(coursesByCategory).map(([category, courses]) => (
+              <div key={category}>
+                <p className="px-5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  {category}
+                </p>
+                {courses.map((course) => {
+                  const { count, tiers } = cov[course] ?? { count: 0, tiers: new Set<string>() };
+                  const countColor =
+                    count >= 3
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      : count >= 1
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                      : "bg-red-500/15 text-red-600 dark:text-red-400";
 
-                return (
-                  <div
-                    key={course}
-                    className="flex items-center justify-between px-5 py-2.5 hover:bg-muted/10 transition-colors"
-                  >
-                    <a
-                      href="/admin/laptops"
-                      className="text-sm text-foreground hover:text-primary transition-colors"
+                  return (
+                    <div
+                      key={course}
+                      className="flex items-center justify-between px-5 py-2.5 hover:bg-muted/10 transition-colors"
                     >
-                      {course}
-                    </a>
-                    <div className="flex items-center gap-2 shrink-0 ml-4">
-                      {/* Tier pills */}
-                      <div className="hidden sm:flex items-center gap-1">
-                        {TIER_ORDER.filter((t) => tiers.has(t)).map((tier) => (
-                          <span
-                            key={tier}
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TIER_PILL_COLORS[tier]}`}
-                          >
-                            {TIER_LABELS[tier]}
-                          </span>
-                        ))}
+                      <a
+                        href="/admin/laptops"
+                        className="text-sm text-foreground hover:text-primary transition-colors"
+                      >
+                        {course}
+                      </a>
+                      <div className="flex items-center gap-2 shrink-0 ml-4">
+                        {/* Tier pills */}
+                        <div className="hidden sm:flex items-center gap-1">
+                          {TIER_ORDER.filter((t) => tiers.has(t)).map((tier) => (
+                            <span
+                              key={tier}
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TIER_PILL_COLORS[tier]}`}
+                            >
+                              {TIER_LABELS[tier]}
+                            </span>
+                          ))}
+                        </div>
+                        {/* Count badge */}
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full min-w-[2rem] text-center ${countColor}`}>
+                          {count}
+                        </span>
                       </div>
-                      {/* Count badge */}
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full min-w-[2rem] text-center ${countColor}`}>
-                        {count}
-                      </span>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
+        );
+      })}
       </div>
 
       {/* Recent laptops */}

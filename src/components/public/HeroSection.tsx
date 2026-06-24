@@ -13,7 +13,19 @@ const fadeUp = {
   }),
 };
 
-export function HeroSection() {
+interface HeroSectionProps {
+  badge?: string;
+  titleLead?: string;
+  titleAccent?: string;
+  subtitle?: string;
+}
+
+export function HeroSection({
+  badge = "Trusted by design students & professionals",
+  titleLead = "Find the right laptop for",
+  titleAccent = "your design journey",
+  subtitle = "Whether you're heading into design school or deep into professional practice — answer a few quick questions and get matched to hardware built for the work you actually do.",
+}: HeroSectionProps = {}) {
   const scrollToFinder = () => {
     document.getElementById("finder")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -37,7 +49,7 @@ export function HeroSection() {
             animate="visible"
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card text-xs text-muted-foreground border mb-2"
           >
-            Trusted by design students &amp; professionals
+            {badge}
           </m.div>
 
           <m.h1
@@ -47,8 +59,8 @@ export function HeroSection() {
             animate="visible"
             className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight"
           >
-            Find the right laptop for{" "}
-            <span className="gradient-text">your design journey</span>
+            {titleLead}{" "}
+            <span className="gradient-text">{titleAccent}</span>
           </m.h1>
 
           <m.p
@@ -58,9 +70,7 @@ export function HeroSection() {
             animate="visible"
             className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed"
           >
-            Whether you&apos;re heading into design school or deep into
-            professional practice — answer a few quick questions and get matched
-            to hardware built for the work you actually do.
+            {subtitle}
           </m.p>
 
           <m.div

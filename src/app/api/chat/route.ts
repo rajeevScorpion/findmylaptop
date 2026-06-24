@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ChatApiRequest, ChatApiResponse, ChipJsonOutput } from "@/lib/types";
+import { DOMAINS, isDomainId, type DomainId } from "@/lib/domains";
 
 const SESSION_LIMIT = 30;
 
-function buildSystemPrompt(catalogJson: string): string {
-  return `You are Chip — a sharp, empathetic laptop advisor and design mentor for designers in India. You work for the "Find My Laptop" tool. You have personally studied every laptop in the catalog below and know exactly which workflows each one handles well or struggles with.
+function buildSystemPrompt(catalogJson: string, domain: DomainId): string {
+  const chip = DOMAINS[domain].chip;
+  return `You are Chip — ${chip.persona}. You work for the "Find My Laptop" tool. You have personally studied every laptop in the catalog below and know exactly which workflows each one handles well or struggles with. Right now you are helping someone in the ${DOMAINS[domain].label} space — the catalog below contains only laptops curated for that audience, so recommend from it.
 
 ## Persona
 - An experienced senior designer who has mentored many beginners. Patient, encouraging, never condescending.
@@ -18,8 +20,8 @@ function buildSystemPrompt(catalogJson: string): string {
 
 ## Conversation flow — ONE question per turn, never repeat
 Understand the WORK first, money last. Ask about only ONE thing at a time, roughly in this order:
-1. Role — design aspirant/fresher, student, or working professional
-2. Design discipline (e.g. graphic, UI/UX, product, fashion, motion/VFX, game/3D, architecture)
+1. Role — aspirant/fresher, student, or working professional
+2. ${chip.disciplineLabel} (e.g. ${chip.disciplineExamples})
 3. Primary software they'll use (infer/offer it — see Handholding)
 4. Budget — but ask this LAST, and gently (see Budget tone)
 Main priority (GPU power, portability, battery, display) is OPTIONAL — never a gate. Offer it as a refinement AFTER you've shown options, not before.
@@ -43,14 +45,8 @@ Many users are freshers/students with NO idea what software they'll use. If the 
 - ALWAYS include an "I'm not sure — help me decide" chip.
 - If they pick "I'm not sure" (or similar), YOU choose sensible default software for their discipline + budget, briefly say what you picked and why, and continue. Do not loop back asking again.
 
-### Discipline → likely software cheat-sheet (use to generate chips/defaults)
-- Graphic / visual design → Photoshop, Illustrator, InDesign, Figma
-- UI/UX → Figma, Adobe XD
-- Product / industrial design → Fusion 360, SolidWorks, Rhino, Blender, KeyShot
-- Fashion design → CLO 3D, Browzwear, Illustrator
-- Motion / VFX → After Effects, Premiere, Blender, Cinema 4D, DaVinci Resolve
-- Game / 3D art → Blender, Maya, Unreal Engine, Unity, Substance Painter
-- Architecture / interior → AutoCAD, SketchUp, Revit, 3ds Max, Lumion
+### ${chip.disciplineLabel} → likely software cheat-sheet (use to generate chips/defaults)
+${chip.cheatSheet}
 
 ## Gauge curiosity (light touch — NOT a required step)
 When it feels natural, sense how comfortable the user is with computers and whether they're curious about emerging tech — AR/VR/MR, AI-assisted workflows, or heavy real-time 3D. Offer this as an optional chip; never force it as an extra gate (extra steps make people quit). If they show interest, lean toward laptops with more GPU/VRAM headroom and briefly mention future-proofing for those workflows.
@@ -134,6 +130,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const { messages, sessionId: incomingSessionId } = body;
+  const domain: DomainId = isDomainId(body.domain) ? body.domain : "design";
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "messages array is required" }, { status: 400 });
@@ -150,7 +147,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     sessionId = crypto.randomUUID();
     const { error } = await supabase
       .from("chat_sessions")
-      .insert({ session_id: sessionId, message_count: 0 });
+      .insert({ session_id: sessionId, message_count: 0, domain });
 
     if (error) {
       console.error("Failed to create chat session:", error);
@@ -169,7 +166,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       sessionId = crypto.randomUUID();
       const { error: insertError } = await supabase
         .from("chat_sessions")
-        .insert({ session_id: sessionId, message_count: 0 });
+        .insert({ session_id: sessionId, message_count: 0, domain });
 
       if (insertError) {
         console.error("Failed to create replacement chat session:", insertError);
@@ -202,6 +199,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       "slug, name, brand, price_label, price_approx, tier, workload_tags, recommended_for_courses, why_recommended, cautions, four_year_suitability, ram_gb, gpu_vram_gb, weight, cpu, gpu"
     )
     .eq("is_published", true)
+    .eq("domain", domain)
     .order("priority_score", { ascending: false });
 
   const laptops = laptopsRaw ?? [];
@@ -249,7 +247,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       temperature: 0.4,
       max_tokens: 900,
       messages: [
-        { role: "system", content: buildSystemPrompt(catalogJson) },
+        { role: "system", content: buildSystemPrompt(catalogJson, domain) },
         ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
       ],
     });

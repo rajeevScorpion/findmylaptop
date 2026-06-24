@@ -1,5 +1,5 @@
 import type { Laptop, FilterState, RecommendationResult, BadgeType, SortOption } from "./types";
-import { getGpuStrengthScore, COURSES_BY_CATEGORY } from "./constants";
+import { getGpuStrengthScore } from "./constants";
 
 const FOUR_YEAR_SCORES: Record<string, number> = {
   excellent: 4,
@@ -169,7 +169,8 @@ function sortResults(
 export function getRecommendations(
   laptops: Laptop[],
   filters: FilterState,
-  sort: SortOption = "recommended"
+  sort: SortOption = "recommended",
+  coursesByCategory: Record<string, string[]> = {}
 ): RecommendationResult[] {
   const filtered = laptops.filter((laptop) => {
     // Text search
@@ -183,7 +184,7 @@ export function getRecommendations(
       if (!matches) return false;
     } else if (filters.courseCategory) {
       // Only category selected — match any course in that category
-      const categoryCourses = (COURSES_BY_CATEGORY[filters.courseCategory] ?? []).map(
+      const categoryCourses = (coursesByCategory[filters.courseCategory] ?? []).map(
         (c) => c.toLowerCase()
       );
       const matches = laptop.recommended_for_courses.some((c) =>

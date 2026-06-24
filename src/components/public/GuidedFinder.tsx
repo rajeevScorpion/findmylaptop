@@ -5,10 +5,21 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FilterState } from "@/lib/types";
-import { COURSES_BY_CATEGORY, BUDGET_RANGES, WORKLOAD_TAGS, BRANDS, PROCESSOR_TYPES } from "@/lib/constants";
+import type { WorkloadTagOption } from "@/lib/domains";
+import { BUDGET_RANGES, BRANDS, PROCESSOR_TYPES } from "@/lib/constants";
 
 interface GuidedFinderProps {
   onFilterChange: (filters: FilterState) => void;
+  /** Ordered programme categories for the active domain. */
+  categories: string[];
+  /** category -> ordered specialisation names for the active domain. */
+  coursesByCategory: Record<string, string[]>;
+  /** Workload chips for the active domain. */
+  workloadTags: readonly WorkloadTagOption[];
+  /** Sub-line under the "Find your laptop" heading. */
+  finderSubtitle?: string;
+  /** Smaller reassurance note. */
+  finderNote?: string;
 }
 
 const DEFAULT_FILTERS: FilterState = {
@@ -24,7 +35,14 @@ const DEFAULT_FILTERS: FilterState = {
   processorType: undefined,
 };
 
-export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
+export function GuidedFinder({
+  onFilterChange,
+  categories,
+  coursesByCategory,
+  workloadTags,
+  finderSubtitle = "Filter by course, budget, and workload",
+  finderNote = "Every laptop listed here is hand-picked based on real course requirements and years of experience guiding design students.",
+}: GuidedFinderProps) {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -50,13 +68,13 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
     filters.processorType;
 
   return (
-    <section id="finder" className="px-4 py-10 max-w-5xl mx-auto w-full">
+    <section id="finder" className="px-4 pt-4 pb-10 max-w-5xl mx-auto w-full">
       <div className="glass-card rounded-2xl p-6 border space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-foreground">Find your laptop</h2>
-            <p className="text-sm text-muted-foreground">Filter by course, budget, and workload</p>
-            <p className="text-xs text-muted-foreground/70 leading-relaxed mt-0.5">Every laptop listed here is hand-picked based on real course requirements and years of experience guiding design students.</p>
+            <p className="text-sm text-muted-foreground">{finderSubtitle}</p>
+            <p className="text-xs text-muted-foreground/70 leading-relaxed mt-0.5">{finderNote}</p>
           </div>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={reset} className="gap-1.5 text-xs text-muted-foreground">
@@ -95,7 +113,7 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
                   <X className="w-3 h-3 opacity-80" />
                 </button>
               ) : (
-                Object.keys(COURSES_BY_CATEGORY).map((cat) => (
+                categories.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => update({ courseCategory: cat, course: undefined })}
@@ -107,9 +125,9 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
               )}
             </div>
 
-            {filters.courseCategory && (COURSES_BY_CATEGORY[filters.courseCategory] ?? []).length > 0 && (
+            {filters.courseCategory && (coursesByCategory[filters.courseCategory] ?? []).length > 0 && (
               <div className="flex flex-wrap gap-2 pl-3 border-l-2 border-primary/25">
-                {(COURSES_BY_CATEGORY[filters.courseCategory] ?? []).map((course) => (
+                {(coursesByCategory[filters.courseCategory] ?? []).map((course) => (
                   <button
                     key={course}
                     onClick={() => update({ course: filters.course === course ? undefined : course })}
@@ -169,7 +187,7 @@ export function GuidedFinder({ onFilterChange }: GuidedFinderProps) {
                 <p className="text-xs text-muted-foreground/60">Ranks results — doesn't remove laptops</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {WORKLOAD_TAGS.map((tag) => (
+                {workloadTags.map((tag) => (
                   <button
                     key={tag.value}
                     onClick={() => {

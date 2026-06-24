@@ -61,10 +61,29 @@ export interface AmazonProduct {
   title: string;
   brand?: string;
   price?: string;
+  /** Numeric INR price parsed straight from the API (authoritative for price_approx). */
+  priceAmount?: number;
   availability?: string;
   imageUrl?: string;
   features: string[];
   asin: string;
+}
+
+/**
+ * OffersV2 nests the price under `price.money` (`{ amount, displayAmount }`);
+ * older/flatter shapes put `displayAmount` directly on `price`. Read both so a
+ * structure change on Amazon's side doesn't silently drop the price again.
+ */
+function extractListingPrice(listing: unknown): { display?: string; amount?: number } {
+  const price = (listing as { price?: Record<string, unknown> } | null)?.price;
+  if (!price) return {};
+  const money = (price.money as Record<string, unknown> | undefined) ?? price;
+  const display = (money.displayAmount ?? price.displayAmount ?? price.displayString) as
+    | string
+    | undefined;
+  const amount =
+    typeof money.amount === "number" ? Math.round(money.amount) : parsePriceToInt(display);
+  return { display, amount: amount ?? undefined };
 }
 
 /** Parses a display price like "₹89,990" → 89990. Returns null if unparseable. */
@@ -129,11 +148,21 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
   }
 
   const listing = item?.offersV2?.listings?.[0];
+  const { display: priceDisplay, amount: priceAmount } = extractListingPrice(listing);
+  if (!priceDisplay) {
+    // Price is the one field the AI can't infer — log the raw shape so we can
+    // chase it if Amazon nests it somewhere new instead of silently blanking it.
+    console.warn(
+      `[amazon] No price parsed for ASIN ${asin}. Raw offersV2:`,
+      JSON.stringify(item?.offersV2 ?? null)
+    );
+  }
   return {
     asin,
     title: item?.itemInfo?.title?.displayValue ?? "",
     brand: item?.itemInfo?.byLineInfo?.brand?.displayValue,
-    price: listing?.price?.displayAmount,
+    price: priceDisplay,
+    priceAmount,
     availability: listing?.availability?.message ?? listing?.availability?.type,
     imageUrl: item?.images?.primary?.large?.url,
     features: [
