@@ -6,12 +6,28 @@ import { ThumbsUp, ThumbsDown, MessageSquare, ArrowLeft, MessagesSquare } from "
 export interface FeedbackRow {
   id: string;
   session_id: string;
+  domain: "design" | "technology" | "management";
   rating: boolean | null;
   comment: string | null;
   transcript: { role: string; content: string }[] | null;
   recommended_slugs: string[];
   message_count: number;
   created_at: string;
+}
+
+const DOMAIN_BADGE: Record<FeedbackRow["domain"], { label: string; cls: string }> = {
+  design: { label: "Design", cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+  technology: { label: "Technology", cls: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
+  management: { label: "Management", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+};
+
+function DomainBadge({ domain }: { domain: FeedbackRow["domain"] }) {
+  const d = DOMAIN_BADGE[domain] ?? DOMAIN_BADGE.design;
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${d.cls}`}>
+      {d.label}
+    </span>
+  );
 }
 
 function timeAgo(iso: string): string {
@@ -70,9 +86,12 @@ function TranscriptView({ row, onBack }: { row: FeedbackRow; onBack?: () => void
                   {row.rating === null ? "Not rated" : "No comment left"}
                 </span>}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {row.message_count} messages · {timeAgo(row.created_at)}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[11px] text-muted-foreground">
+              {row.message_count} messages · {timeAgo(row.created_at)}
+            </p>
+            <DomainBadge domain={row.domain} />
+          </div>
           {row.recommended_slugs.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {row.recommended_slugs.map((slug) => (
@@ -161,6 +180,7 @@ export function FeedbackPanel({ feedback }: { feedback: FeedbackRow[] }) {
                   <span className="text-[10px] text-muted-foreground">{row.message_count} msgs</span>
                   <span className="text-muted-foreground/30">·</span>
                   <span className="text-[10px] text-muted-foreground">{timeAgo(row.created_at)}</span>
+                  <DomainBadge domain={row.domain} />
                 </div>
               </div>
             </button>

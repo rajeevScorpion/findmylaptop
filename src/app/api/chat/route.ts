@@ -147,7 +147,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     sessionId = crypto.randomUUID();
     const { error } = await supabase
       .from("chat_sessions")
-      .insert({ session_id: sessionId, message_count: 0 });
+      .insert({ session_id: sessionId, message_count: 0, domain });
 
     if (error) {
       console.error("Failed to create chat session:", error);
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       sessionId = crypto.randomUUID();
       const { error: insertError } = await supabase
         .from("chat_sessions")
-        .insert({ session_id: sessionId, message_count: 0 });
+        .insert({ session_id: sessionId, message_count: 0, domain });
 
       if (insertError) {
         console.error("Failed to create replacement chat session:", insertError);

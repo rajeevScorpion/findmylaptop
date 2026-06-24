@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Pencil, Laptop, Plus, ChevronUp, ChevronDown, ChevronsUpDown, Info } from "lucide-react";
 import { PublishToggle } from "@/components/admin/PublishToggle";
+import { FeatureToggle } from "@/components/admin/FeatureToggle";
 import { InlinePriceEdit } from "@/components/admin/InlinePriceEdit";
 import { DeleteLaptopButton } from "@/components/admin/DeleteLaptopButton";
 import { LaptopCard } from "@/components/public/LaptopCard";
@@ -40,6 +41,7 @@ export interface AdminLaptop {
   four_year_suitability?: "basic" | "good" | "strong" | "excellent" | null;
   priority_score: number;
   is_published: boolean;
+  feature_on_home: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -150,6 +152,7 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
                     </th>
                   );
                 })}
+                <th className="text-center px-4 py-3 font-medium hidden sm:table-cell">Featured</th>
                 <th className="text-right px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
@@ -199,6 +202,15 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
                       <PublishToggle
                         laptopId={laptop.id}
                         initialPublished={laptop.is_published}
+                      />
+                    </td>
+                    <td
+                      className="px-4 py-3 text-center hidden sm:table-cell"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <FeatureToggle
+                        laptopId={laptop.id}
+                        initialFeatured={laptop.feature_on_home}
                       />
                     </td>
                     <td

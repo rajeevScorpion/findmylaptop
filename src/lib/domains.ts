@@ -79,6 +79,8 @@ export interface DomainConfig {
   route: string;
   /** Tab display order, low to high. */
   order: number;
+  /** One-line description for the domain's card on the cross-discipline hub (/). */
+  hubBlurb: string;
   /**
    * Settings flag gating this domain. `undefined` for Design, which is always
    * on (the site's original, untouched experience).
@@ -160,8 +162,10 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
   design: {
     id: "design",
     label: "Design",
-    route: "/",
+    route: "/design",
     order: 1,
+    hubBlurb:
+      "Colour-accurate displays and real GPU muscle for graphic, UI/UX, product, animation, game, and 3D work.",
     hero: {
       badge: "Trusted by design students & professionals",
       titleLead: "Find the right laptop for",
@@ -307,6 +311,8 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
     route: "/technology",
     order: 2,
     flagKey: "domain_tech_enabled",
+    hubBlurb:
+      "RAM, fast CPUs, and quick SSDs for web, data, ML/AI, mobile, cybersecurity, and game programming.",
     hero: {
       badge: "Trusted by tech students & engineers",
       titleLead: "Find the right laptop for",
@@ -453,6 +459,8 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
     route: "/management",
     order: 3,
     flagKey: "domain_mgmt_enabled",
+    hubBlurb:
+      "Light, all-day machines that breeze through Excel, BI tools, and presentations for MBA and business work.",
     hero: {
       badge: "Trusted by business & management students",
       titleLead: "Find the right laptop for",

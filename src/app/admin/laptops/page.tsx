@@ -41,6 +41,7 @@ export default async function AdminLaptopsPage() {
     four_year_suitability: row.four_year_suitability,
     priority_score: row.priority_score ?? 50,
     is_published: row.is_published ?? false,
+    feature_on_home: row.feature_on_home ?? false,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }));

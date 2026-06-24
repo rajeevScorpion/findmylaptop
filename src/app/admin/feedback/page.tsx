@@ -10,7 +10,7 @@ export default async function AdminFeedbackPage() {
   const [{ data: sessions }, { data: ratings }] = await Promise.all([
     supabase
       .from("chat_sessions")
-      .select("session_id, transcript, recommended_slugs, message_count, created_at, last_message_at")
+      .select("session_id, domain, transcript, recommended_slugs, message_count, created_at, last_message_at")
       .not("transcript", "is", null)
       .order("last_message_at", { ascending: false })
       .limit(200),
@@ -27,6 +27,7 @@ export default async function AdminFeedbackPage() {
     return {
       id: s.session_id,
       session_id: s.session_id,
+      domain: (s.domain ?? "design") as FeedbackRow["domain"],
       rating: r ? r.rating : null,
       comment: r ? r.comment : null,
       transcript,

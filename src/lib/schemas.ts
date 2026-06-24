@@ -48,6 +48,7 @@ export const laptopSchema = z.object({
   four_year_suitability: z.enum(["basic", "good", "strong", "excellent"]).nullable().optional(),
   priority_score: z.number().int().default(50),
   is_published: z.boolean().default(false),
+  feature_on_home: z.boolean().default(false),
   last_checked: z.string().nullable().optional(),
   raw_input: z.string().nullable().optional(),
   openai_processed_json: z.record(z.string(), z.unknown()).nullable().optional(),
