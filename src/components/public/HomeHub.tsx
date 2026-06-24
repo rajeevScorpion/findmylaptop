@@ -80,10 +80,14 @@ export async function HomeHub() {
           The right laptop depends entirely on your field. Pick your discipline below and
           we&apos;ll match you to hardware built for it — no spec-sheet jargon, no upselling.
         </p>
-        <p className="mt-5 inline-flex items-center gap-1.5 text-sm text-muted-foreground/80">
-          <Bot className="w-4 h-4 text-violet-500" />
-          Meet Chip, our friendly advisor — chat with them inside any discipline.
-        </p>
+        <div className="mt-6 flex justify-center">
+          <span className="inline-flex items-center gap-2 rounded-full glass-card border px-4 py-2.5 text-xs sm:text-sm text-muted-foreground/80">
+            <Bot className="w-4 h-4 shrink-0 text-violet-500" />
+            <span className="text-balance">
+              Meet Chip — chat inside any discipline.
+            </span>
+          </span>
+        </div>
       </section>
 
       {/* ── Domain path cards ──────────────────────────────────── */}

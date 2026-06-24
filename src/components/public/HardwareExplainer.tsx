@@ -158,7 +158,7 @@ export function HardwareExplainer() {
         </m.div>
 
         <m.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          className="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-4 pb-2 -mx-4 px-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 lg:grid-cols-4"
           variants={container}
           initial="hidden"
           whileInView="visible"
@@ -179,7 +179,7 @@ function ExplainerCard({ item }: { item: ExplainerItem }) {
       variants={cardVariant}
       whileHover={{ y: -6, scale: 1.015 }}
       transition={{ type: "spring", stiffness: 300, damping: 22 }}
-      className="relative glass-card rounded-2xl border overflow-hidden flex flex-col gap-5 p-8 cursor-default"
+      className="relative glass-card rounded-2xl border overflow-hidden flex flex-col gap-5 p-8 cursor-default snap-start shrink-0 w-[78vw] sm:w-auto sm:shrink"
     >
       {/* Radial glow */}
       <div

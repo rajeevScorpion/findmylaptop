@@ -6,7 +6,6 @@ import { DOMAIN_ORDER, type DomainConfig, type DomainId } from "@/lib/domains";
 import { HeroSection } from "@/components/public/HeroSection";
 import { ResultsSection } from "@/components/public/ResultsSection";
 import { DomainTabs } from "@/components/public/DomainTabs";
-import { HardwareExplainer } from "@/components/public/HardwareExplainer";
 import { AISection } from "@/components/public/AISection";
 import { AdvisorySection } from "@/components/public/AdvisorySection";
 import { TrustSection } from "@/components/public/TrustSection";
@@ -72,7 +71,6 @@ export async function DomainLanding({ domain }: { domain: DomainConfig }) {
         finderSubtitle={domain.finder.subtitle}
         finderNote={domain.finder.note}
       />
-      <HardwareExplainer />
       <AISection landscape={domain.landscape} />
       <AdvisorySection advisory={domain.advisory} />
       <TrustSection />
