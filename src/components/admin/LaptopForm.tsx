@@ -14,8 +14,8 @@ import { ProcessWithAI } from "./ProcessWithAI";
 import { createClient } from "@/lib/supabase/client";
 import { laptopFormSchema } from "@/lib/schemas";
 import { generateSlug } from "@/lib/recommendationEngine";
-import { WORKLOAD_TAGS, TIER_LABELS } from "@/lib/constants";
-import { type DomainId } from "@/lib/domains";
+import { TIER_LABELS } from "@/lib/constants";
+import { DOMAINS, type DomainId } from "@/lib/domains";
 import type { DomainTaxonomy } from "@/lib/taxonomy";
 import type { Laptop, ProcessedLaptopInput } from "@/lib/types";
 
@@ -119,6 +119,7 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
   const watchedPublished = watch("is_published");
   const watchedDomain = (watch("domain") ?? "design") as DomainId;
   const domainCourses = taxonomies[watchedDomain]?.coursesByCategory ?? {};
+  const domainWorkloadTags = DOMAINS[watchedDomain].workloadTags;
 
   const handleAIProcessed = (data: ProcessedLaptopInput) => {
     if (data.name) setValue("name", data.name);
@@ -330,7 +331,7 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
       {/* Workload tags */}
       <Section title="Workload Tags">
         <div className="flex flex-wrap gap-2">
-          {WORKLOAD_TAGS.map((tag) => (
+          {domainWorkloadTags.map((tag) => (
             <button
               key={tag.value}
               type="button"

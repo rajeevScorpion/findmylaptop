@@ -140,9 +140,9 @@ const cardVariant = {
 export function HardwareExplainer() {
   return (
     <LazyMotion features={domAnimation}>
-      <section id="explainer" className="px-4 py-20 max-w-7xl mx-auto w-full">
+      <section id="explainer" className="py-20 w-full">
         <m.div
-          className="mb-14 text-center"
+          className="px-4 mb-14 text-center max-w-7xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -158,7 +158,8 @@ export function HardwareExplainer() {
         </m.div>
 
         <m.div
-          className="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-4 pb-2 -mx-4 px-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 lg:grid-cols-4"
+          className="flex flex-nowrap overflow-x-auto snap-x snap-mandatory gap-4 px-4 [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:max-w-7xl sm:mx-auto sm:px-4 lg:grid-cols-4"
+          style={{ scrollbarWidth: "none" }}
           variants={container}
           initial="hidden"
           whileInView="visible"

@@ -1,6 +1,7 @@
 import type { Laptop, FilterState } from "@/lib/types";
 import { getRecommendations } from "@/lib/recommendationEngine";
-import { WORKLOAD_TAGS, BRANDS } from "@/lib/constants";
+import { BRANDS } from "@/lib/constants";
+import { ALL_WORKLOAD_TAGS } from "@/lib/domains";
 
 // Synonyms that map free-text editorial language onto the catalog's workload tags.
 const WORKLOAD_SYNONYMS: { tag: string; keywords: string[] }[] = [
@@ -57,7 +58,7 @@ export function parseIntent(intent: string | null | undefined): FilterState {
     w.keywords.some((kw) => text.includes(kw))
   ).map((w) => w.tag);
   // Keep only tags that exist in the catalog's known set.
-  const knownTags = new Set(WORKLOAD_TAGS.map((t) => t.value));
+  const knownTags = new Set(ALL_WORKLOAD_TAGS.map((t) => t.value));
   const tags = [...new Set(workloadTags)].filter((t) => knownTags.has(t as never));
 
   const tier = TIERS.find((t) => t && text.includes(` ${t} `)) ?? undefined;

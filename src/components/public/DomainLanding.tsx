@@ -68,6 +68,7 @@ export async function DomainLanding({ domain }: { domain: DomainConfig }) {
       <ResultsSection
         laptops={laptops}
         taxonomy={taxonomy}
+        workloadTags={domain.workloadTags}
         finderSubtitle={domain.finder.subtitle}
         finderNote={domain.finder.note}
       />

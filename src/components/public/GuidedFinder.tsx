@@ -5,7 +5,8 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FilterState } from "@/lib/types";
-import { BUDGET_RANGES, WORKLOAD_TAGS, BRANDS, PROCESSOR_TYPES } from "@/lib/constants";
+import type { WorkloadTagOption } from "@/lib/domains";
+import { BUDGET_RANGES, BRANDS, PROCESSOR_TYPES } from "@/lib/constants";
 
 interface GuidedFinderProps {
   onFilterChange: (filters: FilterState) => void;
@@ -13,6 +14,8 @@ interface GuidedFinderProps {
   categories: string[];
   /** category -> ordered specialisation names for the active domain. */
   coursesByCategory: Record<string, string[]>;
+  /** Workload chips for the active domain. */
+  workloadTags: readonly WorkloadTagOption[];
   /** Sub-line under the "Find your laptop" heading. */
   finderSubtitle?: string;
   /** Smaller reassurance note. */
@@ -36,6 +39,7 @@ export function GuidedFinder({
   onFilterChange,
   categories,
   coursesByCategory,
+  workloadTags,
   finderSubtitle = "Filter by course, budget, and workload",
   finderNote = "Every laptop listed here is hand-picked based on real course requirements and years of experience guiding design students.",
 }: GuidedFinderProps) {
@@ -183,7 +187,7 @@ export function GuidedFinder({
                 <p className="text-xs text-muted-foreground/60">Ranks results — doesn't remove laptops</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {WORKLOAD_TAGS.map((tag) => (
+                {workloadTags.map((tag) => (
                   <button
                     key={tag.value}
                     onClick={() => {

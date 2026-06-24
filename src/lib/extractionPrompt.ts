@@ -5,7 +5,6 @@
 // from DOMAINS[domain].extraction and the live taxonomy. Used by both the
 // fetch-amazon and process-laptop API routes so the prompt lives in one place.
 
-import { WORKLOAD_TAGS } from "@/lib/constants";
 import { DOMAINS, type DomainId } from "@/lib/domains";
 
 /**
@@ -14,7 +13,7 @@ import { DOMAINS, type DomainId } from "@/lib/domains";
  */
 export function buildExtractionPrompt(domain: DomainId, courses: string[]): string {
   const e = DOMAINS[domain].extraction;
-  const tagList = WORKLOAD_TAGS.map((t) => `"${t.value}"`).join(", ");
+  const tagList = DOMAINS[domain].workloadTags.map((t) => `"${t.value}"`).join(", ");
   const courseLine =
     courses.length > 0
       ? `array of programme names from: [${courses.map((c) => `"${c}"`).join(", ")}]`

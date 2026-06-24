@@ -11,6 +11,9 @@ export type DomainId = "design" | "technology" | "management";
 
 export type DomainFlagKey = "domain_tech_enabled" | "domain_mgmt_enabled";
 
+/** A selectable workload tag: stable `value` (stored on laptops) + display `label`. */
+export type WorkloadTagOption = { value: string; label: string };
+
 /**
  * Lucide icon names usable in the "changing landscape" cards. AISection maps
  * each name to its imported icon component, so this stays a plain string union
@@ -98,6 +101,13 @@ export interface DomainConfig {
     /** Smaller reassurance note below the sub-line. */
     note: string;
   };
+  /**
+   * Workload chips shown in the finder's advanced filters and the admin laptop
+   * form, tailored to this domain. `value` is the stable token stored on a
+   * laptop's `workload_tags`; `label` is the display text. Values may be shared
+   * across domains (e.g. "ai", "game") to keep ranking/badge semantics aligned.
+   */
+  workloadTags: readonly WorkloadTagOption[];
   metaTitle: string;
   metaDescription: string;
   chip: {
@@ -177,6 +187,20 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       subtitle: "Filter by course, budget, and workload",
       note: "Every laptop listed here is hand-picked based on real course requirements and years of experience guiding design students.",
     },
+    workloadTags: [
+      { value: "2d", label: "2D Design" },
+      { value: "uiux", label: "UI/UX" },
+      { value: "video", label: "Video Editing" },
+      { value: "fashion", label: "Fashion" },
+      { value: "interior", label: "Interior Design" },
+      { value: "product", label: "Product Design" },
+      { value: "animation", label: "Animation" },
+      { value: "game", label: "Game Dev" },
+      { value: "3d", label: "3D Modeling" },
+      { value: "ai", label: "AI Workflows" },
+      { value: "coding", label: "Coding" },
+      { value: "rendering", label: "Rendering" },
+    ],
     metaTitle: "Find My Laptop — Design Course Laptop Recommender",
     metaDescription:
       "Find the perfect laptop for your design course. Get personalised recommendations based on your discipline, budget, and creative workflow.",
@@ -324,6 +348,18 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       subtitle: "Filter by field, budget, and workload",
       note: "Every laptop listed here is hand-picked for real engineering workloads — compiling, containers, data, and ML — not just spec-sheet numbers.",
     },
+    workloadTags: [
+      { value: "webdev", label: "Web Dev" },
+      { value: "mobile", label: "Mobile Dev" },
+      { value: "data", label: "Data Science" },
+      { value: "ml", label: "Machine Learning" },
+      { value: "ai", label: "AI Workflows" },
+      { value: "cyber", label: "Cybersecurity" },
+      { value: "devops", label: "DevOps / Cloud" },
+      { value: "db", label: "Databases" },
+      { value: "game", label: "Game Dev" },
+      { value: "coding", label: "Programming" },
+    ],
     metaTitle: "Find My Laptop — Best Laptops for Tech & Engineering Students",
     metaDescription:
       "Find the perfect laptop for software, data science, AI, cybersecurity, and engineering. Personalised picks by field, budget, and workload.",
@@ -472,6 +508,15 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       subtitle: "Filter by specialisation, budget, and workload",
       note: "Every laptop listed here is hand-picked for real business workloads — long battery, portability, and smooth analytics — not gaming-grade overkill.",
     },
+    workloadTags: [
+      { value: "analytics", label: "Business Analytics" },
+      { value: "finance", label: "Financial Modeling" },
+      { value: "dataviz", label: "Data Visualization" },
+      { value: "presentations", label: "Presentations" },
+      { value: "bi", label: "Spreadsheets / BI" },
+      { value: "pm", label: "Project Management" },
+      { value: "ai", label: "AI Workflows" },
+    ],
     metaTitle: "Find My Laptop — Best Laptops for MBA & Management Students",
     metaDescription:
       "Find the perfect laptop for an MBA, finance, analytics, or marketing. Personalised picks by specialisation, budget, and workload.",
@@ -604,6 +649,26 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
 export const DOMAIN_ORDER: DomainConfig[] = Object.values(DOMAINS).sort(
   (a, b) => a.order - b.order
 );
+
+/**
+ * Every known workload tag across all domains, de-duplicated by `value` (first
+ * occurrence wins). For consumers that need the full vocabulary rather than a
+ * single domain's set — e.g. blog product-intent matching and the `WorkloadTag`
+ * type.
+ */
+export const ALL_WORKLOAD_TAGS: readonly WorkloadTagOption[] = (() => {
+  const seen = new Set<string>();
+  const all: WorkloadTagOption[] = [];
+  for (const d of DOMAIN_ORDER) {
+    for (const tag of d.workloadTags) {
+      if (!seen.has(tag.value)) {
+        seen.add(tag.value);
+        all.push(tag);
+      }
+    }
+  }
+  return all;
+})();
 
 export function isDomainId(value: string | undefined | null): value is DomainId {
   return value === "design" || value === "technology" || value === "management";

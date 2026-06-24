@@ -55,7 +55,20 @@
       "PowerShell(git stash drop \"stash@{0}\")",
       "PowerShell(git branch -d feature/ai-seo-blog-cms)",
       "PowerShell(git push origin --delete feature/ai-seo-blog-cms)",
-      "Bash(git commit -q -m ' *)"
+      "Bash(git commit -q -m ' *)",
+      "PowerShell(git checkout -b feature/multi-domain-expansion)",
+      "PowerShell(npm run build 2>&1)",
+      "Bash(command -v supabase)",
+      "Bash(git commit -m '@ *)",
+      "Bash(git commit --amend -m 'feat: multi-domain expansion \\(Design / Technology / Management\\)' -m 'Extend the finder from Design-only to three domains selectable via tabs above the finder. Switching a domain changes the laptop pool, programme chips, hero/landing copy, and accent theme; Chip stays one shared, domain-aware assistant. *)",
+      "Bash(git commit -m 'feat: domain-contextual '\\\\''changing landscape'\\\\'' section' -m 'Move the AISection discipline cards into per-domain config so the section *)",
+      "Bash(git commit *)",
+      "PowerShell(npx eslint src/lib/extractionPrompt.ts src/lib/domains.ts src/components/admin/ProcessWithAI.tsx src/components/admin/LaptopForm.tsx src/app/api/admin/process-laptop/route.ts src/app/api/admin/fetch-amazon/route.ts)",
+      "PowerShell(npx next build 2>&1)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1)",
+      "PowerShell(npx next lint --file src/lib/domains.ts --file src/lib/types.ts --file src/lib/constants.ts --file src/lib/extractionPrompt.ts --file src/lib/blog/product-intent.ts --file src/components/public/GuidedFinder.tsx --file src/components/public/ResultsSection.tsx --file src/components/public/DomainLanding.tsx --file src/components/admin/LaptopForm.tsx)",
+      "PowerShell(npx eslint src/lib/domains.ts src/lib/types.ts src/lib/constants.ts src/lib/extractionPrompt.ts src/lib/blog/product-intent.ts src/components/public/GuidedFinder.tsx src/components/public/ResultsSection.tsx src/components/public/DomainLanding.tsx src/components/admin/LaptopForm.tsx)",
+      "PowerShell(npm run lint 2>&1)"
     ],
     "additionalDirectories": [
       "D:\\AiCoding\\findmylaptop\\.git"

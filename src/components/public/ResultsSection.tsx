@@ -16,12 +16,14 @@ import { GuidedFinder } from "./GuidedFinder";
 import { ComparePanel } from "./ComparePanel";
 import type { Laptop as LaptopType, FilterState, RecommendationResult, SortOption } from "@/lib/types";
 import type { DomainTaxonomy } from "@/lib/taxonomy";
+import type { WorkloadTagOption } from "@/lib/domains";
 import { getRecommendations } from "@/lib/recommendationEngine";
 import { SORT_OPTIONS } from "@/lib/constants";
 
 interface ResultsSectionProps {
   laptops: LaptopType[];
   taxonomy: DomainTaxonomy;
+  workloadTags: readonly WorkloadTagOption[];
   finderSubtitle?: string;
   finderNote?: string;
 }
@@ -31,7 +33,7 @@ const DEFAULT_FILTERS: FilterState = {
   searchQuery: "",
 };
 
-export function ResultsSection({ laptops, taxonomy, finderSubtitle, finderNote }: ResultsSectionProps) {
+export function ResultsSection({ laptops, taxonomy, workloadTags, finderSubtitle, finderNote }: ResultsSectionProps) {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>("recommended");
   const [compareList, setCompareList] = useState<RecommendationResult[]>([]);
@@ -90,6 +92,7 @@ export function ResultsSection({ laptops, taxonomy, finderSubtitle, finderNote }
         onFilterChange={handleFilterChange}
         categories={taxonomy.categories}
         coursesByCategory={taxonomy.coursesByCategory}
+        workloadTags={workloadTags}
         finderSubtitle={finderSubtitle}
         finderNote={finderNote}
       />
