@@ -6,7 +6,7 @@ import { buildExtractionPrompt } from "@/lib/extractionPrompt";
 import { getTaxonomy } from "@/lib/taxonomy";
 import { isDomainId, type DomainId } from "@/lib/domains";
 import {
-  extractAsin,
+  resolveAsin,
   fetchProductByAsin,
   buildAffiliateUrl,
   productToText,
@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // Extract ASIN
-  const asin = extractAsin(url.trim());
+  // Extract ASIN (follows amzn.to / a.co short links when needed)
+  const asin = await resolveAsin(url.trim());
   if (!asin) {
     return NextResponse.json(
       { error: "Could not extract ASIN from URL. Make sure it is a valid Amazon product link." },

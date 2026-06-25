@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
-  extractAsin,
+  resolveAsin,
   fetchProductByAsin,
   parsePriceToInt,
   AmazonApiError,
@@ -33,25 +33,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { data: laptops, error } = await supabase
+  // Optional: scope the refresh to a specific set of laptop ids (a single row
+  // or one page). Falls back to all published laptops (cron / "refresh all").
+  let ids: string[] | null = null;
+  try {
+    const body = await request.json();
+    if (Array.isArray(body?.ids) && body.ids.length > 0) {
+      ids = body.ids.filter((id: unknown): id is string => typeof id === "string");
+    }
+  } catch {
+    // No / invalid body → refresh everything.
+  }
+
+  let query = supabase
     .from("laptops")
     .select("id, name, amazon_affiliate_url")
     .eq("is_published", true)
     .not("amazon_affiliate_url", "is", null);
 
+  if (ids) query = query.in("id", ids);
+
+  const { data: laptops, error } = await query;
+
   if (error) {
     return NextResponse.json({ error: "Failed to fetch laptops" }, { status: 500 });
   }
+
+  type UpdatedRow = {
+    id: string;
+    price_label: string | null;
+    availability: string | null;
+    last_checked: string;
+  };
 
   const results = {
     total: laptops.length,
     updated: 0,
     failed: 0,
     errors: [] as string[],
+    rows: [] as UpdatedRow[],
   };
 
   for (const laptop of laptops) {
-    const asin = extractAsin(laptop.amazon_affiliate_url);
+    const asin = await resolveAsin(laptop.amazon_affiliate_url);
     if (!asin) {
       results.failed++;
       results.errors.push(`${laptop.name}: could not extract ASIN`);
@@ -61,16 +85,24 @@ export async function POST(request: NextRequest) {
     try {
       const product = await fetchProductByAsin(asin);
 
+      const update: UpdatedRow = {
+        id: laptop.id,
+        price_label: product.price ?? null,
+        availability: product.availability ?? null,
+        last_checked: new Date().toISOString().split("T")[0],
+      };
+
       await supabase
         .from("laptops")
         .update({
-          price_label: product.price ?? null,
+          price_label: update.price_label,
           price_approx: parsePriceToInt(product.price),
-          availability: product.availability ?? null,
-          last_checked: new Date().toISOString().split("T")[0],
+          availability: update.availability,
+          last_checked: update.last_checked,
         })
         .eq("id", laptop.id);
 
+      results.rows.push(update);
       results.updated++;
     } catch (err) {
       results.failed++;

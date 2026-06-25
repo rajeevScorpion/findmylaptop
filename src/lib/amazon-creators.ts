@@ -57,6 +57,38 @@ export function extractAsin(url: string): string | null {
   return match ? match[1].toUpperCase() : null;
 }
 
+// Amazon short links (amzn.to, a.co, …) hide the ASIN behind an HTTP redirect,
+// so the plain regex can't see it. These hosts are followed once to recover it.
+const SHORTENER_HOSTS = new Set(["amzn.to", "a.co", "amzn.eu", "amzn.asia"]);
+
+/**
+ * Like `extractAsin`, but if the URL is a known Amazon shortener whose ASIN is
+ * only visible after a redirect (e.g. `https://amzn.to/abc123`), follow it once
+ * and read the ASIN off the resolved product URL. Returns null if no ASIN can
+ * be recovered.
+ */
+export async function resolveAsin(url: string): Promise<string | null> {
+  const direct = extractAsin(url);
+  if (direct) return direct;
+
+  let host: string;
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+  if (!SHORTENER_HOSTS.has(host)) return null;
+
+  try {
+    const res = await fetch(url, { redirect: "follow" });
+    // We only need the final URL, not the page body.
+    res.body?.cancel().catch(() => {});
+    return extractAsin(res.url);
+  } catch {
+    return null;
+  }
+}
+
 export interface AmazonProduct {
   title: string;
   brand?: string;

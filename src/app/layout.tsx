@@ -60,6 +60,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${caveat.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <meta name="impact-site-verification" {...{ value: "2280a2f3-f462-4e2f-b220-dd5c0ebddfb9" } as any} />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
