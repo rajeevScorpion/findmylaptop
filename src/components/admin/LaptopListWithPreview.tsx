@@ -53,6 +53,8 @@ export interface AdminLaptop {
   upgrade_notes?: string | null;
   four_year_suitability?: "basic" | "good" | "strong" | "excellent" | null;
   priority_score: number;
+  availability?: string | null;
+  last_checked?: string | null;
   is_published: boolean;
   feature_on_home: boolean;
   created_at: string;

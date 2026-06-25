@@ -41,6 +41,8 @@ export default async function AdminLaptopsPage() {
     upgrade_notes: row.upgrade_notes,
     four_year_suitability: row.four_year_suitability,
     priority_score: row.priority_score ?? 50,
+    availability: row.availability ?? null,
+    last_checked: row.last_checked ?? null,
     is_published: row.is_published ?? false,
     feature_on_home: row.feature_on_home ?? false,
     created_at: row.created_at,
