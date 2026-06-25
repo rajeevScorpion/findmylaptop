@@ -116,9 +116,9 @@ export async function HomeHub() {
         </div>
       </section>
 
-      <HardwareExplainer />
-
       <EditorsPicks laptops={featured} />
+
+      <HardwareExplainer />
 
       {/* ── Recent blog posts ──────────────────────────────────── */}
       {recentPosts.length > 0 && (
