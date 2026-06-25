@@ -75,6 +75,11 @@ export interface AdvisoryCard {
   paragraphs: string[];
 }
 
+export interface Faq {
+  q: string;
+  a: string;
+}
+
 export interface DomainConfig {
   id: DomainId;
   label: string;
@@ -150,6 +155,11 @@ export interface DomainConfig {
     /** Body of the "Practical advice" footer callout (the label is fixed). */
     footer: string;
   };
+  /**
+   * Domain-specific FAQ items rendered by TrustSection on domain landing pages.
+   * The home hub keeps its own generic FAQs hardcoded in TrustSection.
+   */
+  faqs: readonly Faq[];
   /**
    * Per-domain steering for the admin AI spec-extraction prompt ("Add Laptop").
    * The objective spec fields and output format are shared across domains; these
@@ -318,6 +328,32 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       footer:
         "Students who already own a MacBook or iPad may use them initially and decide after understanding their specific course workload. Heavy 3D, animation, game, AI, and computational design workflows will benefit from a Windows machine with an NVIDIA RTX GPU sooner — but even lighter disciplines benefit the moment you want to run AI tools natively.",
     },
+    faqs: [
+      {
+        q: "What specs matter most for Figma, Adobe Creative Cloud, and design software?",
+        a: "RAM is the most overlooked bottleneck — 16GB is the baseline for working across Photoshop, Illustrator, and Figma simultaneously without constant stalling. A fast NVMe SSD makes opening large files and switching projects noticeably quicker. For colour-critical work, display accuracy matters as much as raw power: an sRGB-calibrated panel with solid brightness is part of your toolkit, not just a screen.",
+      },
+      {
+        q: "Do I need a dedicated GPU for design work?",
+        a: "It depends on your discipline. UI/UX, graphic, and communication design run comfortably on integrated graphics — Figma, Illustrator, and InDesign don't lean on the GPU hard. The moment you move into 3D modelling, animation, video production, rendering, or game art, a dedicated NVIDIA GPU with at least 6GB VRAM becomes meaningful. If you're unsure, buy with GPU headroom — you'll likely need it by your second year.",
+      },
+      {
+        q: "Mac or Windows — which is better for design students?",
+        a: "Both are genuinely viable, but the answer shifts with your workflow. MacBooks excel at communication design, UI/UX, Figma, video editing in Final Cut, and photo work — with outstanding battery and quiet operation. Windows with an NVIDIA GPU is the stronger choice the moment 3D modelling, rendering, game development, or AI-assisted design enters the picture. CUDA — required by Blender Cycles, DaVinci Resolve, and most local generative AI tools — is an NVIDIA exclusive.",
+      },
+      {
+        q: "How important is display quality for design coursework?",
+        a: "Quite important — not just aesthetics, but accuracy. A display with full sRGB coverage (ideally 100%) and proper calibration means the colours you see match print output, client screens, and other devices. Cheap panels with limited colour gamut lead to poor colour decisions that surface on presentation day. For motion and film work, a high refresh rate (120Hz+) helps with smooth preview playback.",
+      },
+      {
+        q: "Can I run AI image tools like Stable Diffusion or ComfyUI locally on my laptop?",
+        a: "Yes, but an NVIDIA GPU with 8GB+ VRAM is effectively required for a smooth experience. Tools like ComfyUI, Automatic1111, and Flux use CUDA for GPU-accelerated inference — an RTX 4060 with 8GB VRAM is the practical entry point. Apple Silicon has Metal-based alternatives and they work, but the model support, speed, and community tooling strongly favour NVIDIA CUDA. If generative AI workflows are part of your practice, VRAM should be a priority in your shortlist.",
+      },
+      {
+        q: "What GPU VRAM do I need — and when does it start to matter?",
+        a: "For 2D design and UI/UX: GPU VRAM barely matters. For 3D modelling and moderate rendering: 6GB is a working minimum. For Blender Cycles GPU renders, DaVinci Resolve colour grading, and game development with Unreal Engine: 8GB is where you stop hitting walls consistently. For local AI inference (Stable Diffusion, Flux, LoRA fine-tunes) or Cinema 4D with Redshift: 8–12GB is the comfortable range. Buy more VRAM than you think you need — it cannot be upgraded after purchase.",
+      },
+    ],
     extraction: {
       audience: "design students",
       whyFocus:
@@ -478,6 +514,36 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       footer:
         "Cloud and remote development — GitHub Codespaces, dev containers, and remote SSH — let a lighter, cheaper laptop punch well above its weight by offloading heavy compute. Buy for a 3–4 year journey: prioritise RAM, CPU, and SSD now, and add a strong NVIDIA GPU only when your field genuinely calls for it.",
     },
+    faqs: [
+      {
+        q: "What CPU specs matter most for coding, compiling, and running a dev environment?",
+        a: "Multi-core count and clock speed together — a modern processor with 8+ cores handles parallel builds, multiple terminal sessions, and a browser full of tabs without queuing. For web and backend development, even a mid-range CPU is rarely the bottleneck. Compilation speed matters most for compiled languages like Go, Rust, C++, and Java — if those are your stack, pay for a stronger CPU.",
+      },
+      {
+        q: "How much RAM do I actually need for Docker, VMs, and a real dev environment?",
+        a: "16GB is the practical minimum for most developers. If your workflow includes multiple Docker containers, a local Kubernetes cluster, or virtual machines (Kali, Windows, Android emulators running simultaneously), aim for 32GB — the cost difference is rarely large and the quality-of-life improvement is significant. The most common mistake tech students make is underestimating how much RAM development environments consume alongside a browser.",
+      },
+      {
+        q: "Do I need a dedicated GPU for software development?",
+        a: "For most development — web, backend, mobile, data engineering, cloud/DevOps — no. Integrated graphics handle the load fine, and the money is better spent on more RAM or a faster CPU. The two cases where a dedicated NVIDIA GPU genuinely matters are machine learning with CUDA (PyTorch, TensorFlow) and game-engine development (Unreal, Unity). For everything else, skip the GPU.",
+      },
+      {
+        q: "Mac, Windows, or Linux — which OS should a tech student choose?",
+        a: "For web, backend, DevOps, and cloud: macOS and Linux both give you a real Unix shell out of the box — terminals, package managers, and Docker all behave as expected. Apple Silicon is also outstanding for iOS development. For machine learning, game programming, or any CUDA-dependent work: Windows with an NVIDIA GPU is the clearer choice. WSL2 brings a real Linux environment alongside Windows, covering the rest. Pick by your target platform and whether you need CUDA.",
+      },
+      {
+        q: "What's the minimum spec for running local AI or ML models?",
+        a: "To run inference with local LLMs (Ollama, llama.cpp) or ML frameworks (PyTorch, TensorFlow): an NVIDIA GPU with 8GB VRAM is the practical starting point. 16GB VRAM opens up most modern models without quantisation trade-offs. For training from scratch or fine-tuning large models locally: cloud compute (Colab Pro, Vast.ai, RunPod) is the more realistic path even with a strong consumer GPU. A capable CPU with 32GB RAM covers data science work entirely without a GPU.",
+      },
+      {
+        q: "Can I do serious AI and ML work on a laptop, or do I need the cloud?",
+        a: "Both are part of a practical ML workflow. A laptop with an NVIDIA RTX GPU handles experimentation, prototyping, LoRA/QLoRA fine-tunes, and fast iteration on quantised models. For large-scale training runs, fine-tuning 7B+ parameter models without quantisation, or production pipelines: cloud GPUs are more cost-effective than workstation-class laptop pricing. The pragmatic setup: an RTX 4060 or 4070 laptop for local iteration, cloud for scale.",
+      },
+      {
+        q: "What storage should I look for in a developer laptop?",
+        a: "An NVMe SSD (M.2 PCIe Gen 4) makes a real daily difference — faster boots, quicker IDE starts, shorter build times, and snappier Docker image pulls. For capacity, 512GB is a tight minimum: a dev environment, several Docker images, and a handful of projects fills up quickly. 1TB is the comfortable choice. Avoid laptops with SATA SSDs or older Gen 3 NVMe if you can — the performance gap is noticeable on heavy builds.",
+      },
+    ],
     extraction: {
       audience: "tech students and developers",
       whyFocus:
@@ -633,6 +699,32 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
       footer:
         "Prioritise weight, battery life, and a good screen over raw power — you'll carry this everywhere and present from it constantly. 16GB RAM and a modern CPU handle Excel, BI tools, and dozens of tabs with ease. Reach for Windows (or a cloud/VM workaround) the moment your electives lean into Windows-only analytics or finance tools.",
     },
+    faqs: [
+      {
+        q: "Do management and MBA students actually need a powerful laptop?",
+        a: "Rarely. The everyday workload — Office, email, video calls, browser tabs, and presentations — doesn't demand much raw power. What you need is reliability, good battery life, and a light chassis you can carry all day without noticing. The exception is analytics-heavy specialisations: Finance and Business Analytics students who run large Excel models, Tableau, Power BI, or Python notebooks benefit from 16GB RAM and a capable CPU.",
+      },
+      {
+        q: "What specs matter for Excel, financial modelling, and BI tools?",
+        a: "RAM is the key variable. Light Excel work runs fine on 8GB, but multi-tab financial models with heavy formulas, Power Pivot, and Solver routines start to drag. For serious modelling, 16GB RAM and a modern multi-core CPU keep large workbooks responsive. Power BI Desktop is also RAM- and CPU-hungry on large datasets. A discrete GPU is almost never useful for management coursework.",
+      },
+      {
+        q: "Should I prioritise battery life or performance for business school?",
+        a: "Battery life, almost always. Long lecture days, case discussions, group-work sessions, and travel between campuses mean you're often away from power for 6–10 hours. A laptop that can't make it through the day becomes a liability. A well-balanced ultrabook with 12–15 hours of real-world battery, a light chassis, and a comfortable keyboard is more useful than a powerful-but-heavy machine that needs to be plugged in.",
+      },
+      {
+        q: "Will my Mac work for MBA, or do I need Windows?",
+        a: "A MacBook handles most MBA workloads well — Office 365 runs natively on macOS, and the battery life and portability are genuine advantages. The real gap: Power BI Desktop is Windows-only (no native macOS version), and some Excel add-ins, SPSS, and certain ERP/SAP lab tools assume Windows. Finance and Business Analytics students run into this most. Options are Windows from the start, a virtual machine (Parallels), or using school lab machines for those specific tools.",
+      },
+      {
+        q: "How are AI tools changing what management students need from their laptops?",
+        a: "AI tools are entering business workflows fast — from ChatGPT-style analysis to Copilot in Office 365 and AI-powered features in Power BI and Excel. The good news: almost all of these run in the cloud, so they don't change your hardware requirements. What matters is a reliable connection and a capable browser. The exception is Business Analytics or FinTech students who want to run local Python-based AI tools — that's when 16GB RAM and a capable CPU become worth the investment.",
+      },
+      {
+        q: "How much should I budget for a business school laptop?",
+        a: "For general MBA and management programmes: ₹70,000–₹90,000 buys a solid, light, long-battery machine that handles all core workloads comfortably. For Finance and Business Analytics students with heavier tooling: ₹90,000–₹1,20,000 buys better RAM and CPU headroom that's worth having. Above that threshold, the marginal gains for management coursework are small — the money is better spent elsewhere. Avoid paying gaming-laptop premiums for a GPU you'll almost never use.",
+      },
+    ],
     extraction: {
       audience: "business and management (MBA) students",
       whyFocus:

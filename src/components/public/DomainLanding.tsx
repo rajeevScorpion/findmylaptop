@@ -74,7 +74,7 @@ export async function DomainLanding({ domain }: { domain: DomainConfig }) {
       />
       <AISection landscape={domain.landscape} />
       <AdvisorySection advisory={domain.advisory} />
-      <TrustSection />
+      <TrustSection faqs={domain.faqs} />
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
       <VisitCounter />
       <Disclaimer text={settingsMap["disclaimer_text"]} />

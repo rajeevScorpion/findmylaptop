@@ -4,8 +4,9 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
+import type { Faq } from "@/lib/domains";
 
-const FAQS = [
+const GENERIC_FAQS: Faq[] = [
   {
     q: "How do these recommendations actually work?",
     a: "Each recommendation is curated by design practitioners with years of hands-on experience across disciplines — not generated from a generic spec sheet. We map real hardware requirements to actual design workflows and course curriculums, so what you get is grounded in how designers actually work.",
@@ -28,7 +29,8 @@ const FAQS = [
   },
 ];
 
-export function TrustSection() {
+export function TrustSection({ faqs }: { faqs?: readonly Faq[] }) {
+  const items = faqs ?? GENERIC_FAQS;
   return (
     <section className="py-16 px-4 bg-muted/20">
       <div className="max-w-2xl mx-auto">
@@ -42,7 +44,7 @@ export function TrustSection() {
         </div>
 
         <Accordion>
-          {FAQS.map((faq, i) => (
+          {items.map((faq, i) => (
             <AccordionItem key={i} value={String(i)}>
               <AccordionTrigger className="text-sm font-medium py-4 text-left">
                 {faq.q}
