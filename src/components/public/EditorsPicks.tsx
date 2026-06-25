@@ -40,7 +40,7 @@ export function EditorsPicks({ laptops }: { laptops: Laptop[] }) {
           return (
             <Link
               key={laptop.slug}
-              href={`/laptop/${laptop.slug}`}
+              href={`/${laptop.domain ?? "design"}?highlight=${laptop.slug}`}
               className="laptop-card glass-card rounded-2xl border p-4 flex gap-4 items-start hover:border-border transition-colors"
             >
               {laptop.image_url ? (

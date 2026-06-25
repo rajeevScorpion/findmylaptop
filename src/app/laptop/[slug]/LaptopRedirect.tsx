@@ -3,10 +3,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export function LaptopRedirect({ slug }: { slug: string }) {
+export function LaptopRedirect({ slug, domain }: { slug: string; domain: string }) {
   const router = useRouter();
   useEffect(() => {
-    router.replace(`/?highlight=${slug}`);
-  }, [slug, router]);
+    router.replace(`/${domain}?highlight=${slug}`);
+  }, [slug, domain, router]);
   return null;
 }

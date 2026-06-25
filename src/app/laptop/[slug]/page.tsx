@@ -10,7 +10,7 @@ async function getLaptop(slug: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("laptops")
-    .select("id, slug, name, brand, model, price_label, price_approx, image_url, is_published, tier, recommended_for_courses, why_recommended, amazon_affiliate_url")
+    .select("id, slug, name, brand, model, price_label, price_approx, image_url, is_published, tier, domain, recommended_for_courses, why_recommended, amazon_affiliate_url")
     .eq("slug", slug)
     .single();
   return data;
@@ -73,9 +73,9 @@ export default async function LaptopPage({ params }: Props) {
   const { slug } = await params;
   const laptop = await getLaptop(slug);
 
-  // Published — redirect to homepage with highlight
+  // Published — redirect to the domain page with highlight
   if (laptop?.is_published) {
-    return <LaptopRedirect slug={slug} />;
+    return <LaptopRedirect slug={slug} domain={laptop.domain ?? "design"} />;
   }
 
   // Not found or unpublished — show not-available page
