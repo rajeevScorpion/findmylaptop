@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Pencil, Laptop, Plus, ChevronUp, ChevronDown, ChevronsUpDown, Info } from "lucide-react";
+import { Pencil, Laptop, Plus, ChevronUp, ChevronDown, ChevronsUpDown, Info, Search, X, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { PublishToggle } from "@/components/admin/PublishToggle";
 import { FeatureToggle } from "@/components/admin/FeatureToggle";
 import { InlinePriceEdit } from "@/components/admin/InlinePriceEdit";
@@ -79,6 +79,87 @@ interface LaptopListWithPreviewProps {
 type SortColumn = "name" | "domain" | "price" | "updated" | "published";
 type SortDir = "asc" | "desc";
 
+function isUnavailable(availability: string | null | undefined): boolean {
+  if (!availability) return false;
+  const l = availability.toLowerCase();
+  return l.includes("unavailable") || l.includes("out of stock") || l.includes("not available");
+}
+
+function AttentionPanel({ laptops }: { laptops: AdminLaptop[] }) {
+  const [open, setOpen] = useState(true);
+  if (laptops.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2.5 px-4 py-3 text-left"
+      >
+        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+        <span className="text-sm font-medium text-amber-700 dark:text-amber-400 flex-1">
+          {laptops.length} laptop{laptops.length !== 1 ? "s" : ""} auto-unpublished — availability issue detected
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-amber-500 transition-transform ${open ? "" : "-rotate-90"}`}
+        />
+      </button>
+      {open && (
+        <div className="border-t border-amber-500/20 divide-y divide-amber-500/10">
+          {laptops.map((l) => (
+            <div key={l.id} className="flex items-center gap-3 px-4 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{l.name}</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                  {l.availability ?? "Unavailable"} · last checked {l.last_checked ?? "—"}
+                </p>
+              </div>
+              <div className="shrink-0 flex items-center gap-2">
+                <span className="text-xs text-muted-foreground hidden sm:block">Re-publish?</span>
+                <PublishToggle laptopId={l.id} initialPublished={false} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaginationBar({
+  pageStart, pageSize, total, page, totalPages, onPrev, onNext,
+}: {
+  pageStart: number; pageSize: number; total: number;
+  page: number; totalPages: number;
+  onPrev: () => void; onNext: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+      <span className="text-xs text-muted-foreground">
+        {pageStart + 1}–{Math.min(pageStart + pageSize, total)} of {total}
+      </span>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={onPrev}
+          disabled={page === 0}
+          className="inline-flex items-center gap-1 h-7 px-2 text-xs font-medium rounded-md border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Prev
+        </button>
+        <span className="text-xs text-muted-foreground px-1">{page + 1} / {totalPages}</span>
+        <button
+          onClick={onNext}
+          disabled={page === totalPages - 1}
+          className="inline-flex items-center gap-1 h-7 px-2 text-xs font-medium rounded-md border border-border bg-card hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Next
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SortIcon({ column, sort }: { column: SortColumn; sort: { col: SortColumn; dir: SortDir } | null }) {
   if (!sort || sort.col !== column) return <ChevronsUpDown className="w-3 h-3 opacity-40" />;
   return sort.dir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
@@ -87,8 +168,11 @@ function SortIcon({ column, sort }: { column: SortColumn; sort: { col: SortColum
 export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sort, setSort] = useState<{ col: SortColumn; dir: SortDir } | null>(null);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
 
   function toggleSort(col: SortColumn) {
+    setPage(0);
     setSort((prev) =>
       prev?.col === col
         ? prev.dir === "asc"
@@ -96,6 +180,11 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
           : null
         : { col, dir: "asc" }
     );
+  }
+
+  function handleQuery(v: string) {
+    setQuery(v);
+    setPage(0);
   }
 
   const sorted = useMemo(() => {
@@ -110,6 +199,30 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
       return sort.dir === "asc" ? cmp : -cmp;
     });
   }, [laptops, sort]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter(
+      (l) =>
+        l.name.toLowerCase().includes(q) ||
+        (l.brand ?? "").toLowerCase().includes(q)
+    );
+  }, [sorted, query]);
+
+  const PAGE_SIZE = 15;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageStart = safePage * PAGE_SIZE;
+  const paginated = useMemo(
+    () => filtered.slice(pageStart, pageStart + PAGE_SIZE),
+    [filtered, pageStart]
+  );
+
+  const attentionLaptops = useMemo(
+    () => laptops.filter((l) => !l.is_published && l.last_checked && isUnavailable(l.availability)),
+    [laptops]
+  );
 
   const selected = laptops.find((l) => l.id === selectedId) ?? null;
 
@@ -135,7 +248,38 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
   return (
     <div className="flex gap-6 items-start">
       {/* Table */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 space-y-3">
+        <AttentionPanel laptops={attentionLaptops} />
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search by name or brand…"
+            value={query}
+            onChange={(e) => handleQuery(e.target.value)}
+            className="w-full h-8 pl-8 pr-8 text-sm rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+          {query && (
+            <button
+              onClick={() => handleQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        {totalPages > 1 && (
+          <PaginationBar
+            pageStart={pageStart}
+            pageSize={PAGE_SIZE}
+            total={filtered.length}
+            page={safePage}
+            totalPages={totalPages}
+            onPrev={() => setPage((p) => Math.max(0, p - 1))}
+            onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          />
+        )}
         <div className="glass-card rounded-xl border overflow-hidden">
           <table className="w-full">
             <thead>
@@ -171,7 +315,14 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
-              {sorted.map((laptop) => {
+              {paginated.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No laptops match &ldquo;{query}&rdquo;
+                  </td>
+                </tr>
+              )}
+              {paginated.map((laptop) => {
                 const isSelected = laptop.id === selectedId;
                 return (
                   <tr
@@ -259,6 +410,19 @@ export function LaptopListWithPreview({ laptops }: LaptopListWithPreviewProps) {
               })}
             </tbody>
           </table>
+          {totalPages > 1 && (
+            <div className="border-t border-border/30">
+              <PaginationBar
+                pageStart={pageStart}
+                pageSize={PAGE_SIZE}
+                total={filtered.length}
+                page={safePage}
+                totalPages={totalPages}
+                onPrev={() => setPage((p) => Math.max(0, p - 1))}
+                onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              />
+            </div>
+          )}
         </div>
         {!selected && (
           <p className="text-xs text-muted-foreground/50 mt-3 text-center">

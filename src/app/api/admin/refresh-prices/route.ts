@@ -59,11 +59,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch laptops" }, { status: 500 });
   }
 
+  function isUnavailable(availability: string | null | undefined): boolean {
+    if (!availability) return false;
+    const l = availability.toLowerCase();
+    return l.includes("unavailable") || l.includes("out of stock") || l.includes("not available");
+  }
+
   type UpdatedRow = {
     id: string;
     price_label: string | null;
     availability: string | null;
     last_checked: string;
+    auto_unpublished?: boolean;
   };
 
   const results = {
@@ -85,11 +92,13 @@ export async function POST(request: NextRequest) {
     try {
       const product = await fetchProductByAsin(asin);
 
+      const unavailable = isUnavailable(product.availability);
       const update: UpdatedRow = {
         id: laptop.id,
         price_label: product.price ?? null,
         availability: product.availability ?? null,
         last_checked: new Date().toISOString().split("T")[0],
+        ...(unavailable && { auto_unpublished: true }),
       };
 
       await supabase
@@ -99,6 +108,7 @@ export async function POST(request: NextRequest) {
           price_approx: parsePriceToInt(product.price),
           availability: update.availability,
           last_checked: update.last_checked,
+          ...(unavailable && { is_published: false }),
         })
         .eq("id", laptop.id);
 
