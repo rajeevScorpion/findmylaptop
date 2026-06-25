@@ -7,7 +7,6 @@ export default async function RefreshPricesPage() {
   const { data: laptops } = await supabase
     .from("laptops")
     .select("id, name, brand, price_label, availability, last_checked, is_published, amazon_affiliate_url, created_at")
-    .eq("is_published", true)
     .order("created_at", { ascending: false });
 
   return (

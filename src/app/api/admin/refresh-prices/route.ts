@@ -45,13 +45,18 @@ export async function POST(request: NextRequest) {
     // No / invalid body → refresh everything.
   }
 
+  // When specific IDs are requested (e.g. re-checking attention/unpublished
+  // laptops), skip the is_published filter so they can be fetched too.
   let query = supabase
     .from("laptops")
-    .select("id, name, amazon_affiliate_url")
-    .eq("is_published", true)
+    .select("id, name, amazon_affiliate_url, is_published")
     .not("amazon_affiliate_url", "is", null);
 
-  if (ids) query = query.in("id", ids);
+  if (ids) {
+    query = query.in("id", ids);
+  } else {
+    query = query.eq("is_published", true);
+  }
 
   const { data: laptops, error } = await query;
 
@@ -93,12 +98,15 @@ export async function POST(request: NextRequest) {
       const product = await fetchProductByAsin(asin);
 
       const unavailable = isUnavailable(product.availability);
+      // Only auto-unpublish if the laptop was published before this check.
+      // Re-checking an already-unpublished laptop should never flip it back.
+      const shouldUnpublish = unavailable && laptop.is_published;
       const update: UpdatedRow = {
         id: laptop.id,
         price_label: product.price ?? null,
         availability: product.availability ?? null,
         last_checked: new Date().toISOString().split("T")[0],
-        ...(unavailable && { auto_unpublished: true }),
+        ...(shouldUnpublish && { auto_unpublished: true }),
       };
 
       await supabase
@@ -108,7 +116,7 @@ export async function POST(request: NextRequest) {
           price_approx: parsePriceToInt(product.price),
           availability: update.availability,
           last_checked: update.last_checked,
-          ...(unavailable && { is_published: false }),
+          ...(shouldUnpublish && { is_published: false }),
         })
         .eq("id", laptop.id);
 
