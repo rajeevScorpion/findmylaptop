@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Bot, Clock, CalendarDays } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { getDomainFlags, getBlogFlags } from "@/lib/flags";
 import { getPublishedPosts } from "@/lib/blog/queries";
+import { getFeaturedLaptops, getPublicSettings } from "@/lib/laptop-queries";
 import { DOMAIN_ORDER, type DomainId } from "@/lib/domains";
 import { HardwareExplainer } from "@/components/public/HardwareExplainer";
 import { EditorsPicks } from "@/components/public/EditorsPicks";
@@ -28,30 +28,21 @@ function formatDate(value: string | null): string {
 }
 
 export async function HomeHub() {
-  const supabase = await createClient();
-
-  const [flags, blogFlags] = await Promise.all([getDomainFlags(), getBlogFlags()]);
+  const [flags, blogFlags, featuredAll, settingsMap] = await Promise.all([
+    getDomainFlags(),
+    getBlogFlags(),
+    getFeaturedLaptops(),
+    getPublicSettings(),
+  ]);
 
   // Design is always enabled; the other two follow their flags.
   const enabledDomains = DOMAIN_ORDER.filter((d) => !d.flagKey || flags[d.flagKey]);
   const enabledIds = new Set<DomainId>(enabledDomains.map((d) => d.id));
 
-  const { data: featuredRaw } = await supabase
-    .from("laptops")
-    .select("*")
-    .eq("is_published", true)
-    .eq("feature_on_home", true)
-    .order("priority_score", { ascending: false });
-
   // Never surface a pick from a domain that isn't live yet.
-  const featured: Laptop[] = ((featuredRaw ?? []) as Laptop[])
+  const featured: Laptop[] = featuredAll
     .filter((l) => !l.domain || enabledIds.has(l.domain as DomainId))
     .slice(0, 6);
-
-  const { data: settings } = await supabase.from("settings").select("key, value");
-  const settingsMap = Object.fromEntries(
-    (settings ?? []).map((s: { key: string; value: string }) => [s.key, s.value])
-  );
 
   const blogPublic = blogFlags.blog_enabled && blogFlags.blog_public_enabled;
   const recentPosts = blogPublic ? (await getPublishedPosts()).slice(0, 3) : [];

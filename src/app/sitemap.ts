@@ -1,14 +1,17 @@
 import type { MetadataRoute } from "next";
+import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBlogFlags, getDomainFlags } from "@/lib/flags";
 import { getPublishedPostSlugs } from "@/lib/blog/queries";
 import { DOMAIN_ORDER } from "@/lib/domains";
 
-export const revalidate = 3600;
-
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://laptopfinder.cc").replace(/\/$/, "");
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  "use cache";
+  cacheTag("laptops", "blog", "flags");
+  cacheLife("hours");
+
   const entries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
   ];

@@ -50,6 +50,11 @@ export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabl
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+    fetch("/api/admin/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: "settings" }),
+    });
   };
 
   return (

@@ -347,6 +347,11 @@ export function BlogPostForm({
       setError(err.message.includes("duplicate") ? "That slug is already in use." : err.message);
       return;
     }
+    fetch("/api/admin/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: "blog" }),
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
     if (!post?.id && newId) router.push(`/admin/blog/${newId}`);

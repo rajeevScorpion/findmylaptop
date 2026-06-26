@@ -208,6 +208,11 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
       return;
     }
 
+    fetch("/api/admin/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: "laptops" }),
+    });
     router.push("/admin/laptops");
     router.refresh();
   };

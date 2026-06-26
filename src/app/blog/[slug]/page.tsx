@@ -8,13 +8,10 @@ import { BlockRenderer } from "@/components/blog/BlockRenderer";
 import { ShareButton } from "@/components/blog/ShareButton";
 import { buildToc } from "@/lib/blog/toc";
 import type { BlogContentDoc, Block, FaqItem } from "@/lib/blog/types";
-import { createClient } from "@/lib/supabase/server";
+import { getAllPublishedLaptops, getPublicSettings } from "@/lib/laptop-queries";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
 import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
-import type { Laptop } from "@/lib/types";
-
-export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -78,17 +75,10 @@ export default async function BlogPostPage({ params }: Props) {
   const toc = post.toc_json?.length ? post.toc_json : buildToc(doc);
   const related = await getRelatedPosts({ id: post.id, category_id: post.category_id });
 
-  const supabase = await createClient();
-  const { data: laptopsRaw } = await supabase
-    .from("laptops")
-    .select("*")
-    .eq("is_published", true)
-    .order("priority_score", { ascending: false });
-  const { data: settings } = await supabase.from("settings").select("key, value");
-  const settingsMap = Object.fromEntries(
-    (settings ?? []).map((s: { key: string; value: string }) => [s.key, s.value])
-  );
-  const laptops: Laptop[] = (laptopsRaw ?? []) as Laptop[];
+  const [laptops, settingsMap] = await Promise.all([
+    getAllPublishedLaptops(),
+    getPublicSettings(),
+  ]);
 
   // FAQ items (for schema) only from visible FAQ blocks.
   const faqItems: FaqItem[] = doc.blocks
