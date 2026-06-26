@@ -52,6 +52,7 @@ export async function DomainLanding({ domain }: { domain: DomainConfig }) {
         laptops={laptops}
         taxonomy={taxonomy}
         workloadTags={domain.workloadTags}
+        showWorkloadFilter={settingsMap["workload_filter_enabled"] === "true"}
         finderSubtitle={domain.finder.subtitle}
         finderNote={domain.finder.note}
       />

@@ -24,6 +24,7 @@ interface ResultsSectionProps {
   laptops: LaptopType[];
   taxonomy: DomainTaxonomy;
   workloadTags: readonly WorkloadTagOption[];
+  showWorkloadFilter?: boolean;
   finderSubtitle?: string;
   finderNote?: string;
 }
@@ -33,7 +34,7 @@ const DEFAULT_FILTERS: FilterState = {
   searchQuery: "",
 };
 
-export function ResultsSection({ laptops, taxonomy, workloadTags, finderSubtitle, finderNote }: ResultsSectionProps) {
+export function ResultsSection({ laptops, taxonomy, workloadTags, showWorkloadFilter, finderSubtitle, finderNote }: ResultsSectionProps) {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>("recommended");
   const [compareList, setCompareList] = useState<RecommendationResult[]>([]);
@@ -93,6 +94,7 @@ export function ResultsSection({ laptops, taxonomy, workloadTags, finderSubtitle
         categories={taxonomy.categories}
         coursesByCategory={taxonomy.coursesByCategory}
         workloadTags={workloadTags}
+        showWorkloadFilter={showWorkloadFilter}
         finderSubtitle={finderSubtitle}
         finderNote={finderNote}
       />

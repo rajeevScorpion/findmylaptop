@@ -13,12 +13,14 @@ interface AdminSettingsFormProps {
   whatsappUrl: string;
   disclaimerText: string;
   voiceInputEnabled: boolean;
+  workloadFilterEnabled: boolean;
 }
 
-export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabled }: AdminSettingsFormProps) {
+export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabled, workloadFilterEnabled }: AdminSettingsFormProps) {
   const [waUrl, setWaUrl] = useState(whatsappUrl);
   const [disclaimer, setDisclaimer] = useState(disclaimerText);
   const [voiceEnabled, setVoiceEnabled] = useState(voiceInputEnabled);
+  const [workloadEnabled, setWorkloadEnabled] = useState(workloadFilterEnabled);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,7 @@ export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabl
       { key: "whatsapp_url", value: waUrl },
       { key: "disclaimer_text", value: disclaimer },
       { key: "voice_input_enabled", value: voiceEnabled ? "true" : "false" },
+      { key: "workload_filter_enabled", value: workloadEnabled ? "true" : "false" },
     ];
 
     for (const update of updates) {
@@ -107,6 +110,24 @@ export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabl
           <Switch
             checked={voiceEnabled}
             onCheckedChange={(v: boolean) => setVoiceEnabled(v)}
+            className="mt-1 shrink-0"
+          />
+        </div>
+      </div>
+
+      <div className="glass-card rounded-xl border p-5 space-y-4">
+        <h3 className="text-sm font-medium text-foreground">Guided Finder</h3>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm text-foreground">Workload filter</p>
+            <p className="text-xs text-muted-foreground">
+              Shows the &ldquo;Workload&rdquo; chips in the advanced filters. Currently hidden while we
+              rework how workload should influence ranking. Applies to all domains.
+            </p>
+          </div>
+          <Switch
+            checked={workloadEnabled}
+            onCheckedChange={(v: boolean) => setWorkloadEnabled(v)}
             className="mt-1 shrink-0"
           />
         </div>
