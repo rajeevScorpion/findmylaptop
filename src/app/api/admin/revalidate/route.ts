@@ -34,6 +34,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid tag" }, { status: 400 });
   }
 
-  revalidateTag(tag as ValidTag, "max");
+  revalidateTag(tag as ValidTag, { expire: 0 });
   return NextResponse.json({ revalidated: true, tag });
 }

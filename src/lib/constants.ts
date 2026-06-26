@@ -122,8 +122,6 @@ export const SORT_OPTIONS = [
   { value: "recommended", label: "Best Match" },
   { value: "price-asc", label: "Price: Low to High" },
   { value: "price-desc", label: "Price: High to Low" },
-  { value: "gpu-strength", label: "GPU Strength" },
-  { value: "four-year", label: "4-Year Suitability" },
 ] as const;
 
 export const PREFERENCE_OPTIONS = [

@@ -8,34 +8,47 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { DOMAIN_ORDER, type DomainId } from "@/lib/domains";
 import type { ProcessedLaptopInput } from "@/lib/types";
+import type { DuplicateCandidate } from "@/lib/duplicate-detection";
+
+interface DuplicateInfo {
+  message: string;
+  candidates: DuplicateCandidate[];
+}
 
 interface ProcessWithAIProps {
   onProcessed: (data: ProcessedLaptopInput) => void;
   /** Active domain — steers the extraction prompt's reasoning per audience. */
   domain: DomainId;
   onDomainChange: (domain: DomainId) => void;
+  /** When provided, clicking a suggested duplicate previews it in place rather
+   *  than opening its edit page in a new tab. */
+  onPreviewDuplicate?: (id: string) => void;
 }
 
-export function ProcessWithAI({ onProcessed, domain, onDomainChange }: ProcessWithAIProps) {
+export function ProcessWithAI({ onProcessed, domain, onDomainChange, onPreviewDuplicate }: ProcessWithAIProps) {
   const [urlInput, setUrlInput] = useState("");
   const [rawInput, setRawInput] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
   const [textLoading, setTextLoading] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [urlApiInactive, setUrlApiInactive] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateInfo | null>(null);
   const [textError, setTextError] = useState<string | null>(null);
 
-  const handleFetchUrl = async () => {
+  // `force` skips the duplicate gate — used by "Add anyway" after the admin has
+  // reviewed the suggested duplicates and confirmed this is a distinct laptop.
+  const handleFetchUrl = async (force = false) => {
     if (!urlInput.trim()) return;
     setUrlLoading(true);
     setUrlError(null);
     setUrlApiInactive(false);
+    if (!force) setDuplicates(null);
 
     try {
       const res = await fetch("/api/admin/fetch-amazon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput.trim(), domain }),
+        body: JSON.stringify({ url: urlInput.trim(), domain, force }),
       });
 
       const body = await res.json().catch(() => ({}));
@@ -43,12 +56,15 @@ export function ProcessWithAI({ onProcessed, domain, onDomainChange }: ProcessWi
       if (!res.ok) {
         if (body.code === "API_NOT_ACTIVE") {
           setUrlApiInactive(true);
+        } else if (body.code === "DUPLICATE_FOUND") {
+          setDuplicates({ message: body.message, candidates: body.candidates ?? [] });
         } else {
           setUrlError(body.error ?? `Server error ${res.status}`);
         }
         return;
       }
 
+      setDuplicates(null);
       onProcessed(body as ProcessedLaptopInput);
     } catch (err) {
       setUrlError(err instanceof Error ? err.message : "Request failed");
@@ -127,12 +143,13 @@ export function ProcessWithAI({ onProcessed, domain, onDomainChange }: ProcessWi
               setUrlInput(e.target.value);
               setUrlError(null);
               setUrlApiInactive(false);
+              setDuplicates(null);
             }}
             placeholder="https://www.amazon.in/dp/B0XXXXXXXX"
             className="bg-background/60 text-xs h-8 flex-1"
           />
           <Button
-            onClick={handleFetchUrl}
+            onClick={() => handleFetchUrl()}
             disabled={urlLoading || !urlInput.trim()}
             size="sm"
             className="gap-1.5 h-8 shrink-0 bg-primary text-primary-foreground hover:opacity-90"
@@ -152,6 +169,61 @@ export function ProcessWithAI({ onProcessed, domain, onDomainChange }: ProcessWi
             <span>
               Amazon Creators API requires 10 qualifying sales in the last 30 days. Your account isn&apos;t active yet — paste product details manually below.
             </span>
+          </div>
+        )}
+
+        {duplicates && (
+          <div className="space-y-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300">
+            <div className="flex gap-2 text-xs font-medium">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>{duplicates.message} Edit the existing entry instead of adding a duplicate.</span>
+            </div>
+
+            <ul className="space-y-1.5 pl-5">
+              {duplicates.candidates.map((c) => (
+                <li key={c.id} className="text-xs flex items-center gap-2 flex-wrap">
+                  {onPreviewDuplicate ? (
+                    <button
+                      type="button"
+                      onClick={() => onPreviewDuplicate(c.id)}
+                      className="font-semibold underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200"
+                    >
+                      {c.name}
+                    </button>
+                  ) : (
+                    <a
+                      href={`/admin/laptops/${c.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold underline underline-offset-2"
+                    >
+                      {c.name}
+                    </a>
+                  )}
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-[10px] uppercase tracking-wide">
+                    {c.match === "exact-asin"
+                      ? "Same ASIN"
+                      : `Similar name (${Math.round(c.score * 100)}%)`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="pl-5">
+              <Button
+                onClick={() => handleFetchUrl(true)}
+                disabled={urlLoading}
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs border-amber-500/40 hover:bg-amber-500/10"
+              >
+                {urlLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  "Not a duplicate — add anyway"
+                )}
+              </Button>
+            </div>
           </div>
         )}
 

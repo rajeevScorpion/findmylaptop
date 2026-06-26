@@ -35,9 +35,7 @@ export type BadgeType =
 export type SortOption =
   | "recommended"
   | "price-asc"
-  | "price-desc"
-  | "gpu-strength"
-  | "four-year";
+  | "price-desc";
 
 // ── Chip Chat Types ──────────────────────────────────────────────
 

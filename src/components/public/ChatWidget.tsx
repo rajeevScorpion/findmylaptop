@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bot, X, Send, Maximize2, Minimize2, ThumbsUp, ThumbsDown, Mic, Square, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,14 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
   const [hasBeenOpened, setHasBeenOpened] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Mobile keyboard / address-bar aware sizing. On mobile the chat window is
+  // `position: fixed`, which anchors to the layout viewport — that does NOT
+  // shrink when the on-screen keyboard or address bar appears, so the header
+  // gets pushed off-screen. We instead track the visualViewport (the region
+  // actually visible) and size the window to fit within it.
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [viewport, setViewport] = useState<{ height: number; offsetTop: number } | null>(null);
 
   // Voice input
   type RecordingState = "idle" | "recording" | "transcribing";
@@ -116,6 +124,30 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
 
   useEffect(() => {
     if (isOpen) setTimeout(() => textareaRef.current?.focus(), 100);
+  }, [isOpen]);
+
+  // Track whether we're on a mobile-sized screen (matches the `md` breakpoint).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onChange = () => setIsMobileViewport(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Track the visualViewport so the window can clear the address bar + keyboard.
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!isOpen || !vv) return;
+    const update = () => setViewport({ height: vv.height, offsetTop: vv.offsetTop });
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
   }, [isOpen]);
 
   // After "before you go" feedback resolves, close the window on a short beat
@@ -321,6 +353,26 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
     reallyClose();
   }
 
+  // On mobile, override vertical positioning so the window always fits inside
+  // the visible region (between the address bar and the keyboard). Horizontal
+  // positioning / width keep coming from the Tailwind classes. Falls back to
+  // the classes when visualViewport is unavailable.
+  let mobileWindowStyle: CSSProperties | undefined;
+  if (isMobileViewport && viewport) {
+    // Reserve clearance for the fixed top nav (logo / Blog / theme toggle, z-50)
+    // in BOTH modes so the chat header never tucks under it.
+    const TOP_GAP = 64;
+    const BOTTOM_GAP = 12;
+    const available = viewport.height - TOP_GAP - BOTTOM_GAP;
+    const height = isMaximized ? available : Math.min(520, available);
+    mobileWindowStyle = {
+      top: viewport.offsetTop + viewport.height - BOTTOM_GAP - height,
+      height,
+      bottom: "auto",
+      maxHeight: "none",
+    };
+  }
+
   return (
     <>
       {/* ── Background blur overlay — mobile always, desktop when maximized ── */}
@@ -383,6 +435,7 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            style={mobileWindowStyle}
             className={cn(
               "z-[40] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden",
               isMaximized

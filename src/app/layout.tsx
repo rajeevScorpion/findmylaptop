@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Caveat } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
@@ -19,6 +19,16 @@ const caveat = Caveat({
   variable: "--font-handwriting",
   subsets: ["latin"],
 });
+
+// `resizes-content` shrinks the layout viewport when the on-screen keyboard
+// opens (instead of the default `resizes-visual`, which overlays it). This lets
+// `position: fixed` UI — notably the Chip chat window — sit above the keyboard
+// on mobile instead of being covered by it.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(

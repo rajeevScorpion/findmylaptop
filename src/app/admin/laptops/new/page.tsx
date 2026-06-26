@@ -1,4 +1,4 @@
-import { LaptopForm } from "@/components/admin/LaptopForm";
+import { AddLaptopWorkspace } from "@/components/admin/AddLaptopWorkspace";
 import { ChevronLeft } from "lucide-react";
 import { getAllTaxonomies } from "@/lib/taxonomy";
 
@@ -19,7 +19,7 @@ export default async function AdminNewLaptopPage() {
           Paste Amazon details and use AI to extract specs, or fill in manually.
         </p>
       </div>
-      <LaptopForm taxonomies={taxonomies} />
+      <AddLaptopWorkspace taxonomies={taxonomies} />
     </div>
   );
 }

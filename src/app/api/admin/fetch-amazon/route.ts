@@ -5,6 +5,7 @@ import { processedLaptopInputSchema } from "@/lib/schemas";
 import { buildExtractionPrompt } from "@/lib/extractionPrompt";
 import { getTaxonomy } from "@/lib/taxonomy";
 import { isDomainId, type DomainId } from "@/lib/domains";
+import { findDuplicateCandidates } from "@/lib/duplicate-detection";
 import {
   resolveAsin,
   fetchProductByAsin,
@@ -33,10 +34,14 @@ export async function POST(request: NextRequest) {
 
   let url: string;
   let domain: DomainId = "design";
+  // `force` is set when the admin has seen the duplicate list and chose to add
+  // the laptop anyway — it skips the duplicate gate and proceeds to extraction.
+  let force = false;
   try {
     const body = await request.json();
     url = body.url;
     if (isDomainId(body.domain)) domain = body.domain;
+    force = body.force === true;
     if (!url || typeof url !== "string" || !url.trim()) {
       return NextResponse.json({ error: "url is required" }, { status: 400 });
     }
@@ -53,7 +58,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fetch from Amazon Creators API
+  // Fetch from Amazon Creators API. Done before the duplicate check because the
+  // product name is needed for fuzzy matching (and we need this data anyway).
+  let productName: string;
   let productText: string;
   let imageUrl: string | undefined;
   let priceApprox: number | undefined;
@@ -62,6 +69,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const product = await fetchProductByAsin(asin);
+    productName = product.title;
     productText = productToText(product);
     imageUrl = product.imageUrl;
     priceApprox = product.priceAmount;
@@ -87,6 +95,36 @@ export async function POST(request: NextRequest) {
       { error: err instanceof Error ? err.message : "Failed to fetch product from Amazon" },
       { status: 502 }
     );
+  }
+
+  // Duplicate gate — exact ASIN (via the resolved `asin` column) or fuzzy name
+  // match within the same domain. The same laptop may legitimately exist across
+  // domains, so this is domain-scoped. Skipped when the admin forces through.
+  if (!force) {
+    const { data: existing, error: dupErr } = await supabase
+      .from("laptops")
+      .select("id, name, slug, asin")
+      .eq("domain", domain);
+
+    if (dupErr) {
+      console.error("[fetch-amazon] duplicate check failed:", dupErr);
+    }
+
+    const candidates = findDuplicateCandidates(asin, productName, existing ?? []);
+    if (candidates.length > 0) {
+      return NextResponse.json(
+        {
+          code: "DUPLICATE_FOUND",
+          message: `Found ${candidates.length} possible duplicate${
+            candidates.length > 1 ? "s" : ""
+          } in the ${domain} domain. Review before adding.`,
+          asin,
+          productName,
+          candidates,
+        },
+        { status: 409 }
+      );
+    }
   }
 
   // Run through OpenAI
@@ -136,5 +174,7 @@ export async function POST(request: NextRequest) {
     price_label: priceLabel ?? data.price_label,
     image_url: imageUrl,
     amazon_affiliate_url: affiliateUrl,
+    // Persisted so future duplicate checks are an exact, indexed lookup.
+    asin,
   });
 }

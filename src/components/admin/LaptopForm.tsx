@@ -24,6 +24,7 @@ type FormData = {
   name: string;
   domain: DomainId;
   amazon_affiliate_url: string;
+  asin?: string;
   brand?: string;
   model?: string;
   price_approx?: number | "";
@@ -56,9 +57,12 @@ interface LaptopFormProps {
   laptop?: Laptop;
   /** DB-backed taxonomy per domain, used to tag recommended courses. */
   taxonomies: Record<DomainId, DomainTaxonomy>;
+  /** Preview a suggested duplicate by id in the surrounding workspace, instead
+   *  of navigating to its edit page. Provided on the "add" screen only. */
+  onPreviewDuplicate?: (id: string) => void;
 }
 
-export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
+export function LaptopForm({ laptop, taxonomies, onPreviewDuplicate }: LaptopFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -81,6 +85,7 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
           price_approx: laptop.price_approx ?? undefined,
           price_label: laptop.price_label ?? "",
           amazon_affiliate_url: laptop.amazon_affiliate_url,
+          asin: laptop.asin ?? "",
           image_url: laptop.image_url ?? "",
           cpu: laptop.cpu ?? "",
           gpu: laptop.gpu ?? "",
@@ -129,6 +134,7 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
     if (data.price_label) setValue("price_label", data.price_label);
     if (data.image_url) setValue("image_url", data.image_url);
     if (data.amazon_affiliate_url) setValue("amazon_affiliate_url", data.amazon_affiliate_url);
+    if (data.asin) setValue("asin", data.asin);
     if (data.cpu) setValue("cpu", data.cpu);
     if (data.gpu) setValue("gpu", data.gpu);
     if (data.gpu_vram_gb) setValue("gpu_vram_gb", data.gpu_vram_gb);
@@ -169,6 +175,7 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
       price_approx: data.price_approx ? Number(data.price_approx) : null,
       price_label: data.price_label || null,
       amazon_affiliate_url: data.amazon_affiliate_url,
+      asin: data.asin || null,
       image_url: data.image_url || null,
       cpu: data.cpu || null,
       gpu: data.gpu || null,
@@ -240,6 +247,7 @@ export function LaptopForm({ laptop, taxonomies }: LaptopFormProps) {
         onProcessed={handleAIProcessed}
         domain={watchedDomain}
         onDomainChange={(d) => setValue("domain", d)}
+        onPreviewDuplicate={onPreviewDuplicate}
       />
 
       {/* Basic info */}

@@ -133,6 +133,6 @@ export async function POST(request: NextRequest) {
     await new Promise((resolve) => setTimeout(resolve, 1100));
   }
 
-  revalidateTag("laptops", "max");
+  revalidateTag("laptops", { expire: 0 });
   return NextResponse.json(results);
 }
