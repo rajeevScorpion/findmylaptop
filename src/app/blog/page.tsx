@@ -2,17 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock, CalendarDays } from "lucide-react";
+import { cacheLife, cacheTag } from "next/cache";
 import { getBlogFlags } from "@/lib/flags";
 import { getPublishedPosts } from "@/lib/blog/queries";
-import { createClient } from "@/lib/supabase/server";
+import { getAllPublishedLaptops, getPublicSettings } from "@/lib/laptop-queries";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
 import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
 import { BlogHero } from "@/components/blog/BlogHero";
 import { ShareButton } from "@/components/blog/ShareButton";
-import type { Laptop } from "@/lib/types";
 
-export const revalidate = 300;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://laptopfinder.cc";
 
@@ -33,24 +32,19 @@ function formatDate(value: string | null): string {
 }
 
 export default async function BlogIndexPage() {
+  "use cache";
+  cacheTag("blog");
+  cacheLife("hours");
   const flags = await getBlogFlags();
   if (!flags.blog_enabled || !flags.blog_public_enabled) {
     notFound();
   }
 
-  const posts = await getPublishedPosts();
-
-  const supabase = await createClient();
-  const { data: laptopsRaw } = await supabase
-    .from("laptops")
-    .select("*")
-    .eq("is_published", true)
-    .order("priority_score", { ascending: false });
-  const { data: settings } = await supabase.from("settings").select("key, value");
-  const settingsMap = Object.fromEntries(
-    (settings ?? []).map((s: { key: string; value: string }) => [s.key, s.value])
-  );
-  const laptops: Laptop[] = (laptopsRaw ?? []) as Laptop[];
+  const [posts, laptops, settingsMap] = await Promise.all([
+    getPublishedPosts(),
+    getAllPublishedLaptops(),
+    getPublicSettings(),
+  ]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

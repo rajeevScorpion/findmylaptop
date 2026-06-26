@@ -5,7 +5,7 @@ import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
-import { BLOG_FLAG_KEYS, type BlogFlagKey, type BlogFlags } from "@/lib/flags";
+import { BLOG_FLAG_KEYS, type BlogFlagKey, type BlogFlags } from "@/lib/flag-keys";
 
 const FLAG_META: Record<BlogFlagKey, { label: string; description: string }> = {
   blog_enabled: {
@@ -63,6 +63,11 @@ export function BlogFlagsForm({ initial }: { initial: BlogFlags }) {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+    fetch("/api/admin/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: "flags" }),
+    });
   }
 
   return (

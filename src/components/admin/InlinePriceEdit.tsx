@@ -60,6 +60,12 @@ export function InlinePriceEdit({ laptopId, initialPrice, initialLabel }: Inline
     if (error) {
       setPrice(prevPrice);
       setLabel(prevLabel);
+    } else {
+      fetch("/api/admin/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "laptops" }),
+      });
     }
     setSaving(false);
   }

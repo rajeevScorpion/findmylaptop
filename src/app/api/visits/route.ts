@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const dynamic = "force-dynamic";
-
 // GET — read the current visit total without incrementing.
 export async function GET(): Promise<NextResponse> {
   const supabase = createAdminClient();

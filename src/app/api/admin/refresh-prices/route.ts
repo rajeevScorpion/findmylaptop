@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
   resolveAsin,
@@ -132,5 +133,6 @@ export async function POST(request: NextRequest) {
     await new Promise((resolve) => setTimeout(resolve, 1100));
   }
 
+  revalidateTag("laptops", "max");
   return NextResponse.json(results);
 }

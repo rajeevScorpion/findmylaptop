@@ -1,3 +1,4 @@
+import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { BlogCategory, BlogPost } from "./types";
 
@@ -11,6 +12,9 @@ const LIST_COLUMNS =
 const FULL_COLUMNS = "*";
 
 export async function getPublishedPosts(): Promise<BlogPost[]> {
+  "use cache";
+  cacheTag("blog");
+  cacheLife("hours");
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("blog_posts")
@@ -21,6 +25,9 @@ export async function getPublishedPosts(): Promise<BlogPost[]> {
 }
 
 export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | null> {
+  "use cache";
+  cacheTag("blog");
+  cacheLife("hours");
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("blog_posts")
@@ -35,6 +42,9 @@ export async function getRelatedPosts(
   post: Pick<BlogPost, "id" | "category_id">,
   limit = 3
 ): Promise<BlogPost[]> {
+  "use cache";
+  cacheTag("blog");
+  cacheLife("hours");
   const supabase = createAdminClient();
   let query = supabase
     .from("blog_posts")
@@ -50,6 +60,9 @@ export async function getRelatedPosts(
 
 // Slugs only — used by the sitemap.
 export async function getPublishedPostSlugs(): Promise<{ slug: string; updated_at: string }[]> {
+  "use cache";
+  cacheTag("blog");
+  cacheLife("hours");
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("blog_posts")
@@ -59,6 +72,7 @@ export async function getPublishedPostSlugs(): Promise<{ slug: string; updated_a
 }
 
 // ---- Admin ----------------------------------------------------------------
+// No caching on admin functions — they need to be always fresh.
 
 export async function getAllPostsForAdmin(): Promise<BlogPost[]> {
   const supabase = createAdminClient();

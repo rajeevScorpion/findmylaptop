@@ -1,27 +1,16 @@
-import { cache } from "react";
+import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  BLOG_FLAG_KEYS,
+  DOMAIN_FLAG_KEYS,
+  type BlogFlags,
+  type DomainFlags,
+} from "@/lib/flag-keys";
 
-// Blog/CMS feature flags. Stored as 'true'/'false' text rows in the existing
-// `settings` table (seeded by migration 013). Read server-side only.
-
-export type BlogFlagKey =
-  | "blog_enabled"
-  | "blog_public_enabled"
-  | "ai_blog_writer_enabled"
-  | "blog_product_blocks_enabled"
-  | "blog_schema_enabled"
-  | "blog_auto_sitemap_enabled";
-
-export type BlogFlags = Record<BlogFlagKey, boolean>;
-
-export const BLOG_FLAG_KEYS: BlogFlagKey[] = [
-  "blog_enabled",
-  "blog_public_enabled",
-  "ai_blog_writer_enabled",
-  "blog_product_blocks_enabled",
-  "blog_schema_enabled",
-  "blog_auto_sitemap_enabled",
-];
+// Re-export types and constants so existing callers of @/lib/flags still work.
+export type { BlogFlagKey, BlogFlags, DomainFlagKey, DomainFlags } from "@/lib/flag-keys";
+export { BLOG_FLAG_KEYS, DOMAIN_FLAG_KEYS } from "@/lib/flag-keys";
 
 // Safe defaults if the DB lookup fails: public-facing features OFF, so a
 // settings outage can never silently expose unreviewed content.
@@ -34,32 +23,20 @@ const SAFE_DEFAULTS: BlogFlags = {
   blog_auto_sitemap_enabled: false,
 };
 
-function toBool(value: string | undefined, fallback: boolean): boolean {
-  if (value == null) return fallback;
-  return value.trim().toLowerCase() === "true";
-}
-
-// ── Domain feature flags ───────────────────────────────────────────────────
-// Gate the Technology / Management tabs and routes. Stored as 'true'/'false'
-// text rows in `settings` (seeded by migration 020). Design is always on and
-// has no flag. Default OFF so a settings outage never exposes an unfinished
-// domain and never affects the live Design experience.
-
-export type DomainFlagKey = "domain_tech_enabled" | "domain_mgmt_enabled";
-
-export type DomainFlags = Record<DomainFlagKey, boolean>;
-
-export const DOMAIN_FLAG_KEYS: DomainFlagKey[] = [
-  "domain_tech_enabled",
-  "domain_mgmt_enabled",
-];
-
 const DOMAIN_SAFE_DEFAULTS: DomainFlags = {
   domain_tech_enabled: false,
   domain_mgmt_enabled: false,
 };
 
-export const getDomainFlags = cache(async (): Promise<DomainFlags> => {
+function toBool(value: string | undefined, fallback: boolean): boolean {
+  if (value == null) return fallback;
+  return value.trim().toLowerCase() === "true";
+}
+
+export async function getDomainFlags(): Promise<DomainFlags> {
+  "use cache";
+  cacheTag("flags");
+  cacheLife("hours");
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -80,11 +57,14 @@ export const getDomainFlags = cache(async (): Promise<DomainFlags> => {
   } catch {
     return { ...DOMAIN_SAFE_DEFAULTS };
   }
-});
+}
 
-// Cached per-request. Uses the admin (service-role) client so the read is not
-// affected by RLS, mirroring how other server pages read settings.
-export const getBlogFlags = cache(async (): Promise<BlogFlags> => {
+// Cached across requests via `use cache`. Uses the admin (service-role) client
+// so the read is not affected by RLS. Invalidate with revalidateTag('flags').
+export async function getBlogFlags(): Promise<BlogFlags> {
+  "use cache";
+  cacheTag("flags");
+  cacheLife("hours");
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
@@ -98,8 +78,6 @@ export const getBlogFlags = cache(async (): Promise<BlogFlags> => {
       data.map((r: { key: string; value: string }) => [r.key, r.value])
     );
 
-    // If a flag row is missing, fall back to the recommended seed default
-    // (blog on, schema/sitemap on; everything risky off).
     return {
       blog_enabled: toBool(map["blog_enabled"], true),
       blog_public_enabled: toBool(map["blog_public_enabled"], false),
@@ -111,4 +89,4 @@ export const getBlogFlags = cache(async (): Promise<BlogFlags> => {
   } catch {
     return { ...SAFE_DEFAULTS };
   }
-});
+}

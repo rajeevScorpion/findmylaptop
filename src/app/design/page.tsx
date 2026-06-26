@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
 import { DomainLanding } from "@/components/public/DomainLanding";
 import { DOMAINS } from "@/lib/domains";
-
-export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: DOMAINS.design.metaTitle,
@@ -11,5 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DesignPage() {
+  "use cache";
+  cacheLife("minutes");
   return <DomainLanding domain={DOMAINS.design} />;
 }

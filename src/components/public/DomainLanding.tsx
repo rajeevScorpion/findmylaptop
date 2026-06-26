@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { getDomainFlags } from "@/lib/flags";
 import { getTaxonomy } from "@/lib/taxonomy";
+import { getPublishedLaptopsForDomain, getPublicSettings } from "@/lib/laptop-queries";
 import { DOMAIN_ORDER, type DomainConfig, type DomainId } from "@/lib/domains";
 import { HeroSection } from "@/components/public/HeroSection";
 import { ResultsSection } from "@/components/public/ResultsSection";
@@ -15,28 +15,13 @@ import { Disclaimer } from "@/components/public/Disclaimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
-import type { Laptop } from "@/lib/types";
-
 // Shared, config-driven landing page rendered by /, /technology and /management.
 // The active domain controls the laptop pool, taxonomy, hero copy, and theme
 // (via the data-domain attribute, see globals.css).
 export async function DomainLanding({ domain }: { domain: DomainConfig }) {
-  const supabase = await createClient();
-
-  const { data: laptopsRaw } = await supabase
-    .from("laptops")
-    .select("*")
-    .eq("is_published", true)
-    .eq("domain", domain.id)
-    .order("priority_score", { ascending: false });
-
-  const { data: settings } = await supabase.from("settings").select("key, value");
-
-  const settingsMap = Object.fromEntries(
-    (settings ?? []).map((s: { key: string; value: string }) => [s.key, s.value])
-  );
-
-  const [taxonomy, flags] = await Promise.all([
+  const [laptops, settingsMap, taxonomy, flags] = await Promise.all([
+    getPublishedLaptopsForDomain(domain.id),
+    getPublicSettings(),
     getTaxonomy(domain.id),
     getDomainFlags(),
   ]);
@@ -45,8 +30,6 @@ export async function DomainLanding({ domain }: { domain: DomainConfig }) {
   const enabledIds: DomainId[] = DOMAIN_ORDER.filter(
     (d) => !d.flagKey || flags[d.flagKey]
   ).map((d) => d.id);
-
-  const laptops: Laptop[] = (laptopsRaw ?? []) as Laptop[];
 
   return (
     <main data-domain={domain.id} className="min-h-screen">

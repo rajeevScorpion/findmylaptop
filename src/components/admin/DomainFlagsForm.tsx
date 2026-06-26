@@ -5,7 +5,7 @@ import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { createClient } from "@/lib/supabase/client";
-import { DOMAIN_FLAG_KEYS, type DomainFlagKey, type DomainFlags } from "@/lib/flags";
+import { DOMAIN_FLAG_KEYS, type DomainFlagKey, type DomainFlags } from "@/lib/flag-keys";
 
 const FLAG_META: Record<DomainFlagKey, { label: string; description: string }> = {
   domain_tech_enabled: {
@@ -49,6 +49,11 @@ export function DomainFlagsForm({ initial }: { initial: DomainFlags }) {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+    fetch("/api/admin/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag: "flags" }),
+    });
   }
 
   return (

@@ -26,6 +26,12 @@ export function PublishToggle({ laptopId, initialPublished }: PublishToggleProps
 
     if (error) {
       setPublished(!next); // revert
+    } else {
+      fetch("/api/admin/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "laptops" }),
+      });
     }
     setLoading(false);
   };

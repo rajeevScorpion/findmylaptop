@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
 import { HomeHub } from "@/components/public/HomeHub";
-
-export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Find My Laptop — Laptops for Design, Tech & Management Students",
@@ -11,5 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
+  "use cache";
+  cacheLife("minutes");
   return <HomeHub />;
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Caveat } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Analytics } from "@vercel/analytics/next";
@@ -65,7 +66,9 @@ export default function RootLayout({
         <meta name="impact-site-verification" {...{ value: "2280a2f3-f462-4e2f-b220-dd5c0ebddfb9" } as any} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ThemeProvider>{children}</ThemeProvider>
+        <Suspense>
+          <ThemeProvider>{children}</ThemeProvider>
+        </Suspense>
         <Analytics />
       </body>
     </html>

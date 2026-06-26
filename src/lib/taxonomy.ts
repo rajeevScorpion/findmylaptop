@@ -1,4 +1,4 @@
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COURSES_BY_CATEGORY } from "@/lib/constants";
 import type { DomainId } from "@/lib/domains";
@@ -45,44 +45,46 @@ function designFallback(): DomainTaxonomy {
   return buildFromRows(rows);
 }
 
-export const getTaxonomy = cache(
-  async (domain: DomainId): Promise<DomainTaxonomy> => {
-    try {
-      const supabase = createAdminClient();
-      const { data, error } = await supabase
-        .from("courses")
-        .select("category, name, sort_order")
-        .eq("domain", domain)
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-        .order("category", { ascending: true })
-        .order("name", { ascending: true });
+export async function getTaxonomy(domain: DomainId): Promise<DomainTaxonomy> {
+  "use cache";
+  cacheTag("taxonomy");
+  cacheLife("days");
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("courses")
+      .select("category, name, sort_order")
+      .eq("domain", domain)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("category", { ascending: true })
+      .order("name", { ascending: true });
 
-      if (error || !data || data.length === 0) {
-        return domain === "design"
-          ? designFallback()
-          : { categories: [], coursesByCategory: {}, allCourses: [] };
-      }
-
-      return buildFromRows(data as { category: string; name: string }[]);
-    } catch {
+    if (error || !data || data.length === 0) {
       return domain === "design"
         ? designFallback()
         : { categories: [], coursesByCategory: {}, allCourses: [] };
     }
+
+    return buildFromRows(data as { category: string; name: string }[]);
+  } catch {
+    return domain === "design"
+      ? designFallback()
+      : { categories: [], coursesByCategory: {}, allCourses: [] };
   }
-);
+}
 
 // Fetch taxonomy for every domain at once — used by the admin laptop form so a
 // laptop can be re-tagged when its domain changes. Returns a map keyed by
 // DomainId. Falls back per-domain like getTaxonomy.
-export const getAllTaxonomies = cache(
-  async (): Promise<Record<DomainId, DomainTaxonomy>> => {
-    const [design, technology, management] = await Promise.all([
-      getTaxonomy("design"),
-      getTaxonomy("technology"),
-      getTaxonomy("management"),
-    ]);
-    return { design, technology, management };
-  }
-);
+export async function getAllTaxonomies(): Promise<Record<DomainId, DomainTaxonomy>> {
+  "use cache";
+  cacheTag("taxonomy");
+  cacheLife("days");
+  const [design, technology, management] = await Promise.all([
+    getTaxonomy("design"),
+    getTaxonomy("technology"),
+    getTaxonomy("management"),
+  ]);
+  return { design, technology, management };
+}
