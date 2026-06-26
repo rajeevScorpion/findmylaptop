@@ -1,12 +1,4 @@
 import type { Laptop, FilterState, RecommendationResult, BadgeType, SortOption } from "./types";
-import { getGpuStrengthScore } from "./constants";
-
-const FOUR_YEAR_SCORES: Record<string, number> = {
-  excellent: 4,
-  strong: 3,
-  good: 2,
-  basic: 1,
-};
 
 function computeSuitabilityScore(laptop: Laptop, filters: FilterState): number {
   let score = laptop.priority_score ?? 50;
@@ -147,18 +139,6 @@ function sortResults(
     case "price-desc":
       return sorted.sort(
         (a, b) => (b.price_approx ?? 0) - (a.price_approx ?? 0)
-      );
-
-    case "gpu-strength":
-      return sorted.sort(
-        (a, b) => getGpuStrengthScore(b.gpu) - getGpuStrengthScore(a.gpu)
-      );
-
-    case "four-year":
-      return sorted.sort(
-        (a, b) =>
-          (FOUR_YEAR_SCORES[b.four_year_suitability ?? "basic"] ?? 0) -
-          (FOUR_YEAR_SCORES[a.four_year_suitability ?? "basic"] ?? 0)
       );
 
     default:
