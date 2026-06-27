@@ -228,12 +228,12 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
 - Game / 3D art → Blender, Maya, Unreal Engine, Unity, Substance Painter
 - Architecture / interior → AutoCAD, SketchUp, Revit, 3ds Max, Lumion`,
       greeting:
-        "Hi! I'm Chip 👋 I help designers find the right laptop — whether you're just starting out, in school, or working professionally.\n\nAre you a design aspirant, student, or working professional?",
+        "Hi! I'm Chip 👋 your Design laptop advisor. A few quick questions and I'll match you to the right machine for your creative work.\n\nFirst — where are you in your design journey?",
       roleSuggestions: [
-        "Design Aspirant / Fresher",
-        "Design Student",
-        "Working Design Professional",
-        "Just Exploring",
+        "Design aspirant",
+        "Design student",
+        "Working professional",
+        "Just exploring",
       ],
     },
     landscape: {
@@ -413,12 +413,12 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
 - DevOps / cloud → Docker, Kubernetes, local clusters (RAM + multi-core CPU)
 - Game programming → Unreal/Unity, C++ builds (strong GPU + CPU + VRAM)`,
       greeting:
-        "Hi! I'm Chip 👋 I help tech students and developers find the right laptop — whether you're starting your first course, in college, or working in the field.\n\nAre you a student, self-learner, or working professional?",
+        "Hi! I'm Chip 👋 your Technology laptop advisor. A few quick questions and I'll match you to a machine that handles your stack and builds.\n\nFirst — where are you in your tech journey?",
       roleSuggestions: [
-        "CS / Engineering Student",
-        "Self-taught / Bootcamp",
-        "Working Developer",
-        "Just Exploring",
+        "CS / engineering student",
+        "Self-taught / bootcamp",
+        "Working developer",
+        "Just exploring",
       ],
     },
     landscape: {
@@ -599,12 +599,12 @@ export const DOMAINS: Record<DomainId, DomainConfig> = {
 - Operations / supply chain → Excel, simulation/optimisation tools (CPU + RAM)
 - Product management → Figma viewing, docs, analytics dashboards (balanced, portable)`,
       greeting:
-        "Hi! I'm Chip 👋 I help business and management students find the right laptop — whether you're starting your degree, mid-MBA, or already working.\n\nAre you a student, MBA candidate, or working professional?",
+        "Hi! I'm Chip 👋 your Management laptop advisor. A few quick questions and I'll match you to a light, all-day machine for business work.\n\nFirst — where are you in your management journey?",
       roleSuggestions: [
-        "Management Student",
-        "MBA Candidate",
-        "Working Professional",
-        "Just Exploring",
+        "Management student",
+        "MBA candidate",
+        "Working professional",
+        "Just exploring",
       ],
     },
     landscape: {

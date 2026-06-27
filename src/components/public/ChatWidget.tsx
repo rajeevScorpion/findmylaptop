@@ -10,9 +10,16 @@ import { cn } from "@/lib/utils";
 import type { Laptop, ChatMessage, ChatApiResponse } from "@/lib/types";
 import { DOMAINS, type DomainId } from "@/lib/domains";
 
-const STORAGE_MESSAGES = "chip_messages";
-const STORAGE_SESSION_ID = "chip_session_id";
-const STORAGE_RATED = "chip_rated";
+// Conversation state is cached in sessionStorage, scoped PER DOMAIN so that
+// switching domains (e.g. Technology → Design via the tabs) never restores the
+// wrong domain's greeting/conversation. Each domain keeps its own independent
+// chat + session + feedback state. `chip_opened` (the hint-arrow flag) stays
+// global — it isn't conversation state.
+const storageKeys = (domain: DomainId) => ({
+  messages: `chip_messages_${domain}`,
+  sessionId: `chip_session_id_${domain}`,
+  rated: `chip_rated_${domain}`,
+});
 
 function makeInitialMessage(domain: DomainId): ChatMessage {
   const chip = DOMAINS[domain].chip;
@@ -34,6 +41,7 @@ interface ChatWidgetProps {
 
 export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: ChatWidgetProps) {
   const initialMessage = useMemo(() => makeInitialMessage(domain), [domain]);
+  const keys = useMemo(() => storageKeys(domain), [domain]);
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
@@ -75,15 +83,15 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
 
   useEffect(() => {
     try {
-      const savedMessages = sessionStorage.getItem(STORAGE_MESSAGES);
-      const savedSessionId = sessionStorage.getItem(STORAGE_SESSION_ID);
+      const savedMessages = sessionStorage.getItem(keys.messages);
+      const savedSessionId = sessionStorage.getItem(keys.sessionId);
       if (savedMessages) {
         const parsed = JSON.parse(savedMessages) as ChatMessage[];
         if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
       }
       if (savedSessionId) setSessionId(savedSessionId);
       if (localStorage.getItem("chip_opened") === "1") setHasBeenOpened(true);
-      if (sessionStorage.getItem(STORAGE_RATED) === "1") setFeedbackStage("done");
+      if (sessionStorage.getItem(keys.rated) === "1") setFeedbackStage("done");
     } catch {}
 
     const handleOpenEvent = () => {
@@ -93,17 +101,17 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
     };
     document.addEventListener("chip:open", handleOpenEvent);
     return () => document.removeEventListener("chip:open", handleOpenEvent);
-  }, []);
+  }, [keys]);
 
   useEffect(() => {
-    try { sessionStorage.setItem(STORAGE_MESSAGES, JSON.stringify(messages)); } catch {}
-  }, [messages]);
+    try { sessionStorage.setItem(keys.messages, JSON.stringify(messages)); } catch {}
+  }, [messages, keys]);
 
   useEffect(() => {
     if (sessionId) {
-      try { sessionStorage.setItem(STORAGE_SESSION_ID, sessionId); } catch {}
+      try { sessionStorage.setItem(keys.sessionId, sessionId); } catch {}
     }
-  }, [sessionId]);
+  }, [sessionId, keys]);
 
   useEffect(() => {
     if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -113,14 +121,14 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
   useEffect(() => {
     if (hasRecommendation && feedbackStage === null) {
       try {
-        if (sessionStorage.getItem(STORAGE_RATED) !== "1") {
+        if (sessionStorage.getItem(keys.rated) !== "1") {
           setFeedbackStage("prompt");
         }
       } catch {
         setFeedbackStage("prompt");
       }
     }
-  }, [hasRecommendation, feedbackStage]);
+  }, [hasRecommendation, feedbackStage, keys]);
 
   useEffect(() => {
     if (isOpen) setTimeout(() => textareaRef.current?.focus(), 100);
@@ -309,7 +317,7 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
           message_count: transcript.length,
         }),
       });
-      try { sessionStorage.setItem(STORAGE_RATED, "1"); } catch {}
+      try { sessionStorage.setItem(keys.rated, "1"); } catch {}
     } catch {
       // non-critical — don't surface errors to user
     } finally {
@@ -341,7 +349,7 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
     const engaged = messages.some((m) => m.role === "user");
     let alreadyHandled = feedbackStage === "done";
     try {
-      if (sessionStorage.getItem(STORAGE_RATED) === "1") alreadyHandled = true;
+      if (sessionStorage.getItem(keys.rated) === "1") alreadyHandled = true;
     } catch {}
 
     if (engaged && !alreadyHandled) {
@@ -454,7 +462,7 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground leading-tight">Chip</p>
-                <p className="text-[11px] text-muted-foreground leading-tight">Expert laptop advisor</p>
+                <p className="text-[11px] text-muted-foreground leading-tight">{DOMAINS[domain].label} laptop advisor</p>
               </div>
               {/* Maximize / Minimize */}
               <button
