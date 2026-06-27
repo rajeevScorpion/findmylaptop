@@ -16,6 +16,8 @@ interface GuidedFinderProps {
   coursesByCategory: Record<string, string[]>;
   /** Workload chips for the active domain. */
   workloadTags: readonly WorkloadTagOption[];
+  /** Whether to show the Workload chips (admin-controlled; off by default). */
+  showWorkloadFilter?: boolean;
   /** Sub-line under the "Find your laptop" heading. */
   finderSubtitle?: string;
   /** Smaller reassurance note. */
@@ -40,6 +42,7 @@ export function GuidedFinder({
   categories,
   coursesByCategory,
   workloadTags,
+  showWorkloadFilter = false,
   finderSubtitle = "Filter by course, budget, and workload",
   finderNote = "Every laptop listed here is hand-picked based on real course requirements and years of experience guiding design students.",
 }: GuidedFinderProps) {
@@ -181,6 +184,7 @@ export function GuidedFinder({
             </div>
 
             {/* Workload tags */}
+            {showWorkloadFilter && (
             <div>
               <div className="flex items-baseline gap-2 mb-2">
                 <p className="text-xs font-semibold text-foreground uppercase tracking-widest">Workload</p>
@@ -207,6 +211,7 @@ export function GuidedFinder({
                 ))}
               </div>
             </div>
+            )}
 
             {/* Brand + Processor — side by side on desktop */}
             <div className="flex flex-col sm:flex-row gap-4">

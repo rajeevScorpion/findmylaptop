@@ -27,6 +27,7 @@ export default async function AdminSettingsPage() {
         whatsappUrl={settingsMap["whatsapp_url"] ?? ""}
         disclaimerText={settingsMap["disclaimer_text"] ?? ""}
         voiceInputEnabled={settingsMap["voice_input_enabled"] !== "false"}
+        workloadFilterEnabled={settingsMap["workload_filter_enabled"] === "true"}
       />
       <DomainFlagsForm initial={domainFlags} />
       <BlogFlagsForm initial={flags} />

@@ -18,7 +18,7 @@ function computeSuitabilityScore(laptop: Laptop, filters: FilterState): number {
     const overlap = laptop.workload_tags.filter((t) =>
       filters.workloadTags.includes(t)
     ).length;
-    score += overlap * 5;
+    score += overlap * 15;
   }
 
   // RAM adequacy
@@ -173,14 +173,16 @@ export function getRecommendations(
       if (!matches) return false;
     }
 
-    // Budget filter
-    if (
-      filters.maxBudget &&
-      filters.maxBudget < 999999 &&
-      laptop.price_approx &&
-      laptop.price_approx > filters.maxBudget * 1.1
-    ) {
-      return false;
+    // Budget filter — only judges laptops with a known price; price-less
+    // laptops stay visible since we can't evaluate them.
+    if (filters.maxBudget && laptop.price_approx) {
+      if (filters.maxBudget >= 999999) {
+        // "₹2,00,000+" is a premium floor, not a cap
+        if (laptop.price_approx < 200000) return false;
+      } else if (laptop.price_approx > filters.maxBudget) {
+        // Cap means what the label says — no tolerance overshoot
+        return false;
+      }
     }
 
     // RAM filter

@@ -113,15 +113,26 @@ function extractListingPrice(listing: unknown): { display?: string; amount?: num
   const display = (money.displayAmount ?? price.displayAmount ?? price.displayString) as
     | string
     | undefined;
+  // Prefer the human-readable display ("₹66,500.00") — it's authoritative in
+  // rupees. Amazon's `money.amount` on amazon.in is in paise (minor units), so
+  // it's only a fallback and must be divided by 100.
   const amount =
-    typeof money.amount === "number" ? Math.round(money.amount) : parsePriceToInt(display);
+    parsePriceToInt(display) ??
+    (typeof money.amount === "number" ? Math.round(money.amount / 100) : null);
   return { display, amount: amount ?? undefined };
 }
 
-/** Parses a display price like "₹89,990" → 89990. Returns null if unparseable. */
+/**
+ * Parses a display price like "₹89,990" or "₹66,500.00" → 89990 / 66500.
+ * The decimal portion is dropped first so the ".00" doesn't get folded into the
+ * integer (which would yield paise, e.g. 6650000). Returns null if unparseable.
+ */
 export function parsePriceToInt(displayAmount?: string): number | null {
   if (!displayAmount) return null;
-  const digits = displayAmount.replace(/[^\d]/g, "");
+  // Indian formatting groups with commas, so any "." is a decimal separator.
+  const intPart = displayAmount.split(".")[0];
+  const digits = intPart.replace(/[^\d]/g, "");
+  if (!digits) return null;
   const n = parseInt(digits, 10);
   return isNaN(n) ? null : n;
 }
