@@ -183,7 +183,6 @@ export async function HomeHub() {
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
       <VisitCounter />
       <Disclaimer text={settingsMap["disclaimer_text"]} />
-      <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
     </main>
   );
 }

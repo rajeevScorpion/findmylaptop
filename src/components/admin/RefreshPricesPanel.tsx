@@ -33,6 +33,7 @@ type UpdatedRow = {
   availability: string | null;
   last_checked: string;
   auto_unpublished?: boolean;
+  auto_republished?: boolean;
 };
 
 type RefreshResult = {
@@ -151,12 +152,17 @@ export function RefreshPricesPanel({ laptops: initialLaptops }: { laptops: Lapto
           availability: u.availability,
           last_checked: u.last_checked,
           ...(u.auto_unpublished && { is_published: false }),
+          ...(u.auto_republished && { is_published: true }),
         };
       })
     );
   }
 
-  async function refresh(scope: "all" | "page" | string, ids?: string[]) {
+  async function refresh(
+    scope: "all" | "page" | "unpublished" | string,
+    ids?: string[],
+    republishIfAvailable?: boolean
+  ) {
     setBusy(scope);
     setResult(null);
     setErrorMsg(null);
@@ -165,7 +171,10 @@ export function RefreshPricesPanel({ laptops: initialLaptops }: { laptops: Lapto
       const res = await fetch("/api/admin/refresh-prices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ids ? { ids } : {}),
+        body: JSON.stringify({
+          ...(ids ? { ids } : {}),
+          ...(republishIfAvailable ? { republishIfAvailable: true } : {}),
+        }),
       });
       const data = await res.json();
 
@@ -201,24 +210,42 @@ export function RefreshPricesPanel({ laptops: initialLaptops }: { laptops: Lapto
 
   const anyBusy = busy !== null;
   const pageIds = pageLaptops.map((l) => l.id);
+  const attentionIds = attentionLaptops.map((l) => l.id);
 
   return (
     <div className="space-y-4">
       {/* Attention section — unpublished laptops with unavailability */}
       {attentionLaptops.length > 0 && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
-          <button
-            onClick={() => setAttentionOpen((v) => !v)}
-            className="w-full flex items-center gap-2.5 px-4 py-3 text-left"
-          >
-            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-            <span className="text-sm font-medium text-amber-700 dark:text-amber-400 flex-1">
-              {attentionLaptops.length} auto-unpublished — check if back in stock
-            </span>
-            <ChevronDown
-              className={`w-4 h-4 text-amber-500 transition-transform ${attentionOpen ? "" : "-rotate-90"}`}
-            />
-          </button>
+          <div className="w-full flex items-center gap-2.5 px-4 py-3">
+            <button
+              onClick={() => setAttentionOpen((v) => !v)}
+              className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+            >
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+              <span className="text-sm font-medium text-amber-700 dark:text-amber-400 flex-1 truncate">
+                {attentionLaptops.length} auto-unpublished — check if back in stock
+              </span>
+            </button>
+            <button
+              onClick={() => refresh("unpublished", attentionIds, true)}
+              disabled={anyBusy}
+              title="Re-check all unpublished on Amazon — auto-publishes any back in stock"
+              className="inline-flex items-center gap-1.5 rounded-md h-7 px-2.5 text-xs font-medium border border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${busy === "unpublished" ? "animate-spin" : ""}`} />
+              {busy === "unpublished" ? "Checking…" : "Refresh all unpublished"}
+            </button>
+            <button
+              onClick={() => setAttentionOpen((v) => !v)}
+              className="shrink-0"
+              aria-label={attentionOpen ? "Collapse" : "Expand"}
+            >
+              <ChevronDown
+                className={`w-4 h-4 text-amber-500 transition-transform ${attentionOpen ? "" : "-rotate-90"}`}
+              />
+            </button>
+          </div>
           {attentionOpen && (
             <>
               {/* Attention table header */}

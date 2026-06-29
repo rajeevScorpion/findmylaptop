@@ -37,11 +37,15 @@ export async function POST(request: NextRequest) {
   // Optional: scope the refresh to a specific set of laptop ids (a single row
   // or one page). Falls back to all published laptops (cron / "refresh all").
   let ids: string[] | null = null;
+  // When true, any currently-unpublished laptop that comes back available is
+  // automatically re-published (used by the "Refresh all unpublished" action).
+  let republishIfAvailable = false;
   try {
     const body = await request.json();
     if (Array.isArray(body?.ids) && body.ids.length > 0) {
       ids = body.ids.filter((id: unknown): id is string => typeof id === "string");
     }
+    republishIfAvailable = body?.republishIfAvailable === true;
   } catch {
     // No / invalid body → refresh everything.
   }
@@ -77,6 +81,7 @@ export async function POST(request: NextRequest) {
     availability: string | null;
     last_checked: string;
     auto_unpublished?: boolean;
+    auto_republished?: boolean;
   };
 
   const results = {
@@ -102,12 +107,16 @@ export async function POST(request: NextRequest) {
       // Only auto-unpublish if the laptop was published before this check.
       // Re-checking an already-unpublished laptop should never flip it back.
       const shouldUnpublish = unavailable && laptop.is_published;
+      // Re-publish an unpublished laptop that is back in stock — only when the
+      // caller opts in (the "Refresh all unpublished" action).
+      const shouldRepublish = republishIfAvailable && !unavailable && !laptop.is_published;
       const update: UpdatedRow = {
         id: laptop.id,
         price_label: product.price ?? null,
         availability: product.availability ?? null,
         last_checked: new Date().toISOString().split("T")[0],
         ...(shouldUnpublish && { auto_unpublished: true }),
+        ...(shouldRepublish && { auto_republished: true }),
       };
 
       await supabase
@@ -118,6 +127,7 @@ export async function POST(request: NextRequest) {
           availability: update.availability,
           last_checked: update.last_checked,
           ...(shouldUnpublish && { is_published: false }),
+          ...(shouldRepublish && { is_published: true }),
         })
         .eq("id", laptop.id);
 
