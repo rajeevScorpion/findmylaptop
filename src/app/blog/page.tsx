@@ -5,10 +5,7 @@ import { Clock, CalendarDays } from "lucide-react";
 import { cacheLife, cacheTag } from "next/cache";
 import { getBlogFlags } from "@/lib/flags";
 import { getPublishedPosts } from "@/lib/blog/queries";
-import { getAllPublishedLaptops, getPublicSettings } from "@/lib/laptop-queries";
 import { SiteHeader } from "@/components/public/SiteHeader";
-import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
-import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
 import { BlogHero } from "@/components/blog/BlogHero";
 import { ShareButton } from "@/components/blog/ShareButton";
 
@@ -40,11 +37,7 @@ export default async function BlogIndexPage() {
     notFound();
   }
 
-  const [posts, laptops, settingsMap] = await Promise.all([
-    getPublishedPosts(),
-    getAllPublishedLaptops(),
-    getPublicSettings(),
-  ]);
+  const posts = await getPublishedPosts();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -111,9 +104,6 @@ export default async function BlogIndexPage() {
           </div>
         )}
       </div>
-
-      <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
-      <ChatWidgetLoader laptops={laptops} voiceEnabled={settingsMap["voice_input_enabled"] !== "false"} />
     </div>
   );
 }

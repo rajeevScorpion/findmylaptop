@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cacheLife, cacheTag } from "next/cache";
 import { ArrowLeft, Clock, CalendarDays, ListTree } from "lucide-react";
 import { getBlogFlags } from "@/lib/flags";
 import { getPublishedPostBySlug, getRelatedPosts } from "@/lib/blog/queries";
@@ -8,10 +9,8 @@ import { BlockRenderer } from "@/components/blog/BlockRenderer";
 import { ShareButton } from "@/components/blog/ShareButton";
 import { buildToc } from "@/lib/blog/toc";
 import type { BlogContentDoc, Block, FaqItem } from "@/lib/blog/types";
-import { getAllPublishedLaptops, getPublicSettings } from "@/lib/laptop-queries";
+import { getAllPublishedLaptops } from "@/lib/laptop-queries";
 import { SiteHeader } from "@/components/public/SiteHeader";
-import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
-import { ChatWidgetLoader } from "@/components/public/ChatWidgetLoader";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -64,6 +63,9 @@ function formatDate(value: string | null): string {
 }
 
 export default async function BlogPostPage({ params }: Props) {
+  "use cache";
+  cacheTag("blog");
+  cacheLife("hours");
   const { slug } = await params;
   const flags = await getBlogFlags();
   if (!flags.blog_enabled || !flags.blog_public_enabled) notFound();
@@ -75,10 +77,9 @@ export default async function BlogPostPage({ params }: Props) {
   const toc = post.toc_json?.length ? post.toc_json : buildToc(doc);
   const related = await getRelatedPosts({ id: post.id, category_id: post.category_id });
 
-  const [laptops, settingsMap] = await Promise.all([
-    getAllPublishedLaptops(),
-    getPublicSettings(),
-  ]);
+  // Product blocks inside the article need the catalog; skip the heavy load
+  // entirely when the feature is off.
+  const laptops = flags.blog_product_blocks_enabled ? await getAllPublishedLaptops() : [];
 
   // FAQ items (for schema) only from visible FAQ blocks.
   const faqItems: FaqItem[] = doc.blocks
@@ -238,9 +239,6 @@ export default async function BlogPostPage({ params }: Props) {
           )}
         </div>
       </div>
-
-      <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} variant="floating" />
-      <ChatWidgetLoader laptops={laptops} voiceEnabled={settingsMap["voice_input_enabled"] !== "false"} />
     </div>
   );
 }
