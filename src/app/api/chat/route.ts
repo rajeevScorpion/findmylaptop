@@ -1,17 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
+import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ChatApiRequest, ChatApiResponse, ChipJsonOutput } from "@/lib/types";
 import { DOMAINS, isDomainId, type DomainId } from "@/lib/domains";
+import { getGrowthAgentModel } from "@/lib/growth-agents/models";
+import { getAgentSettings } from "@/lib/growth-agents/settings";
+import {
+  extractChipConversationPreferences,
+  extractChipPreferences,
+} from "@/lib/chip-learning/heuristics";
+import {
+  buildChipProfilePromptContext,
+  getChipSessionProfileBestEffort,
+  recordChipLearningTurnBestEffort,
+} from "@/lib/chip-learning/service";
 
 const SESSION_LIMIT = 30;
 
-function buildSystemPrompt(catalogJson: string, domain: DomainId): string {
+const chatRequestSchema = z
+  .object({
+    messages: z
+      .array(
+        z
+          .object({
+            role: z.enum(["user", "assistant"]),
+            content: z.string().trim().min(1).max(4_000),
+          })
+          .strict()
+      )
+      .min(1)
+      .max(60),
+    sessionId: z.uuid().optional(),
+    domain: z.enum(["design", "technology", "management"]).optional(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.messages.reduce((total, message) => total + message.content.length, 0) <=
+      60_000,
+    { message: "Conversation history is too large." }
+  );
+
+const chipResponseSchema = z
+  .object({
+    message: z.string().trim().min(1).max(2_000),
+    recommendedSlugs: z.array(z.string().trim().min(1).max(200)).max(3),
+    suggestions: z.array(z.string().trim().min(1).max(240)).max(4),
+  })
+  .strict();
+
+function buildSystemPrompt(
+  catalogJson: string,
+  domain: DomainId,
+  learningContext: string | null = null
+): string {
   const chip = DOMAINS[domain].chip;
-  return `You are Chip — ${chip.persona}. You work for the "Find My Laptop" tool. You have personally studied every laptop in the catalog below and know exactly which workflows each one handles well or struggles with. Right now you are helping someone in the ${DOMAINS[domain].label} space — the catalog below contains only laptops curated for that audience, so recommend from it.
+  return `You are Chip — ${chip.persona}. You work for the "Find My Laptop" tool. The catalog below contains structured laptop records curated for the ${DOMAINS[domain].label} audience. Base every product statement on those records and never claim personal testing, ownership, or experience.
 
 ## Persona
-- An experienced senior designer who has mentored many beginners. Patient, encouraging, never condescending.
+- An experienced editorial guide for this audience. Patient, encouraging, never condescending.
 - You narrow the search *for* the user — you don't quiz them on things they can't be expected to know.
 - Warm and direct — skip filler phrases ("Great choice!", "Sure thing!"). Get to the point.
 - Empathetic: acknowledge real constraints (tight budgets, heavy software, portability needs) before giving advice.
@@ -118,23 +167,41 @@ EXAMPLE — all info collected, must include slugs, no prices or counts in messa
 }
 
 ## Laptop catalog — use these slugs exactly, never fabricate entries
-${catalogJson}`;
+${catalogJson}${
+    learningContext
+      ? `
+
+## Optional structured session memory
+Learning is enabled for this anonymous session. The following is a deterministic summary of recommendation preferences from earlier turns; it contains no chat text or identity data:
+${learningContext}
+
+- Treat the user's current explicit message as authoritative if it conflicts with this summary.
+- Use the summary only to avoid repeating questions and to improve fit; never imply that you know the user's identity.
+- When recommending, explain why the fit is sensible and name one honest check or trade-off before the product-card CTA.
+- Stay fit-first and non-promotional. When relevant, remind the user to verify the exact configuration, seller, warranty, return policy, and current availability.`
+      : ""
+  }`;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  let body: ChatApiRequest;
+  let rawBody: unknown;
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  const parsedBody = chatRequestSchema.safeParse(rawBody);
+  if (!parsedBody.success) {
+    return NextResponse.json(
+      { error: "Invalid chat request", details: parsedBody.error.flatten() },
+      { status: 400 }
+    );
+  }
+  const body: ChatApiRequest = parsedBody.data;
+
   const { messages, sessionId: incomingSessionId } = body;
   const domain: DomainId = isDomainId(body.domain) ? body.domain : "design";
-
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return NextResponse.json({ error: "messages array is required" }, { status: 400 });
-  }
 
   const supabase = createAdminClient();
 
@@ -192,15 +259,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  // ── Fetch laptop catalog ────────────────────────────────────────
-  const { data: laptopsRaw } = await supabase
-    .from("laptops")
-    .select(
-      "slug, name, brand, price_label, price_approx, tier, workload_tags, recommended_for_courses, why_recommended, cautions, four_year_suitability, ram_gb, gpu_vram_gb, weight, cpu, gpu"
-    )
-    .eq("is_published", true)
-    .eq("domain", domain)
-    .order("priority_score", { ascending: false });
+  // ── Fetch fail-closed learning settings + laptop catalog ───────
+  const [agentSettings, { data: laptopsRaw }] = await Promise.all([
+    getAgentSettings(supabase),
+    supabase
+      .from("laptops")
+      .select(
+        "slug, name, brand, price_label, price_approx, tier, workload_tags, recommended_for_courses, why_recommended, cautions, four_year_suitability, ram_gb, gpu_vram_gb, weight, cpu, gpu"
+      )
+      .eq("is_published", true)
+      .eq("domain", domain)
+      .order("priority_score", { ascending: false }),
+  ]);
 
   const laptops = laptopsRaw ?? [];
 
@@ -236,44 +306,49 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }))
   );
 
+  const storedLearningProfile = agentSettings.chipLearningEnabled
+    ? await getChipSessionProfileBestEffort(sessionId, supabase)
+    : null;
+  const previousLearningProfile =
+    storedLearningProfile?.domain === domain ? storedLearningProfile : null;
+  const learningContext = agentSettings.chipLearningEnabled
+    ? buildChipProfilePromptContext(previousLearningProfile)
+    : null;
+
   // ── Call OpenAI ─────────────────────────────────────────────────
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   let chipResponse: ChipJsonOutput;
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      temperature: 0.4,
-      max_tokens: 900,
-      messages: [
-        { role: "system", content: buildSystemPrompt(catalogJson, domain) },
-        ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-      ],
+    const response = await openai.responses.parse({
+      model: getGrowthAgentModel("chip"),
+      store: false,
+      reasoning: { effort: "low" },
+      max_output_tokens: 900,
+      instructions: buildSystemPrompt(catalogJson, domain, learningContext),
+      input: messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+      text: {
+        format: zodTextFormat(chipResponseSchema, "laptopfinder_chip_response"),
+      },
     });
-
-    const raw = completion.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw);
+    if (!response.output_parsed) {
+      throw new Error("Chip returned no structured output.");
+    }
+    const parsed = chipResponseSchema.parse(response.output_parsed);
 
     const validSlugs = new Set(laptops.map((l) => l.slug));
-    const rawSlugs = Array.isArray(parsed.recommendedSlugs)
-      ? (parsed.recommendedSlugs as unknown[]).filter((s): s is string => typeof s === "string")
-      : [];
+    const rawSlugs = parsed.recommendedSlugs;
     const invalidSlugs = rawSlugs.filter((s) => !validSlugs.has(s));
     if (invalidSlugs.length > 0) {
       console.warn("[chip] AI returned invalid slugs (stripped):", invalidSlugs);
     }
     chipResponse = {
-      message:
-        typeof parsed.message === "string" && parsed.message.trim()
-          ? parsed.message.trim()
-          : "Sorry, I had a hiccup. Could you rephrase that?",
+      message: parsed.message,
       recommendedSlugs: rawSlugs.filter((s) => validSlugs.has(s)).slice(0, 3),
-      suggestions: Array.isArray(parsed.suggestions)
-        ? (parsed.suggestions as unknown[])
-            .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
-            .slice(0, 4)
-        : [],
+      suggestions: parsed.suggestions,
     };
   } catch (err) {
     console.error("OpenAI chat error:", err);
@@ -298,6 +373,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       recommended_slugs: accumulatedSlugs,
     })
     .eq("session_id", sessionId);
+
+  // Learning is best-effort and contains structured signals only. Missing
+  // migrations, disabled settings, or learning-store errors never alter the
+  // user-visible chat response.
+  if (agentSettings.chipLearningEnabled) {
+    const userMessages = messages
+      .filter((message) => message.role === "user")
+      .map((message) => message.content);
+    const latestUserMessage = userMessages.at(-1) ?? "";
+    await recordChipLearningTurnBestEffort(
+      {
+        sessionId,
+        domain,
+        turnNumber: messageCount + 1,
+        profileSignals: extractChipConversationPreferences(userMessages, domain),
+        eventSignals: extractChipPreferences(latestUserMessage, domain),
+        recommendedSlugs: chipResponse.recommendedSlugs,
+        eventRetentionDays:
+          agentSettings.retention.chipInteractionEventsDays,
+        profileRetentionDays:
+          agentSettings.retention.anonymousSessionProfilesDays,
+        previousProfile: previousLearningProfile,
+      },
+      supabase
+    );
+  }
 
   const messagesRemaining = SESSION_LIMIT - (messageCount + 1);
 
