@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { BadgeList } from "./BadgeList";
 import type { RecommendationResult } from "@/lib/types";
 import { FOUR_YEAR_LABELS, TIER_LABELS } from "@/lib/constants";
+import { buildAffiliateOutboundPath } from "@/lib/affiliate/public";
+import { AffiliateCtaDetails } from "./AffiliateCtaDetails";
 
 type CardSection = "why" | "specs" | "bestfor" | "details";
 
@@ -63,11 +65,7 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
       blurb = blurb.slice(0, 140).replace(/\s+\S*$/, "") + "…";
     }
 
-    const lines = [blurb, "", `Find more at: ${url}`];
-    if (laptop.amazon_affiliate_url) {
-      lines.push(`Check on Amazon: ${laptop.amazon_affiliate_url}`);
-    }
-    const text = lines.join("\n");
+    const text = [blurb, "", `Find more at: ${url}`].join("\n");
 
     // Note: no `url` field — WhatsApp/others append it separately, which
     // would duplicate the link we already put in `text`.
@@ -129,14 +127,6 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
                 {laptop.brand}
                 {laptop.model ? ` · ${laptop.model}` : ""}
               </p>
-              {laptop.price_label && (
-                <div className="text-right shrink-0">
-                  <span className="font-bold text-foreground text-base leading-none">
-                    {laptop.price_label}
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-1">approx.</span>
-                </div>
-              )}
             </div>
             <h3 className="font-semibold text-foreground leading-tight text-sm sm:text-base w-full">
               {laptop.name}
@@ -305,15 +295,20 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
 
           {/* Actions */}
           <div className="flex gap-2 mt-auto pt-1">
-            <a
-              href={laptop.amazon_affiliate_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded-lg h-7 px-2.5 bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              See on Amazon
-            </a>
+            {laptop.affiliateCta && (
+              <a
+                href={buildAffiliateOutboundPath({
+                  laptopId: laptop.id,
+                  placement: "product_card",
+                })}
+                target="_blank"
+                rel="sponsored noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded-lg h-7 px-2.5 bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Check current price
+              </a>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -333,6 +328,9 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
               <Share2 className="w-3.5 h-3.5" />
             </Button>
           </div>
+          {laptop.affiliateCta && (
+            <AffiliateCtaDetails cta={laptop.affiliateCta} />
+          )}
         </div>
       </m.div>
     </LazyMotion>

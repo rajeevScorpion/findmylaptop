@@ -3,6 +3,9 @@ import Link from "next/link";
 import { ExternalLink, ArrowLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LaptopRedirect } from "./LaptopRedirect";
+import { buildAffiliateOutboundPath } from "@/lib/affiliate/public";
+import { getAffiliateCtaMetadataForLaptops } from "@/lib/affiliate/resolver";
+import { AffiliateCtaDetails } from "@/components/public/AffiliateCtaDetails";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -10,7 +13,7 @@ async function getLaptop(slug: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("laptops")
-    .select("id, slug, name, brand, model, price_label, price_approx, image_url, is_published, tier, domain, recommended_for_courses, why_recommended, amazon_affiliate_url")
+    .select("id, slug, name, brand, model, image_url, is_published, tier, domain, recommended_for_courses, why_recommended")
     .eq("slug", slug)
     .single();
   return data;
@@ -20,20 +23,28 @@ async function getAlternatives(tier: string | null, courses: string[], excludeId
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("laptops")
-    .select("id, slug, name, brand, price_label, image_url, tier, recommended_for_courses, amazon_affiliate_url")
+    .select("id, slug, name, brand, image_url, tier, recommended_for_courses")
     .eq("is_published", true)
     .neq("id", excludeId)
     .order("priority_score", { ascending: false });
 
   if (!data) return [];
 
-  return data
+  const picks = data
     .filter((l) => {
       const sameTier = tier ? l.tier === tier : true;
       const courseOverlap = l.recommended_for_courses?.some((c: string) => courses.includes(c));
       return sameTier && courseOverlap;
     })
     .slice(0, 3);
+  const metadata = await getAffiliateCtaMetadataForLaptops(
+    picks.map((laptop) => laptop.id),
+    { client: supabase }
+  );
+  return picks.map((laptop) => ({
+    ...laptop,
+    affiliateCta: metadata.get(laptop.id) ?? null,
+  }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -130,20 +141,25 @@ export default async function LaptopPage({ params }: Props) {
                     <div>
                       {alt.brand && <p className="text-xs text-muted-foreground">{alt.brand}</p>}
                       <h3 className="text-sm font-semibold text-foreground leading-snug">{alt.name}</h3>
-                      {alt.price_label && (
-                        <p className="text-sm font-bold text-foreground mt-0.5">{alt.price_label}</p>
-                      )}
                     </div>
                     <div className="flex flex-col gap-2 mt-auto">
-                      <a
-                        href={alt.amazon_affiliate_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        See on Amazon
-                      </a>
+                      {alt.affiliateCta && (
+                        <>
+                          <a
+                            href={buildAffiliateOutboundPath({
+                              laptopId: alt.id,
+                              placement: "laptop_alternative",
+                            })}
+                            target="_blank"
+                            rel="sponsored noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Check current price
+                          </a>
+                          <AffiliateCtaDetails cta={alt.affiliateCta} compact />
+                        </>
+                      )}
                       <Link
                         href={`/?highlight=${alt.slug}`}
                         className="inline-flex items-center justify-center w-full py-2 rounded-lg text-xs font-medium border border-border/60 text-muted-foreground hover:text-foreground hover:border-border transition-colors"

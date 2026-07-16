@@ -3,6 +3,12 @@
 import { ExternalLink } from "lucide-react";
 import { TIER_LABELS } from "@/lib/constants";
 import type { Laptop } from "@/lib/types";
+import {
+  buildAffiliateOutboundPath,
+  type AffiliatePlacement,
+  type WithAffiliateCta,
+} from "@/lib/affiliate/public";
+import { AffiliateCtaDetails } from "./AffiliateCtaDetails";
 
 const TIER_COLORS: Record<string, string> = {
   budget:   "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400",
@@ -13,10 +19,16 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 interface LaptopMiniCardProps {
-  laptop: Laptop;
+  laptop: WithAffiliateCta<Laptop>;
+  placement?: AffiliatePlacement;
+  showDisclosure?: boolean;
 }
 
-export function LaptopMiniCard({ laptop }: LaptopMiniCardProps) {
+export function LaptopMiniCard({
+  laptop,
+  placement = "mini_card",
+  showDisclosure = true,
+}: LaptopMiniCardProps) {
   return (
     <div className="glass-card rounded-xl border p-2.5 flex gap-2.5 items-start">
       {laptop.image_url ? (
@@ -48,21 +60,25 @@ export function LaptopMiniCard({ laptop }: LaptopMiniCardProps) {
               {TIER_LABELS[laptop.tier] ?? laptop.tier}
             </span>
           )}
-          {laptop.price_label && (
-            <span className="text-[10px] font-semibold text-foreground/80">
-              {laptop.price_label}
-            </span>
-          )}
         </div>
-        <a
-          href={laptop.amazon_affiliate_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          <ExternalLink className="w-2.5 h-2.5" />
-          Buy on Amazon
-        </a>
+        {laptop.affiliateCta && (
+          <>
+            <a
+              href={buildAffiliateOutboundPath({ laptopId: laptop.id, placement })}
+              target="_blank"
+              rel="sponsored noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              <ExternalLink className="w-2.5 h-2.5" />
+              Check current price
+            </a>
+            <AffiliateCtaDetails
+              cta={laptop.affiliateCta}
+              compact
+              showDisclosure={showDisclosure}
+            />
+          </>
+        )}
       </div>
     </div>
   );

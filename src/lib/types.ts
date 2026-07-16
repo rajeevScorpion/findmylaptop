@@ -6,6 +6,7 @@ import type {
   processedLaptopInputSchema,
 } from "./schemas";
 import type { ALL_WORKLOAD_TAGS } from "./domains";
+import type { AffiliateCtaMetadata } from "./affiliate/public";
 
 export type LaptopTier = "budget" | "value" | "balanced" | "advanced" | "premium";
 export type WorkloadLevel = "light" | "balanced" | "heavy";
@@ -22,6 +23,7 @@ export type ProcessedLaptopInput = z.infer<typeof processedLaptopInputSchema>;
 export interface RecommendationResult extends Laptop {
   suitabilityScore: number;
   badges: BadgeType[];
+  affiliateCta?: AffiliateCtaMetadata | null;
 }
 
 export type BadgeType =

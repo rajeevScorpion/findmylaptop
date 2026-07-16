@@ -128,7 +128,7 @@ export function ResultsSection({ laptops, taxonomy, workloadTags, showWorkloadFi
           </div>
         </div>
         <p className="text-xs text-muted-foreground/60 mb-5">
-          Prices may vary. For the latest price, click <span className="italic">See on Amazon</span>.
+          Prices and availability can change. Use <span className="italic">Check current price</span> for the retailer&apos;s latest details.
         </p>
 
         {/* Results grid */}

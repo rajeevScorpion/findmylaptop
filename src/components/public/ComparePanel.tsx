@@ -9,6 +9,8 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import type { RecommendationResult } from "@/lib/types";
 import { FOUR_YEAR_LABELS, TIER_LABELS } from "@/lib/constants";
+import { buildAffiliateOutboundPath } from "@/lib/affiliate/public";
+import { AffiliateCtaDetails } from "./AffiliateCtaDetails";
 
 interface ComparePanelProps {
   laptops: RecommendationResult[];
@@ -156,9 +158,6 @@ function LaptopCompareCard({
             {laptop.name}
           </h3>
           <div className="flex items-baseline gap-2 mt-0.5">
-            {laptop.price_label && (
-              <span className="text-base font-bold text-foreground">{laptop.price_label}</span>
-            )}
             {laptop.tier && (
               <span className="text-xs text-muted-foreground">{TIER_LABELS[laptop.tier]}</span>
             )}
@@ -233,15 +232,23 @@ function LaptopCompareCard({
         )}
 
         {/* Buy */}
-        <a
-          href={laptop.amazon_affiliate_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity mt-1"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          Buy on Amazon
-        </a>
+        {laptop.affiliateCta && (
+          <>
+            <a
+              href={buildAffiliateOutboundPath({
+                laptopId: laptop.id,
+                placement: "comparison",
+              })}
+              target="_blank"
+              rel="sponsored noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity mt-1"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Check current price
+            </a>
+            <AffiliateCtaDetails cta={laptop.affiliateCta} compact />
+          </>
+        )}
       </div>
     </div>
   );

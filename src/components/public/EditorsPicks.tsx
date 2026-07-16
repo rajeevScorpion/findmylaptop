@@ -79,9 +79,6 @@ export function EditorsPicks({ laptops }: { laptops: Laptop[] }) {
                     </span>
                   )}
                 </div>
-                {laptop.price_label && (
-                  <p className="text-sm font-bold text-foreground">{laptop.price_label}</p>
-                )}
               </div>
             </Link>
           );

@@ -24,6 +24,11 @@ import type {
 import type { Laptop as LaptopProduct } from "@/lib/types";
 import { LaptopMiniCard } from "@/components/public/LaptopMiniCard";
 import { selectProductsForIntent } from "@/lib/blog/product-intent";
+import {
+  AFFILIATE_DISCLOSURE,
+  type WithAffiliateCta,
+} from "@/lib/affiliate/public";
+import { safeInternalBlogHref } from "@/lib/blog/links";
 
 // Curated icon map — AI/admin supply an icon name string; unknown names fall
 // back to a neutral icon. Keeps lucide tree-shakeable and avoids dynamic eval.
@@ -125,7 +130,7 @@ function CtaView({ block }: { block: CtaBlock }) {
       <p className="text-lg font-semibold text-foreground mb-1">{block.title}</p>
       {block.body && <p className="text-sm text-muted-foreground mb-4">{block.body}</p>}
       <Link
-        href={block.href || "/"}
+        href={safeInternalBlogHref(block.href)}
         className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
       >
         {block.label || "Open LaptopFinder"}
@@ -144,6 +149,9 @@ function ProductGridView({
   intent?: string;
   adminPreview: boolean;
 }) {
+  const hasOutboundLink = picks.some((laptop) =>
+    Boolean((laptop as WithAffiliateCta<LaptopProduct>).affiliateCta)
+  );
   return (
     <div className="my-8">
       <div className="flex items-center gap-2 mb-3">
@@ -152,9 +160,19 @@ function ProductGridView({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {picks.map((laptop) => (
-          <LaptopMiniCard key={laptop.id} laptop={laptop} />
+          <LaptopMiniCard
+            key={laptop.id}
+            laptop={laptop}
+            placement="blog_product"
+            showDisclosure={false}
+          />
         ))}
       </div>
+      {hasOutboundLink && (
+        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+          {AFFILIATE_DISCLOSURE}
+        </p>
+      )}
       {adminPreview && (
         <p className="mt-2 text-[11px] italic text-muted-foreground">
           Auto-selected from intent: “{intent || "—"}”. Updates automatically as your catalog
