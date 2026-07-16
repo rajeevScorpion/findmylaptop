@@ -71,7 +71,15 @@ export async function HomeHub() {
           The right laptop depends entirely on your field. Pick your discipline below and
           we&apos;ll match you to hardware built for it — no spec-sheet jargon, no upselling.
         </p>
-        <div className="mt-6 flex justify-center">
+        <div className="mt-7 flex justify-center">
+          <Link
+            href="#explainer"
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Understand Laptop Specs
+          </Link>
+        </div>
+        <div className="mt-4 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-full glass-card border px-4 py-2.5 text-xs sm:text-sm text-muted-foreground/80">
             <Bot className="w-4 h-4 shrink-0 text-violet-500" />
             <span className="text-balance">

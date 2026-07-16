@@ -30,10 +30,6 @@ export function HeroSection({
     document.getElementById("finder")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const scrollToExplainer = () => {
-    document.getElementById("explainer")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
     <LazyMotion features={domAnimation}>
       <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 pt-16 pb-12 hero-gradient grid-pattern overflow-hidden">
@@ -87,14 +83,6 @@ export function HeroSection({
             >
               <Cpu className="w-4 h-4" />
               Find My Laptop
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={scrollToExplainer}
-              className="gap-2 border-border/60 hover:border-border w-full sm:w-auto"
-            >
-              Understand Laptop Specs
             </Button>
           </m.div>
 
