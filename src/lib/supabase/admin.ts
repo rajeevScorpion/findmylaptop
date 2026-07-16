@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 // Service role client — bypasses RLS. Server-side only. Never import in client components.
