@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { createClient } from "@/lib/supabase/client";
 
 interface AdminSettingsFormProps {
   whatsappUrl: string;
@@ -30,34 +29,32 @@ export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabl
     setError(null);
     setSaved(false);
 
-    const supabase = createClient();
-
-    const updates = [
-      { key: "whatsapp_url", value: waUrl },
-      { key: "disclaimer_text", value: disclaimer },
-      { key: "voice_input_enabled", value: voiceEnabled ? "true" : "false" },
-      { key: "workload_filter_enabled", value: workloadEnabled ? "true" : "false" },
-    ];
-
-    for (const update of updates) {
-      const { error: err } = await supabase
-        .from("settings")
-        .upsert({ key: update.key, value: update.value, updated_at: new Date().toISOString() });
-      if (err) {
-        setError(err.message);
-        setSaving(false);
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "general",
+          values: {
+            whatsapp_url: waUrl,
+            disclaimer_text: disclaimer,
+            voice_input_enabled: voiceEnabled,
+            workload_filter_enabled: workloadEnabled,
+          },
+        }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(json.error ?? "Could not save settings.");
         return;
       }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      setError("Network error. Please retry.");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-    fetch("/api/admin/revalidate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag: "settings" }),
-    });
   };
 
   return (

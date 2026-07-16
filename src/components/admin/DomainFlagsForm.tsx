@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { createClient } from "@/lib/supabase/client";
 import { DOMAIN_FLAG_KEYS, type DomainFlagKey, type DomainFlags } from "@/lib/flag-keys";
 
 const FLAG_META: Record<DomainFlagKey, { label: string; description: string }> = {
@@ -33,27 +32,24 @@ export function DomainFlagsForm({ initial }: { initial: DomainFlags }) {
     setSaving(true);
     setSaved(false);
     setError(null);
-    const supabase = createClient();
-    for (const key of DOMAIN_FLAG_KEYS) {
-      const { error: err } = await supabase.from("settings").upsert({
-        key,
-        value: flags[key] ? "true" : "false",
-        updated_at: new Date().toISOString(),
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "domains", values: flags }),
       });
-      if (err) {
-        setError(err.message);
-        setSaving(false);
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(json.error ?? "Could not save domain flags.");
         return;
       }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      setError("Network error. Please retry.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-    fetch("/api/admin/revalidate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag: "flags" }),
-    });
   }
 
   return (

@@ -11,10 +11,8 @@ import { createClient } from "@/lib/supabase/client";
 import { BlockEditor } from "./BlockEditor";
 import { BlockRenderer } from "@/components/blog/BlockRenderer";
 import { slugify } from "@/lib/blog/slug";
-import { buildToc, syncHeadingIds } from "@/lib/blog/toc";
-import { readingTimeMinutes } from "@/lib/blog/slug";
 import type { AiInputs, Block, BlogCategory, BlogContentDoc, BlogPost, BlogStatus } from "@/lib/blog/types";
-import type { PersonaOption, PersonaPublicSnapshot } from "@/lib/personas/types";
+import type { PersonaOption } from "@/lib/personas/types";
 import type { Laptop } from "@/lib/types";
 
 type TargetLength = "short" | "medium" | "long";
@@ -39,7 +37,6 @@ interface BlogPostFormProps {
   post?: BlogPost;
   categories: BlogCategory[];
   personas: PersonaOption[];
-  userEmail: string;
   aiWriterEnabled: boolean;
   productBlocksEnabled: boolean;
 }
@@ -76,26 +73,10 @@ function reconcileProductBlock(prev: Block[], aiBlocks: Block[]): Block[] {
   return result;
 }
 
-function publicSnapshot(persona: PersonaOption): PersonaPublicSnapshot {
-  return {
-    id: persona.id,
-    slug: persona.slug,
-    displayName: persona.displayName,
-    publicRole: persona.publicRole,
-    shortBio: persona.shortBio,
-    authorType: persona.authorType,
-    version: persona.version,
-    avatarUrl: persona.avatarUrl,
-    expertiseTags: persona.expertiseTags,
-    disclosureText: persona.disclosureText,
-  };
-}
-
 export function BlogPostForm({
   post,
   categories,
   personas,
-  userEmail,
   aiWriterEnabled,
   productBlocksEnabled,
 }: BlogPostFormProps) {
@@ -431,100 +412,59 @@ export function BlogPostForm({
       return;
     }
 
-    const keepStoredSnapshot =
-      !personaAssignmentChanged &&
-      selectedPersonaId === post?.author_persona_id &&
-      Boolean(post?.author_persona_snapshot_json);
-    const authorSnapshot = selectedPersonaId
-      ? keepStoredSnapshot
-        ? post?.author_persona_snapshot_json ?? null
-        : selectedPersona
-          ? publicSnapshot(selectedPersona)
-          : null
-      : null;
-
     setSaving(true);
-    const supabase = createClient();
-
-    // Normalise content: sync heading ids, build toc + reading time.
-    const doc: BlogContentDoc = syncHeadingIds({ type: "doc", blocks });
-    const toc = buildToc(doc);
-    const readingTime = readingTimeMinutes(doc);
-
-    const nowIso = new Date().toISOString();
-    const row: Record<string, unknown> = {
-      title: title.trim(),
-      slug: cleanSlug,
-      excerpt: excerpt || null,
-      content_json: doc,
-      toc_json: toc,
-      reading_time_minutes: readingTime,
-      status,
-      template_type: aiTemplate || null,
-      audience: aiAudience.split(",").map((s) => s.trim()).filter(Boolean),
-      primary_keyword: primaryKeyword || null,
-      secondary_keywords: secondaryKeywords.split(",").map((s) => s.trim()).filter(Boolean),
-      meta_title: metaTitle || null,
-      meta_description: metaDescription || null,
-      canonical_url: canonicalUrl || null,
-      og_image_url: ogImageUrl || null,
-      category_id: categoryId || null,
-      ai_inputs: {
-        topic: aiTopic,
-        brief: aiBrief,
-        sourceText: aiSourceText,
-        targetLength: aiLength,
-        audience: aiAudience,
-        template: aiTemplate,
-      },
-      updated_by: userEmail,
-    };
-    if (personaColumnsAvailable) {
-      Object.assign(row, {
-        author_persona_id: authorSnapshot?.id ?? null,
-        author_persona_version: authorSnapshot?.version ?? null,
-        author_persona_snapshot_json: authorSnapshot,
-        author_type: authorSnapshot?.authorType ?? null,
-        persona_selection_reason: authorSnapshot
-          ? personaSelectionReason || "Selected manually by an admin."
-          : null,
-        persona_generated: Boolean(authorSnapshot && personaGenerated),
-        research_input_ids: post?.research_input_ids ?? [],
+    try {
+      const response = await fetch("/api/admin/blog/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: post?.id ?? null,
+          title: title.trim(),
+          slug: cleanSlug,
+          excerpt,
+          content: { type: "doc", blocks },
+          status,
+          templateType: aiTemplate,
+          audience: aiAudience.split(",").map((value) => value.trim()).filter(Boolean),
+          primaryKeyword,
+          secondaryKeywords: secondaryKeywords
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
+          metaTitle,
+          metaDescription,
+          canonicalUrl,
+          ogImageUrl,
+          categoryId: categoryId || null,
+          aiInputs: {
+            topic: aiTopic,
+            brief: aiBrief,
+            sourceText: aiSourceText,
+            targetLength: aiLength,
+            audience: aiAudience,
+            template: aiTemplate,
+          },
+          authorPersonaId: selectedPersonaId || null,
+          personaSelectionReason,
+          personaGenerated,
+          refreshPersonaSnapshot: personaAssignmentChanged,
+        }),
       });
-    }
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(json.error ?? "Could not save the blog post.");
+        return;
+      }
 
-    // Set published_at the first time a post becomes published.
-    if (status === "published" && !post?.published_at) row.published_at = nowIso;
-
-    let err;
-    let newId = post?.id;
-    if (post?.id) {
-      ({ error: err } = await supabase.from("blog_posts").update(row).eq("id", post.id));
-    } else {
-      row.created_by = userEmail;
-      const { data, error: insErr } = await supabase
-        .from("blog_posts")
-        .insert(row)
-        .select("id")
-        .single();
-      err = insErr;
-      newId = data?.id;
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      if (!post?.id && json.post?.id) router.push(`/admin/blog/${json.post.id}`);
+      else router.refresh();
+    } catch {
+      setError("Network error. Please retry.");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    if (err) {
-      setError(err.message.includes("duplicate") ? "That slug is already in use." : err.message);
-      return;
-    }
-    fetch("/api/admin/revalidate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag: "blog" }),
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    if (!post?.id && newId) router.push(`/admin/blog/${newId}`);
-    else router.refresh();
   }
 
   const previewDoc: BlogContentDoc = { type: "doc", blocks };

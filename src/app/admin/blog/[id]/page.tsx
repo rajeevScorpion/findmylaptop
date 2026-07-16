@@ -1,6 +1,5 @@
 import { ChevronLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getBlogFlags } from "@/lib/flags";
 import { getCategories, getPostByIdForAdmin } from "@/lib/blog/queries";
 import { getPersonaOptionsForAdmin } from "@/lib/personas/service";
@@ -16,10 +15,6 @@ export default async function AdminEditBlogPostPage({ params }: Props) {
   const post = await getPostByIdForAdmin(id);
   if (!post) notFound();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const [categories, personas] = await Promise.all([
     getCategories(),
     // Keep the legacy editor usable during the deploy window before the user
@@ -40,7 +35,6 @@ export default async function AdminEditBlogPostPage({ params }: Props) {
         post={post}
         categories={categories}
         personas={personas}
-        userEmail={user?.email ?? ""}
         aiWriterEnabled={flags.ai_blog_writer_enabled}
         productBlocksEnabled={flags.blog_product_blocks_enabled}
       />

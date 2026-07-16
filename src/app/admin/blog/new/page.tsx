@@ -1,6 +1,5 @@
 import { ChevronLeft } from "lucide-react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getBlogFlags } from "@/lib/flags";
 import { getCategories } from "@/lib/blog/queries";
 import { getPersonaOptionsForAdmin } from "@/lib/personas/service";
@@ -10,10 +9,6 @@ export default async function AdminNewBlogPostPage() {
   const flags = await getBlogFlags();
   if (!flags.blog_enabled) redirect("/admin/blog");
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const [categories, personas] = await Promise.all([
     getCategories(),
     // Keep the legacy editor usable during the deploy window before the user
@@ -34,7 +29,6 @@ export default async function AdminNewBlogPostPage() {
       <BlogPostForm
         categories={categories}
         personas={personas}
-        userEmail={user?.email ?? ""}
         aiWriterEnabled={flags.ai_blog_writer_enabled}
         productBlocksEnabled={flags.blog_product_blocks_enabled}
       />
