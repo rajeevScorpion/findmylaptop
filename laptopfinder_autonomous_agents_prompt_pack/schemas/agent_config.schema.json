@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LaptopFinder Agent Settings",
+  "type": "object",
+  "properties": {
+    "researchAgentEnabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "bloggingAgentEnabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "chipLearningEnabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "safeModeEnabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "autoPublishBlogsEnabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "productAutoApproveEnabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "minProductConfidence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 70
+    },
+    "minBlogQualityScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 75
+    },
+    "maxBlogPostsPerWeek": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 2
+    },
+    "maxChipProductLinks": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5,
+      "default": 2
+    },
+    "affiliateDisclosure": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "researchCalendarEnabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "researchCalendarMode": {
+      "type": "string",
+      "enum": [
+        "draft_only",
+        "approval_required",
+        "auto_schedule",
+        "controlled_auto_publish"
+      ],
+      "default": "draft_only"
+    },
+    "defaultDailyPostTarget": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 1
+    },
+    "maxDailyAutoPublishedPosts": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "researchCalendarTimezone": {
+      "type": "string",
+      "default": "Asia/Kolkata"
+    }
+  },
+  "required": [
+    "safeModeEnabled"
+  ]
+}

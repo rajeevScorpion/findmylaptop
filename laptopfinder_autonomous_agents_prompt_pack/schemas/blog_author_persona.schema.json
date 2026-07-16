@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LaptopFinder Blog Author Persona",
+  "type": "object",
+  "required": [
+    "id",
+    "slug",
+    "displayName",
+    "publicRole",
+    "shortBio",
+    "authorType",
+    "status",
+    "version",
+    "expertiseTags",
+    "topicCategoryTags",
+    "personaSystemPrompt",
+    "permissions",
+    "affiliatePolicy"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 2
+    },
+    "publicRole": {
+      "type": "string",
+      "minLength": 2
+    },
+    "shortBio": {
+      "type": "string",
+      "minLength": 10
+    },
+    "longInternalDescription": {
+      "type": "string"
+    },
+    "authorType": {
+      "type": "string",
+      "enum": [
+        "human",
+        "ai_persona",
+        "brand"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "disabled",
+        "archived",
+        "soft_deleted"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "avatarUrl": {
+      "type": "string"
+    },
+    "expertiseTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "targetAudienceTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topicCategoryTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "softwareWorkflowTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "toneSettings": {
+      "type": "object",
+      "properties": {
+        "formality": {
+          "type": "string",
+          "enum": [
+            "friendly",
+            "professional",
+            "academic",
+            "technical"
+          ]
+        },
+        "depth": {
+          "type": "string",
+          "enum": [
+            "basic",
+            "intermediate",
+            "advanced"
+          ]
+        },
+        "reassuranceLevel": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "technicalDensity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      }
+    },
+    "buyingPhilosophy": {
+      "type": "string"
+    },
+    "writingDos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "writingDonts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "personaSystemPrompt": {
+      "type": "string",
+      "minLength": 20
+    },
+    "affiliatePolicy": {
+      "type": "object",
+      "required": [
+        "allowAffiliateLinks",
+        "maxProductCards",
+        "requiredDisclosureText"
+      ],
+      "properties": {
+        "allowAffiliateLinks": {
+          "type": "boolean"
+        },
+        "maxProductCards": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requiredDisclosureText": {
+          "type": "string"
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "required": [
+        "canWriteBlogs",
+        "canWriteComparisons",
+        "canInsertProductCards",
+        "canBeAutoScheduled",
+        "alwaysRequiresManualReview"
+      ],
+      "properties": {
+        "canWriteBlogs": {
+          "type": "boolean"
+        },
+        "canWriteComparisons": {
+          "type": "boolean"
+        },
+        "canInsertProductCards": {
+          "type": "boolean"
+        },
+        "canBeAutoScheduled": {
+          "type": "boolean"
+        },
+        "alwaysRequiresManualReview": {
+          "type": "boolean"
+        }
+      }
+    },
+    "priorityWeight": {
+      "type": "number",
+      "minimum": 0
+    },
+    "isDefaultFallback": {
+      "type": "boolean"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LaptopFinder Product Candidate",
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "string"
+    },
+    "sourceProductId": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "cpu": {
+      "type": "object"
+    },
+    "gpu": {
+      "type": "object"
+    },
+    "ramGb": {
+      "type": "number"
+    },
+    "storageGb": {
+      "type": "number"
+    },
+    "price": {
+      "type": "object"
+    },
+    "priceFetchedAt": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "affiliateUrl": {
+      "type": "string"
+    },
+    "fitTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "riskTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidenceScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "complianceStatus": {
+      "enum": [
+        "safe",
+        "needs_review",
+        "blocked"
+      ]
+    },
+    "reviewStatus": {
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "needs_edit",
+        "stale"
+      ]
+    }
+  },
+  "required": [
+    "source",
+    "title",
+    "url",
+    "confidenceScore",
+    "complianceStatus",
+    "reviewStatus"
+  ]
+}
