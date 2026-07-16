@@ -3,13 +3,14 @@ import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBlogFlags, getDomainFlags } from "@/lib/flags";
 import { getPublishedPostSlugs } from "@/lib/blog/queries";
+import { getPublishedPersonaSlugs } from "@/lib/personas/service";
 import { DOMAIN_ORDER } from "@/lib/domains";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://laptopfinder.cc").replace(/\/$/, "");
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   "use cache";
-  cacheTag("laptops", "blog", "flags");
+  cacheTag("laptops", "blog", "personas", "flags");
   cacheLife("hours");
 
   const entries: MetadataRoute.Sitemap = [
@@ -55,6 +56,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: p.updated_at ? new Date(p.updated_at) : undefined,
           changeFrequency: "monthly",
           priority: 0.6,
+        });
+      }
+      const personas = await getPublishedPersonaSlugs();
+      for (const persona of personas) {
+        entries.push({
+          url: `${SITE_URL}/blog/author/${persona.slug}`,
+          lastModified: persona.updatedAt
+            ? new Date(persona.updatedAt)
+            : undefined,
+          changeFrequency: "monthly",
+          priority: 0.5,
         });
       }
     } catch {

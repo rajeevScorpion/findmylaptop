@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getBlogFlags } from "@/lib/flags";
 import { blogGenerateInputSchema } from "@/lib/blog/schemas";
 import { getCategories } from "@/lib/blog/queries";
+import { getPersonaById, toPersonaOption } from "@/lib/personas/service";
+import type { PersonaOption } from "@/lib/personas/types";
 import {
   generateBlogOutline,
   generateBlogDraft,
@@ -14,6 +16,7 @@ import {
   getBlogWriterModel,
   BLOG_WRITER_PROMPT_VERSION,
   type AiUsage,
+  type BlogWriterPersonaContext,
 } from "@/lib/ai/blog-writer";
 
 function isAdminEmail(email: string): boolean {
@@ -91,6 +94,69 @@ export async function POST(request: NextRequest) {
   }
   const input = parsedInput.data;
 
+  let personaContext: BlogWriterPersonaContext | undefined;
+  let resolvedPersona: PersonaOption | null = null;
+  if (input.authorPersonaId) {
+    let persona;
+    try {
+      persona = await getPersonaById(input.authorPersonaId);
+    } catch (error) {
+      console.error("blog AI persona lookup failed:", error);
+      return NextResponse.json(
+        { error: "The author persona could not be loaded." },
+        { status: 500 }
+      );
+    }
+    if (!persona || persona.status !== "active" || !persona.permissions.canWriteBlogs) {
+      return NextResponse.json(
+        { error: "That author persona is not active or cannot write blog posts." },
+        { status: 409 }
+      );
+    }
+    const generatesArticleContent = input.generationType !== "metadata";
+    if (
+      generatesArticleContent &&
+      input.includeProducts &&
+      !persona.permissions.canInsertProductCards
+    ) {
+      return NextResponse.json(
+        { error: "That author persona is not permitted to insert product cards." },
+        { status: 409 }
+      );
+    }
+    if (
+      generatesArticleContent &&
+      input.templateType === "comparison_guide" &&
+      !persona.permissions.canWriteComparisons
+    ) {
+      return NextResponse.json(
+        { error: "That author persona is not permitted to write comparisons." },
+        { status: 409 }
+      );
+    }
+    personaContext = {
+      id: persona.id,
+      version: persona.version,
+      displayName: persona.displayName,
+      publicRole: persona.publicRole,
+      authorType: persona.authorType,
+      disclosureText: persona.disclosureText,
+      expertiseTags: persona.expertiseTags,
+      toneSettings: persona.toneSettings,
+      buyingPhilosophy: persona.buyingPhilosophy,
+      writingDos: persona.writingDos,
+      writingDonts: persona.writingDonts,
+      writingGuidance: persona.personaSystemPrompt,
+      affiliatePolicy: persona.affiliatePolicy,
+      permissions: {
+        canWriteComparisons: persona.permissions.canWriteComparisons,
+        canInsertProductCards: persona.permissions.canInsertProductCards,
+        alwaysRequiresManualReview: persona.permissions.alwaysRequiresManualReview,
+      },
+    };
+    resolvedPersona = toPersonaOption(persona);
+  }
+
   // For category-aware generations, supply the existing category names so the
   // model can only ever *suggest* one of the admin's real categories.
   if (input.generationType === "full" || input.generationType === "metadata") {
@@ -104,25 +170,26 @@ export async function POST(request: NextRequest) {
 
   // 4. Generate
   try {
+    const writerInput = { ...input, personaContext };
     let result: { data: unknown; usage: AiUsage };
     switch (input.generationType) {
       case "outline":
-        result = await generateBlogOutline(input);
+        result = await generateBlogOutline(writerInput);
         break;
       case "draft":
-        result = await generateBlogDraft(input);
+        result = await generateBlogDraft(writerInput);
         break;
       case "full":
-        result = await generateBlogFull(input);
+        result = await generateBlogFull(writerInput);
         break;
       case "metadata":
-        result = await generateBlogMetadata(input);
+        result = await generateBlogMetadata(writerInput);
         break;
       case "faqs":
-        result = await generateBlogFaqs(input);
+        result = await generateBlogFaqs(writerInput);
         break;
       case "section":
-        result = await improveBlogSection(input);
+        result = await improveBlogSection(writerInput);
         break;
       default:
         return NextResponse.json({ error: "Unknown generation type" }, { status: 400 });
@@ -138,7 +205,7 @@ export async function POST(request: NextRequest) {
       usage: result.usage,
     });
 
-    return NextResponse.json({ result: result.data });
+    return NextResponse.json({ result: result.data, persona: resolvedPersona });
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code;
     const status = (err as { status?: number })?.status;

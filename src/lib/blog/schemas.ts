@@ -122,6 +122,9 @@ export const blogGenerateInputSchema = z.object({
   sectionText: z.string().optional(),
   // Optional grounded product facts passed from the DB (never invented by AI).
   productFacts: z.array(z.record(z.string(), z.unknown())).optional(),
+  // The API resolves this ID to a trusted, active persona. Persona prompt data
+  // is deliberately never accepted from the browser.
+  authorPersonaId: z.string().uuid().optional(),
 });
 export type BlogGenerateInput = z.infer<typeof blogGenerateInputSchema>;
 

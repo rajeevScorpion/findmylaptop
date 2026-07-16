@@ -40,6 +40,12 @@ export default async function AdminBlogPage() {
           <Plus className="w-4 h-4" />
           New post
         </Link>
+        <Link
+          href="/admin/personas"
+          className="inline-flex items-center rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium border border-border hover:bg-muted/40 transition-colors"
+        >
+          Author personas
+        </Link>
       </div>
 
       {posts.length === 0 ? (

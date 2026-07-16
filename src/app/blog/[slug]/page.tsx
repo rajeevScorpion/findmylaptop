@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cacheLife, cacheTag } from "next/cache";
 import { ArrowLeft, Clock, CalendarDays, ListTree } from "lucide-react";
 import { getBlogFlags } from "@/lib/flags";
 import { getPublishedPostBySlug, getRelatedPosts } from "@/lib/blog/queries";
 import { BlockRenderer } from "@/components/blog/BlockRenderer";
 import { ShareButton } from "@/components/blog/ShareButton";
+import { AuthorCard } from "@/components/blog/AuthorCard";
 import { buildToc } from "@/lib/blog/toc";
 import type { BlogContentDoc, Block, FaqItem } from "@/lib/blog/types";
 import { getAllPublishedLaptops } from "@/lib/laptop-queries";
@@ -63,9 +63,6 @@ function formatDate(value: string | null): string {
 }
 
 export default async function BlogPostPage({ params }: Props) {
-  "use cache";
-  cacheTag("blog");
-  cacheLife("hours");
   const { slug } = await params;
   const flags = await getBlogFlags();
   if (!flags.blog_enabled || !flags.blog_public_enabled) notFound();
@@ -87,6 +84,15 @@ export default async function BlogPostPage({ params }: Props) {
     .flatMap((b) => b.items);
 
   const lastUpdated = post.updated_at || post.published_at;
+  const authorSnapshot = post.author_persona_snapshot_json;
+  const schemaAuthor = authorSnapshot
+    ? {
+        "@type": authorSnapshot.authorType === "human" ? "Person" : "Organization",
+        name: authorSnapshot.displayName,
+        url: `${SITE_URL}/blog/author/${authorSnapshot.slug}`,
+        description: `${authorSnapshot.shortBio} ${authorSnapshot.disclosureText}`,
+      }
+    : { "@type": "Organization", name: "LaptopFinder" };
 
   // JSON-LD — only when enabled and only for visible content.
   const jsonLd: Record<string, unknown>[] = [];
@@ -98,7 +104,7 @@ export default async function BlogPostPage({ params }: Props) {
       description: post.meta_description || post.excerpt || undefined,
       datePublished: post.published_at || undefined,
       dateModified: lastUpdated || undefined,
-      author: { "@type": "Organization", name: "LaptopFinder" },
+      author: schemaAuthor,
       publisher: { "@type": "Organization", name: "LaptopFinder" },
       mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
     });
@@ -182,6 +188,10 @@ export default async function BlogPostPage({ params }: Props) {
               ) : null}
               <ShareButton url={`${SITE_URL}/blog/${post.slug}`} title={post.title} className="ml-auto" />
             </div>
+
+            {authorSnapshot && (
+              <AuthorCard persona={authorSnapshot} className="mb-8" />
+            )}
 
             <BlockRenderer
               blocks={doc.blocks}

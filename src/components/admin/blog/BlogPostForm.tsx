@@ -14,6 +14,7 @@ import { slugify } from "@/lib/blog/slug";
 import { buildToc, syncHeadingIds } from "@/lib/blog/toc";
 import { readingTimeMinutes } from "@/lib/blog/slug";
 import type { AiInputs, Block, BlogCategory, BlogContentDoc, BlogPost, BlogStatus } from "@/lib/blog/types";
+import type { PersonaOption, PersonaPublicSnapshot } from "@/lib/personas/types";
 import type { Laptop } from "@/lib/types";
 
 type TargetLength = "short" | "medium" | "long";
@@ -37,6 +38,7 @@ const STATUSES: BlogStatus[] = ["draft", "ai_generated", "review", "published", 
 interface BlogPostFormProps {
   post?: BlogPost;
   categories: BlogCategory[];
+  personas: PersonaOption[];
   userEmail: string;
   aiWriterEnabled: boolean;
   productBlocksEnabled: boolean;
@@ -74,9 +76,25 @@ function reconcileProductBlock(prev: Block[], aiBlocks: Block[]): Block[] {
   return result;
 }
 
+function publicSnapshot(persona: PersonaOption): PersonaPublicSnapshot {
+  return {
+    id: persona.id,
+    slug: persona.slug,
+    displayName: persona.displayName,
+    publicRole: persona.publicRole,
+    shortBio: persona.shortBio,
+    authorType: persona.authorType,
+    version: persona.version,
+    avatarUrl: persona.avatarUrl,
+    expertiseTags: persona.expertiseTags,
+    disclosureText: persona.disclosureText,
+  };
+}
+
 export function BlogPostForm({
   post,
   categories,
+  personas,
   userEmail,
   aiWriterEnabled,
   productBlocksEnabled,
@@ -124,6 +142,59 @@ export function BlogPostForm({
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
+  const [selectedPersonaId, setSelectedPersonaId] = useState(
+    post?.author_persona_id ?? ""
+  );
+  const [personaSelectionReason, setPersonaSelectionReason] = useState(
+    post?.persona_selection_reason ?? ""
+  );
+  const [personaGenerated, setPersonaGenerated] = useState(
+    Boolean(post?.persona_generated)
+  );
+  const [personaAssignmentChanged, setPersonaAssignmentChanged] = useState(false);
+  const [personaBusy, setPersonaBusy] = useState(false);
+  const [personaError, setPersonaError] = useState<string | null>(null);
+  const [personaOverride, setPersonaOverride] = useState<PersonaOption | null>(null);
+
+  const personaOptions = personas.slice();
+  if (personaOverride) {
+    const index = personaOptions.findIndex(
+      (persona) => persona.id === personaOverride.id
+    );
+    if (index >= 0) personaOptions[index] = personaOverride;
+    else personaOptions.push(personaOverride);
+  }
+  const storedPersona = post?.author_persona_snapshot_json;
+  if (
+    storedPersona &&
+    !personaOptions.some((persona) => persona.id === storedPersona.id)
+  ) {
+    personaOptions.push({
+      ...storedPersona,
+      status: "soft_deleted",
+      permissions: {
+        canWriteBlogs: false,
+        canWriteComparisons: false,
+        canInsertProductCards: false,
+        canBeAutoScheduled: false,
+        alwaysRequiresManualReview: true,
+      },
+    });
+  }
+  const selectedPersona = personaOptions.find(
+    (persona) => persona.id === selectedPersonaId
+  );
+  const displayedPersona =
+    selectedPersona &&
+    storedPersona?.id === selectedPersonaId &&
+    !personaAssignmentChanged
+      ? { ...selectedPersona, ...storedPersona }
+      : selectedPersona;
+  const personaColumnsAvailable =
+    personas.length > 0 ||
+    Boolean(
+      post && Object.prototype.hasOwnProperty.call(post, "author_persona_id")
+    );
 
   useEffect(() => {
     if (tab !== "preview" || laptopsLoaded || !productBlocksEnabled) return;
@@ -231,6 +302,7 @@ export function BlogPostForm({
           targetLength: aiLength,
           sourceText,
           includeProducts: aiIncludeProducts,
+          authorPersonaId: selectedPersonaId || undefined,
         }),
       });
       const json = await res.json();
@@ -239,6 +311,13 @@ export function BlogPostForm({
         return;
       }
       const result = json.result;
+      if (selectedPersonaId && generationType !== "metadata") {
+        if (json.persona?.id === selectedPersonaId) {
+          setPersonaOverride(json.persona as PersonaOption);
+        }
+        setPersonaGenerated(true);
+        setPersonaAssignmentChanged(true);
+      }
       if (generationType === "draft" || generationType === "full") {
         if (result.title && !title) onTitleChange(result.title);
         if (result.excerpt) setExcerpt(result.excerpt);
@@ -279,6 +358,59 @@ export function BlogPostForm({
     }
   }
 
+  function selectPersonaManually(id: string) {
+    setPersonaOverride(null);
+    setSelectedPersonaId(id);
+    setPersonaSelectionReason(id ? "Selected manually by an admin." : "");
+    setPersonaGenerated(false);
+    setPersonaAssignmentChanged(true);
+    setPersonaError(null);
+  }
+
+  async function autoSelectPersona() {
+    const topic = (aiTopic || title).trim();
+    if (topic.length < 3) {
+      setPersonaError("Add a topic or title before auto-selecting a persona.");
+      return;
+    }
+    setPersonaBusy(true);
+    setPersonaError(null);
+    try {
+      const category = categories.find((item) => item.id === categoryId);
+      const response = await fetch("/api/admin/personas/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic,
+          topicCategory: category?.name,
+          targetAudience: aiAudience
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
+        }),
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        setPersonaError(json.error ?? "Could not select a persona.");
+        return;
+      }
+      const option = json.selection?.persona as PersonaOption | undefined;
+      if (!option) {
+        setPersonaError("The selector did not return a persona.");
+        return;
+      }
+      setSelectedPersonaId(option.id);
+      setPersonaOverride(option);
+      setPersonaSelectionReason(json.selection.reason ?? "Selected automatically.");
+      setPersonaGenerated(false);
+      setPersonaAssignmentChanged(true);
+    } catch {
+      setPersonaError("Network error while selecting a persona.");
+    } finally {
+      setPersonaBusy(false);
+    }
+  }
+
   async function handleSave() {
     setError(null);
     setSaved(false);
@@ -286,6 +418,30 @@ export function BlogPostForm({
     if (!title.trim()) return setError("Title is required.");
     const cleanSlug = slugify(slug || title);
     if (!cleanSlug) return setError("A valid slug is required.");
+    if (selectedPersonaId && !selectedPersona) {
+      return setError("The selected author persona is no longer available.");
+    }
+    if (
+      post?.status === "published" &&
+      personaAssignmentChanged &&
+      !window.confirm(
+        "This post is already published. Update its public author attribution and save a new persona snapshot? This action will be audit logged."
+      )
+    ) {
+      return;
+    }
+
+    const keepStoredSnapshot =
+      !personaAssignmentChanged &&
+      selectedPersonaId === post?.author_persona_id &&
+      Boolean(post?.author_persona_snapshot_json);
+    const authorSnapshot = selectedPersonaId
+      ? keepStoredSnapshot
+        ? post?.author_persona_snapshot_json ?? null
+        : selectedPersona
+          ? publicSnapshot(selectedPersona)
+          : null
+      : null;
 
     setSaving(true);
     const supabase = createClient();
@@ -323,6 +479,19 @@ export function BlogPostForm({
       },
       updated_by: userEmail,
     };
+    if (personaColumnsAvailable) {
+      Object.assign(row, {
+        author_persona_id: authorSnapshot?.id ?? null,
+        author_persona_version: authorSnapshot?.version ?? null,
+        author_persona_snapshot_json: authorSnapshot,
+        author_type: authorSnapshot?.authorType ?? null,
+        persona_selection_reason: authorSnapshot
+          ? personaSelectionReason || "Selected manually by an admin."
+          : null,
+        persona_generated: Boolean(authorSnapshot && personaGenerated),
+        research_input_ids: post?.research_input_ids ?? [],
+      });
+    }
 
     // Set published_at the first time a post becomes published.
     if (status === "published" && !post?.published_at) row.published_at = nowIso;
@@ -555,6 +724,89 @@ export function BlogPostForm({
             </a>
           )}
         </div>
+
+        {personaColumnsAvailable && (
+        <div className="glass-card rounded-xl border p-5 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-foreground">Author persona</h3>
+            <a
+              href="/admin/personas"
+              className="text-[11px] text-primary hover:underline"
+            >
+              Manage
+            </a>
+          </div>
+          <div className="space-y-1.5">
+            <Label className={labelCls}>Editorial voice and attribution</Label>
+            <select
+              className="w-full bg-background/50 border border-input rounded-md text-sm h-9 px-2"
+              value={selectedPersonaId}
+              onChange={(event) => selectPersonaManually(event.target.value)}
+            >
+              <option value="">LaptopFinder (legacy default)</option>
+              {personaOptions.map((persona) => (
+                <option
+                  key={persona.id}
+                  value={persona.id}
+                  disabled={
+                    persona.id !== selectedPersonaId &&
+                    (persona.status !== "active" || !persona.permissions.canWriteBlogs)
+                  }
+                >
+                  {persona.displayName} ({persona.status})
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full gap-1.5"
+            disabled={personaBusy}
+            onClick={autoSelectPersona}
+          >
+            {personaBusy ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            Auto-select from topic
+          </Button>
+          {displayedPersona && (
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-1.5">
+              <p className="text-xs font-medium text-foreground">
+                {displayedPersona.displayName}
+                <span className="ml-1.5 font-normal text-muted-foreground">
+                  v{displayedPersona.version} · {displayedPersona.publicRole}
+                </span>
+              </p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                {displayedPersona.disclosureText}
+              </p>
+              {personaSelectionReason && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Selection: {personaSelectionReason}
+                </p>
+              )}
+              {personaGenerated && (
+                <p className="text-[11px] text-primary">
+                  The current draft includes AI output guided by this persona.
+                </p>
+              )}
+            </div>
+          )}
+          {personaError && (
+            <p className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+              {personaError}
+            </p>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            A public snapshot is saved with the post, so later persona edits do
+            not silently rewrite published attribution.
+          </p>
+        </div>
+        )}
 
         <div className="glass-card rounded-xl border p-5 space-y-3">
           <h3 className="text-sm font-medium text-foreground">SEO</h3>

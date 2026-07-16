@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getBlogFlags } from "@/lib/flags";
 import { getCategories } from "@/lib/blog/queries";
+import { getPersonaOptionsForAdmin } from "@/lib/personas/service";
 import { BlogPostForm } from "@/components/admin/blog/BlogPostForm";
 
 export default async function AdminNewBlogPostPage() {
@@ -13,7 +14,12 @@ export default async function AdminNewBlogPostPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const categories = await getCategories();
+  const [categories, personas] = await Promise.all([
+    getCategories(),
+    // Keep the legacy editor usable during the deploy window before the user
+    // manually applies migration 027.
+    getPersonaOptionsForAdmin().catch(() => []),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -27,6 +33,7 @@ export default async function AdminNewBlogPostPage() {
       </div>
       <BlogPostForm
         categories={categories}
+        personas={personas}
         userEmail={user?.email ?? ""}
         aiWriterEnabled={flags.ai_blog_writer_enabled}
         productBlocksEnabled={flags.blog_product_blocks_enabled}

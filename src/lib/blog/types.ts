@@ -1,6 +1,11 @@
 // Blog/CMS shared types. The content source of truth is `content_json`, a
 // structured block document (see schemas.ts for runtime validation).
 
+import type {
+  PersonaAuthorType,
+  PersonaPublicSnapshot,
+} from "@/lib/personas/types";
+
 export type BlogStatus =
   | "draft"
   | "ai_generated"
@@ -138,6 +143,13 @@ export interface BlogPost {
   last_reviewed_at: string | null;
   needs_update_at: string | null;
   ai_inputs: AiInputs | null;
+  author_persona_id: string | null;
+  author_persona_version: number | null;
+  author_persona_snapshot_json: PersonaPublicSnapshot | null;
+  author_type: PersonaAuthorType | null;
+  persona_selection_reason: string | null;
+  persona_generated: boolean;
+  research_input_ids: string[];
   created_at: string;
   updated_at: string;
 }
