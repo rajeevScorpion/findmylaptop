@@ -122,6 +122,29 @@ export const processedLaptopInputSchema = z.object({
   priority_score: z.number().int().optional(),
 });
 
+// Responses Structured Outputs requires every property to be present. Make the
+// extraction transport nullable, then remove nulls before applying the existing
+// admin-input schema so the public/admin response shape remains sparse.
+const processedLaptopStructuredOutputShape = Object.fromEntries(
+  Object.entries(processedLaptopInputSchema.shape).map(([key, schema]) => {
+    const requiredSchema =
+      schema instanceof z.ZodOptional ? schema.unwrap() : schema;
+    return [key, requiredSchema.nullable()];
+  })
+) as Record<string, z.ZodType>;
+
+export const processedLaptopStructuredOutputSchema = z.object(
+  processedLaptopStructuredOutputShape
+);
+
+export function compactProcessedLaptopOutput(
+  output: z.infer<typeof processedLaptopStructuredOutputSchema>
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(output).filter(([, value]) => value !== null)
+  );
+}
+
 export const filterStateSchema = z.object({
   course: z.string().optional(),
   courseCategory: z.string().optional(),
