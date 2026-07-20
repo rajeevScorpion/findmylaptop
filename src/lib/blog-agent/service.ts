@@ -222,7 +222,7 @@ function appendEvidenceBlocks(
     },
     {
       type: "paragraph",
-      text: "LaptopFinder editors should re-check these sources before publication, especially for time-sensitive claims.",
+      text: "Readers should re-check these sources before publication, especially for time-sensitive claims.",
     },
     {
       type: "bullets",
