@@ -1,15 +1,25 @@
 import Link from "next/link";
-import { Bot, UserRound } from "lucide-react";
+import { Bot, Info, UserRound } from "lucide-react";
 import type { PersonaPublicSnapshot } from "@/lib/personas/types";
+import { combineEditorialDisclosure } from "@/lib/blog/editorial-card";
 import { cn } from "@/lib/utils";
 
 interface AuthorCardProps {
   persona: PersonaPublicSnapshot;
+  generatedDisclosure?: string | null;
   className?: string;
 }
 
-export function AuthorCard({ persona, className }: AuthorCardProps) {
+export function AuthorCard({
+  persona,
+  generatedDisclosure,
+  className,
+}: AuthorCardProps) {
   const isHuman = persona.authorType === "human";
+  const disclosure = combineEditorialDisclosure(
+    persona.disclosureText,
+    generatedDisclosure
+  );
 
   return (
     <aside
@@ -68,10 +78,17 @@ export function AuthorCard({ persona, className }: AuthorCardProps) {
               ))}
             </div>
           )}
-          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground/90">
-            <span className="font-medium text-foreground/80">Disclosure:</span>{" "}
-            {persona.disclosureText}
-          </p>
+          {disclosure && (
+            <div className="mt-3 border-t border-border/50 pt-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <Info className="h-3.5 w-3.5 shrink-0 text-primary" />
+                Editorial disclosure
+              </p>
+              <p className="mt-1 break-words whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground/90">
+                {disclosure}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </aside>

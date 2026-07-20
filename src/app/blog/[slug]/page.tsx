@@ -9,6 +9,7 @@ import { ShareButton } from "@/components/blog/ShareButton";
 import { AuthorCard } from "@/components/blog/AuthorCard";
 import { serializeJsonLd } from "@/lib/json-ld";
 import { buildToc } from "@/lib/blog/toc";
+import { placeEditorialCardAfterFaq } from "@/lib/blog/editorial-card";
 import type { BlogContentDoc, Block, FaqItem } from "@/lib/blog/types";
 import { getAllPublishedLaptops } from "@/lib/laptop-queries";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -86,6 +87,12 @@ export default async function BlogPostPage({ params }: Props) {
 
   const lastUpdated = post.updated_at || post.published_at;
   const authorSnapshot = post.author_persona_snapshot_json;
+  const editorialCardPlacement = authorSnapshot
+    ? placeEditorialCardAfterFaq(doc.blocks)
+    : null;
+  const blocksBeforeEditorialCard =
+    editorialCardPlacement?.beforeCard ?? doc.blocks;
+  const blocksAfterEditorialCard = editorialCardPlacement?.afterCard ?? [];
   const schemaAuthor = authorSnapshot
     ? {
         "@type": authorSnapshot.authorType === "human" ? "Person" : "Organization",
@@ -190,15 +197,27 @@ export default async function BlogPostPage({ params }: Props) {
               <ShareButton url={`${SITE_URL}/blog/${post.slug}`} title={post.title} className="ml-auto" />
             </div>
 
-            {authorSnapshot && (
-              <AuthorCard persona={authorSnapshot} className="mb-8" />
-            )}
-
             <BlockRenderer
-              blocks={doc.blocks}
+              blocks={blocksBeforeEditorialCard}
               laptops={laptops}
               productBlocksEnabled={flags.blog_product_blocks_enabled}
             />
+
+            {authorSnapshot && (
+              <AuthorCard
+                persona={authorSnapshot}
+                generatedDisclosure={editorialCardPlacement?.generatedDisclosure}
+                className="my-8"
+              />
+            )}
+
+            {blocksAfterEditorialCard.length > 0 && (
+              <BlockRenderer
+                blocks={blocksAfterEditorialCard}
+                laptops={laptops}
+                productBlocksEnabled={flags.blog_product_blocks_enabled}
+              />
+            )}
 
             {/* Related posts */}
             {related.length > 0 && (
