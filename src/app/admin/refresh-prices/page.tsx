@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { RefreshPricesPanel } from "@/components/admin/RefreshPricesPanel";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 export default async function RefreshPricesPage() {
   const supabase = await createClient();
@@ -11,11 +12,14 @@ export default async function RefreshPricesPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Refresh Prices</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Fetches the latest price and availability for all published laptops from Amazon.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Refresh Prices</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Fetches the latest price and availability for all published laptops from Amazon.
+          </p>
+        </div>
+        <AdminGuideLink section="refresh-prices" />
       </div>
 
       <RefreshPricesPanel laptops={laptops ?? []} />

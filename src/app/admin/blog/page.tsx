@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getBlogFlags } from "@/lib/flags";
 import { getAllPostsForAdmin } from "@/lib/blog/queries";
 import type { BlogStatus } from "@/lib/blog/types";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 const STATUS_STYLE: Record<BlogStatus, string> = {
   draft: "bg-muted/50 text-muted-foreground",
@@ -23,6 +24,9 @@ export default async function AdminBlogPage() {
         <p className="text-sm text-muted-foreground">
           Enable the blog in <Link href="/admin/settings" className="underline">Settings</Link> to manage posts.
         </p>
+        <div className="mt-4 flex justify-center">
+          <AdminGuideLink section="blog" />
+        </div>
       </div>
     );
   }
@@ -31,21 +35,24 @@ export default async function AdminBlogPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-foreground">Blog</h1>
-        <Link
-          href="/admin/blog/new"
-          className="inline-flex items-center gap-1.5 rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" />
-          New post
-        </Link>
-        <Link
-          href="/admin/personas"
-          className="inline-flex items-center rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium border border-border hover:bg-muted/40 transition-colors"
-        >
-          Author personas
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminGuideLink section="blog" />
+          <Link
+            href="/admin/blog/new"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] bg-primary px-3 text-[0.8rem] font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Plus className="w-4 h-4" />
+            New post
+          </Link>
+          <Link
+            href="/admin/personas"
+            className="inline-flex min-h-11 items-center rounded-[min(var(--radius-md),12px)] border border-border px-3 text-[0.8rem] font-medium transition-colors hover:bg-muted/40"
+          >
+            Author personas
+          </Link>
+        </div>
       </div>
 
       {posts.length === 0 ? (

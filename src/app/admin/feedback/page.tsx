@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 import { FeedbackPanel, type FeedbackRow } from "@/components/admin/FeedbackPanel";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 export default async function AdminFeedbackPage() {
   const supabase = createAdminClient();
@@ -45,9 +46,12 @@ export default async function AdminFeedbackPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Chat Conversations</h1>
-        <p className="text-sm text-muted-foreground">Every Chip session, with ratings where given</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Chat Conversations</h1>
+          <p className="text-sm text-muted-foreground">Every Chip session, with ratings where given</p>
+        </div>
+        <AdminGuideLink section="feedback" />
       </div>
 
       {/* Stats row */}

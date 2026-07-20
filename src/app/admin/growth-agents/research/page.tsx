@@ -6,6 +6,7 @@ import {
   ResearchQueue,
   type ResearchSourceHealth,
 } from "@/components/admin/growth-agents/ResearchQueue";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 export default async function GrowthAgentResearchPage() {
   await requireAdmin();
@@ -35,12 +36,15 @@ export default async function GrowthAgentResearchPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Product research queue</h1>
-        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          Import from approved sources, inspect normalized evidence and freshness,
-          then promote complete candidates to unpublished laptops for final admin review.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Product research queue</h1>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Import from approved sources, inspect normalized evidence and freshness,
+            then promote complete candidates to unpublished laptops for final admin review.
+          </p>
+        </div>
+        <AdminGuideLink section="research-queue" />
       </div>
 
       <ResearchQueue

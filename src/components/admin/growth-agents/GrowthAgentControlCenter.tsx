@@ -15,9 +15,9 @@ import type {
 } from "@/lib/growth-agents/types";
 
 const BOOLEAN_SETTINGS = [
-  ["emergency_stop", "Emergency stop", "Stops every new growth-agent operation."],
-  ["global_pause", "Global pause", "Pauses scheduled and manual agent work."],
-  ["safe_mode", "Safe mode", "Keeps generated content in draft/review mode."],
+  ["emergency_stop", "Emergency stop", "Stops new Calendar research, Blog Agent work, and affiliate monetization. Disable Chip learning and manual tools separately."],
+  ["global_pause", "Global pause", "Pauses the same guarded research, blogging, and affiliate operations."],
+  ["safe_mode", "Safe mode", "Keeps affiliate monetization gated; generated content remains review-controlled regardless."],
   ["research_agent_enabled", "Research Agent", "Enables evidence-backed research calls."],
   ["blogging_agent_enabled", "Blogging Agent", "Enables persona-based draft generation."],
   ["chip_learning_enabled", "Chip learning", "Enables privacy-minimized preference summaries."],
@@ -174,7 +174,7 @@ export function GrowthAgentControlCenter({
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
           )}
           <p className="text-sm font-medium text-foreground">
-            {stopped ? "Agent execution is stopped" : `${enabledCount} of 4 capabilities enabled`}
+            {stopped ? "Guarded research, blogging, and affiliate execution is stopped" : `${enabledCount} of 4 capabilities enabled`}
           </p>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">

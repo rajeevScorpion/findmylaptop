@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Plus, UserRoundPen } from "lucide-react";
 import { getPersonaAdminEmail } from "@/lib/personas/admin-auth";
 import { listPersonasWithUsage } from "@/lib/personas/service";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 function formatDate(value: string | null) {
   return value
@@ -28,13 +29,16 @@ export default async function AdminPersonasPage() {
             safety permissions.
           </p>
         </div>
-        <Link
-          href="/admin/personas/new"
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          New persona
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminGuideLink section="author-personas" />
+          <Link
+            href="/admin/personas/new"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            New persona
+          </Link>
+        </div>
       </div>
 
       <div className="glass-card divide-y divide-border/40 overflow-hidden rounded-xl border">

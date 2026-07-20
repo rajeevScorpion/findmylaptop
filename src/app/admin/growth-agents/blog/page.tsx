@@ -7,6 +7,7 @@ import {
 } from "@/lib/blog-agent/service";
 import { getPersonaOptionsForAdmin } from "@/lib/personas/service";
 import { BlogDraftQueue } from "@/components/admin/growth-agents/BlogDraftQueue";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 async function BlogDraftContent() {
   await requireAdmin();
@@ -45,17 +46,20 @@ async function BlogDraftContent() {
 export default function GrowthAgentBlogPage() {
   return (
     <div className="max-w-6xl space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg border border-primary/20 bg-primary/10 p-2">
-          <FilePenLine className="h-4 w-4 text-primary" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-2">
+            <FilePenLine className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Blog draft queue</h1>
+            <p className="text-sm text-muted-foreground">
+              Convert verified research packets into quality-gated, persona-authored
+              CMS drafts. Every result remains unpublished until admin review.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Blog draft queue</h1>
-          <p className="text-sm text-muted-foreground">
-            Convert verified research packets into quality-gated, persona-authored
-            CMS drafts. Every result remains unpublished until admin review.
-          </p>
-        </div>
+        <AdminGuideLink section="agent-drafts" />
       </div>
       <Suspense
         fallback={

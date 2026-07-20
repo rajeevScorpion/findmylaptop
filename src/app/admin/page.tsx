@@ -3,6 +3,7 @@ import { Laptop, CheckCircle2, FileText, Plus } from "lucide-react";
 import { TIER_LABELS } from "@/lib/constants";
 import { getAllTaxonomies } from "@/lib/taxonomy";
 import { DOMAIN_ORDER } from "@/lib/domains";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 const TIER_PILL_COLORS: Record<string, string> = {
   budget:   "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
@@ -70,18 +71,21 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
         </div>
-        <a
-          href="/admin/laptops/new"
-          className="inline-flex items-center gap-1.5 rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" />
-          Add Laptop
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminGuideLink section="dashboard" />
+          <a
+            href="/admin/laptops/new"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] bg-primary px-3 text-[0.8rem] font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Plus className="w-4 h-4" />
+            Add Laptop
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

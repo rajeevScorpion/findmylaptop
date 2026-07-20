@@ -8,6 +8,7 @@ import {
   listSourceAdapters,
   resolveAgentSettings,
 } from "@/lib/growth-agents/settings";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 async function ControlCenterContent() {
   await requireAdmin();
@@ -44,19 +45,22 @@ async function ControlCenterContent() {
 export default function GrowthAgentsPage() {
   return (
     <div className="max-w-6xl space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg border border-primary/20 bg-primary/10 p-2">
-          <Bot className="h-4 w-4 text-primary" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-2">
+            <Bot className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">
+              Growth Agents
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Fail-closed controls for research, editorial drafts, Chip learning,
+              and affiliate resolution.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">
-            Growth Agents
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Fail-closed controls for research, editorial drafts, Chip learning,
-            and affiliate resolution.
-          </p>
-        </div>
+        <AdminGuideLink section="growth-agents" />
       </div>
       <Suspense
         fallback={

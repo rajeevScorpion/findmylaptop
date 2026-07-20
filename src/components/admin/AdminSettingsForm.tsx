@@ -101,7 +101,7 @@ export function AdminSettingsForm({ whatsappUrl, disclaimerText, voiceInputEnabl
             <p className="text-sm text-foreground">Voice input</p>
             <p className="text-xs text-muted-foreground">
               Shows a mic button in the chat. Tapping it records the user&rsquo;s voice, transcribes
-              it with Whisper, and sends the message automatically.
+              it with the configured speech-to-text model, and sends the message automatically.
             </p>
           </div>
           <Switch

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Plus } from "lucide-react";
 import { LaptopListWithPreview } from "@/components/admin/LaptopListWithPreview";
 import type { AdminLaptop } from "@/components/admin/LaptopListWithPreview";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 export default async function AdminLaptopsPage() {
   const supabase = await createClient();
@@ -51,15 +52,18 @@ export default async function AdminLaptopsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-foreground">Laptops</h1>
-        <a
-          href="/admin/laptops/new"
-          className="inline-flex items-center gap-1.5 rounded-[min(var(--radius-md),12px)] h-7 px-2.5 text-[0.8rem] font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" />
-          Add Laptop
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminGuideLink section="laptops" />
+          <a
+            href="/admin/laptops/new"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] bg-primary px-3 text-[0.8rem] font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Plus className="w-4 h-4" />
+            Add Laptop
+          </a>
+        </div>
       </div>
 
       <LaptopListWithPreview laptops={laptops} />

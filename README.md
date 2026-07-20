@@ -1,5 +1,11 @@
 # FindMyLaptop
 
+## Administrator documentation
+
+- Use the mobile-friendly in-app guide at **Admin → Admin Guide** (`/admin/guide`).
+- Read [`docs/ADMIN_OPERATIONS_GUIDE.md`](docs/ADMIN_OPERATIONS_GUIDE.md) for the complete operational and power-user handbook.
+- Read [`docs/AUTONOMOUS_AGENTS_RUNBOOK.md`](docs/AUTONOMOUS_AGENTS_RUNBOOK.md) for staging activation, environment, migration, retention, and rollback procedures.
+
 A mobile-first, single-page laptop recommendation website for design students. Helps students find the right laptop based on their course, budget, and creative workflow — with Amazon affiliate links and an admin utility for managing recommendations.
 
 ## Features
@@ -82,6 +88,10 @@ supabase/migrations/017_add_laptop_domain.sql       # multi-domain: laptop.domai
 supabase/migrations/018_courses_taxonomy.sql        # courses → admin-managed taxonomy
 supabase/migrations/019_seed_domain_taxonomies.sql  # seed tech/management programmes
 supabase/migrations/020_seed_domain_flags.sql       # domain_tech/mgmt_enabled flags
+... (021–023 — existing product/blog support)
+supabase/migrations/024_create_agent_foundations.sql
+... (025–032 — product research, calendar, personas, Chip learning,
+    blog agent, affiliate events, and access hardening)
 ```
 
 Copy the contents of each file and paste into the SQL editor, then click **Run**.
@@ -182,9 +192,9 @@ Vercel serverless functions do not provide a reliable persistent writable filesy
 ## Security Notes
 
 - `SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security. It is only used in server-side code (`src/lib/supabase/admin.ts`, API routes). It must never appear in client-side bundles.
-- `OPENAI_API_KEY` is only used in the `/api/admin/process-laptop` route handler.
+- `OPENAI_API_KEY` is used only by server-side extraction, research, writing, persona-preview, Chip, and transcription services.
 - The admin email check is done **both** in `src/app/admin/layout.tsx` (UI protection) **and** in the API route (defense in depth).
-- RLS policies ensure anonymous users can only read published laptops. See `supabase/migrations/005_rls_policies.sql`.
+- RLS policies ensure anonymous users can only read published laptops. See `supabase/migrations/005_rls_policies.sql` and the access hardening in `supabase/migrations/032_harden_catalog_and_taxonomy_access.sql`.
 
 ---
 
@@ -192,8 +202,8 @@ Vercel serverless functions do not provide a reliable persistent writable filesy
 
 | Table | anon | authenticated |
 |---|---|---|
-| `courses` | SELECT | ALL |
-| `laptops` | SELECT (is\_published=true only) | ALL |
-| `settings` | SELECT | ALL |
+| `courses` | SELECT | SELECT |
+| `laptops` | SELECT (is\_published=true only) | SELECT |
+| `settings` | SELECT | SELECT |
 
-Admin writes use the service role client which bypasses RLS entirely — this is intentional and safe as long as the service role key stays server-side.
+Admin writes use authenticated, allowlisted server APIs and the service-role client, which bypasses RLS. This is intentional only while the key remains server-side and every mutation keeps its authorization and validation checks.

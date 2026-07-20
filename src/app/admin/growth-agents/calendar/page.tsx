@@ -3,6 +3,7 @@ import { CalendarDays } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/authorization";
 import { getResearchCalendarDashboard } from "@/lib/research-calendar/service";
 import { ResearchCalendarManager } from "@/components/admin/growth-agents/ResearchCalendarManager";
+import { AdminGuideLink } from "@/components/admin/guide/AdminGuideLink";
 
 async function CalendarContent() {
   await requireAdmin();
@@ -35,17 +36,20 @@ async function CalendarContent() {
 export default function ResearchCalendarPage() {
   return (
     <div className="space-y-5 max-w-6xl">
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg border border-primary/20 bg-primary/10 p-2">
-          <CalendarDays className="h-4 w-4 text-primary" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-2">
+            <CalendarDays className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Research Calendar</h1>
+            <p className="text-sm text-muted-foreground">
+              Configure daily research themes and draft targets. Publishing and
+              affiliate insertion remain review-controlled.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Research Calendar</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure daily research themes and draft targets. Publishing and
-            affiliate insertion remain review-controlled.
-          </p>
-        </div>
+        <AdminGuideLink section="research-calendar" />
       </div>
       <Suspense
         fallback={
