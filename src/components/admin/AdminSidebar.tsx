@@ -1,7 +1,24 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Cpu, LayoutDashboard, Laptop, Settings, LogOut, Menu, X, MessageSquare, RefreshCw, FileText, ListTree } from "lucide-react";
+import {
+  Bot,
+  CalendarDays,
+  Cpu,
+  FilePenLine,
+  FileText,
+  LayoutDashboard,
+  Laptop,
+  ListTree,
+  LogOut,
+  Menu,
+  MessageSquare,
+  RefreshCw,
+  ScanSearch,
+  Settings,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +28,11 @@ const NAV = [
   { href: "/admin/laptops", label: "Laptops", icon: Laptop, exact: false },
   { href: "/admin/taxonomy", label: "Taxonomy", icon: ListTree, exact: false },
   { href: "/admin/blog", label: "Blog", icon: FileText, exact: false, flag: "blog" as const },
+  { href: "/admin/personas", label: "Author Personas", icon: UserRound, exact: false },
+  { href: "/admin/growth-agents", label: "Growth Agents", icon: Bot, exact: true },
+  { href: "/admin/growth-agents/research", label: "Research Queue", icon: ScanSearch, exact: false },
+  { href: "/admin/growth-agents/calendar", label: "Research Calendar", icon: CalendarDays, exact: false },
+  { href: "/admin/growth-agents/blog", label: "Agent Drafts", icon: FilePenLine, exact: false },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, exact: false },
   { href: "/admin/refresh-prices", label: "Refresh Prices", icon: RefreshCw, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
@@ -50,7 +72,7 @@ export function AdminSidebar({ userEmail, blogEnabled = false }: AdminSidebarPro
       </div>
 
       {/* Nav links */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {NAV.filter((item) => ("flag" in item ? blogEnabled : true)).map(({ href, label, icon: Icon, exact }) => (
           <a
             key={href}

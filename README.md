@@ -19,7 +19,7 @@ A mobile-first, single-page laptop recommendation website for design students. H
 - **Tailwind CSS v4** + shadcn/ui (base-nova style with @base-ui/react)
 - **Framer Motion** (LazyMotion for reduced bundle)
 - **Supabase** (Postgres + Auth)
-- **OpenAI** `gpt-4o-mini` (JSON mode for spec extraction)
+- **OpenAI Responses API** with task-specific model routing and Structured Outputs
 - **Zod** + React Hook Form
 
 ---
@@ -125,7 +125,8 @@ Only users whose email is listed in `ADMIN_EMAILS` can access the admin panel, e
 
 The `/api/admin/process-laptop` route:
 1. Verifies the caller is an authenticated admin (session + ADMIN_EMAILS check)
-2. Sends the pasted text to `gpt-4o-mini` with a structured extraction prompt
+2. Sends the pasted text to the configured extraction model (default:
+   `gpt-5.6-luna`) using the Responses API and Structured Outputs
 3. Returns a JSON object with laptop specs, workload tags, recommended courses, why_recommended, cautions, and 4-year suitability
 4. The admin reviews and edits before saving — nothing is auto-saved
 

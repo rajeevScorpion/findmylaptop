@@ -40,6 +40,16 @@ const slugSchema = z
   .max(100)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase words separated by hyphens");
 
+const nullableHttpUrlSchema = z
+  .string()
+  .url()
+  .max(2_048)
+  .refine((value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  }, "Only HTTP or HTTPS URLs are allowed")
+  .nullable();
+
 const personaBaseSchema = z.object({
   slug: slugSchema,
   displayName: z.string().trim().min(2).max(120),
@@ -48,7 +58,7 @@ const personaBaseSchema = z.object({
   longInternalDescription: z.string().trim().max(4000).nullable().default(null),
   authorType: personaAuthorTypeSchema.default("ai_persona"),
   status: personaStatusSchema.default("draft"),
-  avatarUrl: z.string().url().nullable().default(null),
+  avatarUrl: nullableHttpUrlSchema.default(null),
   expertiseTags: tagArray,
   targetAudienceTags: tagArray,
   topicCategoryTags: tagArray,

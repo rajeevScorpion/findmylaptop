@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import {
   adminAuthorizationErrorResponse,
   requireAdmin,
@@ -26,11 +27,12 @@ function routeError(error: unknown): Response {
       getAgentErrorHttpStatus(error)
     );
   }
-  console.error("Source health route failed", error);
+  console.error("Source health route failed");
   return json({ error: "Source health request failed." }, 500);
 }
 
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
     await requireAdmin();
     const probe = new URL(request.url).searchParams.get("probe") === "true";

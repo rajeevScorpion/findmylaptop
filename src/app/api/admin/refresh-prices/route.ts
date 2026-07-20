@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import {
+  adminAuthorizationErrorResponse,
+  requireAdmin,
+} from "@/lib/admin/authorization";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  MAX_REFRESH_PRICES_REQUEST_BYTES,
+  refreshPricesRequestSchema,
+} from "@/lib/admin/catalog-write-schema";
 import {
   resolveAsin,
   fetchProductByAsin,
   parsePriceToInt,
   AmazonApiError,
 } from "@/lib/amazon-creators";
-
-function isAdminEmail(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return adminEmails.includes(email.toLowerCase());
-}
 
 function isCronRequest(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -23,32 +23,57 @@ function isCronRequest(request: NextRequest): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-
   if (!isCronRequest(request)) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!isAdminEmail(user.email ?? ""))
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    try {
+      await requireAdmin();
+    } catch (error) {
+      return (
+        adminAuthorizationErrorResponse(error) ??
+        NextResponse.json({ error: "Could not authorize request" }, { status: 500 })
+      );
+    }
   }
 
-  // Optional: scope the refresh to a specific set of laptop ids (a single row
-  // or one page). Falls back to all published laptops (cron / "refresh all").
-  let ids: string[] | null = null;
-  // When true, any currently-unpublished laptop that comes back available is
-  // automatically re-published (used by the "Refresh all unpublished" action).
-  let republishIfAvailable = false;
+  // An empty body refreshes all published laptops. A JSON body may scope the
+  // run to bounded UUIDs and opt into republishing items that are available.
+  let raw: string;
   try {
-    const body = await request.json();
-    if (Array.isArray(body?.ids) && body.ids.length > 0) {
-      ids = body.ids.filter((id: unknown): id is string => typeof id === "string");
-    }
-    republishIfAvailable = body?.republishIfAvailable === true;
+    raw = await request.text();
   } catch {
-    // No / invalid body → refresh everything.
+    return NextResponse.json({ error: "Could not read request body" }, { status: 400 });
   }
+
+  if (new TextEncoder().encode(raw).byteLength > MAX_REFRESH_PRICES_REQUEST_BYTES) {
+    return NextResponse.json({ error: "Request body is too large" }, { status: 413 });
+  }
+  if (
+    raw.trim() &&
+    !request.headers.get("content-type")?.toLowerCase().includes("application/json")
+  ) {
+    return NextResponse.json(
+      { error: "Content-Type must be application/json" },
+      { status: 415 }
+    );
+  }
+
+  let json: unknown = {};
+  if (raw.trim()) {
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+  }
+  const parsed = refreshPricesRequestSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid refresh request", details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+  const ids = parsed.data.ids ?? null;
+  const republishIfAvailable = parsed.data.republishIfAvailable;
+  const supabase = createAdminClient();
 
   // When specific IDs are requested (e.g. re-checking attention/unpublished
   // laptops), skip the is_published filter so they can be fetched too.
@@ -84,15 +109,16 @@ export async function POST(request: NextRequest) {
     auto_republished?: boolean;
   };
 
+  const laptopRows = laptops ?? [];
   const results = {
-    total: laptops.length,
+    total: laptopRows.length,
     updated: 0,
     failed: 0,
     errors: [] as string[],
     rows: [] as UpdatedRow[],
   };
 
-  for (const laptop of laptops) {
+  for (const laptop of laptopRows) {
     const asin = await resolveAsin(laptop.amazon_affiliate_url);
     if (!asin) {
       results.failed++;
@@ -119,7 +145,7 @@ export async function POST(request: NextRequest) {
         ...(shouldRepublish && { auto_republished: true }),
       };
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("laptops")
         .update({
           price_label: update.price_label,
@@ -130,6 +156,7 @@ export async function POST(request: NextRequest) {
           ...(shouldRepublish && { is_published: true }),
         })
         .eq("id", laptop.id);
+      if (updateError) throw new Error("Database update failed");
 
       results.rows.push(update);
       results.updated++;

@@ -4,7 +4,8 @@ export type GrowthAgentModelPurpose =
   | "research"
   | "writer"
   | "chip"
-  | "extraction";
+  | "extraction"
+  | "transcription";
 
 export type GrowthAgentModels = Readonly<
   Record<GrowthAgentModelPurpose, string>
@@ -15,6 +16,7 @@ export const DEFAULT_GROWTH_AGENT_MODELS: GrowthAgentModels = Object.freeze({
   writer: "gpt-5.6-luna",
   chip: "gpt-5.6-luna",
   extraction: "gpt-5.6-luna",
+  transcription: "gpt-4o-mini-transcribe",
 });
 
 export const GROWTH_AGENT_MODEL_ENV_VARS = Object.freeze({
@@ -22,6 +24,7 @@ export const GROWTH_AGENT_MODEL_ENV_VARS = Object.freeze({
   writer: "LLM_MODEL_BLOGGING",
   chip: "LLM_MODEL_CHIP",
   extraction: "LLM_MODEL_EXTRACTION",
+  transcription: "LLM_MODEL_TRANSCRIPTION",
 }) satisfies Readonly<Record<GrowthAgentModelPurpose, string>>;
 
 function modelFromEnvironment(
@@ -57,6 +60,10 @@ export function getGrowthAgentModels(
     extraction: modelFromEnvironment(
       environment[GROWTH_AGENT_MODEL_ENV_VARS.extraction],
       DEFAULT_GROWTH_AGENT_MODELS.extraction
+    ),
+    transcription: modelFromEnvironment(
+      environment[GROWTH_AGENT_MODEL_ENV_VARS.transcription],
+      DEFAULT_GROWTH_AGENT_MODELS.transcription
     ),
   };
 }

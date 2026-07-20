@@ -42,3 +42,37 @@ Run the rollbacks in **reverse** order:
 `011_create_blog_rollback.sql` intentionally does **not** drop
 `public.handle_updated_at()` — that function is shared with the pre-existing
 `laptops` table.
+
+## Autonomous growth-agent migrations (024–032)
+
+These migrations are not applied automatically. Apply them to staging in this
+exact order:
+
+```text
+024_create_agent_foundations.sql
+025_create_product_research.sql
+026_create_research_calendar.sql
+027_add_blog_personas.sql
+028_create_chip_learning.sql
+029_create_blog_agent_metadata.sql
+030_create_affiliate_click_events.sql
+031_harden_chat_and_blog_access.sql
+032_harden_catalog_and_taxonomy_access.sql
+```
+
+Rollback is destructive and must be run in exact reverse order:
+
+```text
+032_harden_catalog_and_taxonomy_access_rollback.sql
+031_harden_chat_and_blog_access_rollback.sql
+030_create_affiliate_click_events_rollback.sql
+029_create_blog_agent_metadata_rollback.sql
+028_create_chip_learning_rollback.sql
+027_add_blog_personas_rollback.sql
+026_create_research_calendar_rollback.sql
+025_create_product_research_rollback.sql
+024_create_agent_foundations_rollback.sql
+```
+
+See `docs/AUTONOMOUS_AGENTS_RUNBOOK.md` for environment setup, staged
+activation, safety checks, and rollback preparation.

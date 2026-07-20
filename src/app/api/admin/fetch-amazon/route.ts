@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       .eq("domain", domain);
 
     if (dupErr) {
-      console.error("[fetch-amazon] duplicate check failed:", dupErr);
+      console.error("[fetch-amazon] duplicate check failed", dupErr.code);
     }
 
     const candidates = findDuplicateCandidates(asin, productName, existing ?? []);
@@ -175,8 +175,8 @@ export async function POST(request: NextRequest) {
       );
     }
     parsed = compactProcessedLaptopOutput(response.output_parsed);
-  } catch (err) {
-    console.error("OpenAI error:", err);
+  } catch {
+    console.error("Amazon laptop extraction request failed");
     return NextResponse.json(
       { error: "OpenAI processing failed. Check your API key and quota." },
       { status: 502 }

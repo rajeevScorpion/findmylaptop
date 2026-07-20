@@ -63,6 +63,15 @@ function isStringArray(value: unknown, maxItems: number, maxLength: number): val
   );
 }
 
+function isPublicHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function isStoredPublicSnapshot(
   value: unknown,
   expectedPersonaId: string
@@ -83,7 +92,10 @@ function isStoredPublicSnapshot(
     typeof row.version === "number" &&
     Number.isInteger(row.version) &&
     row.version >= 1 &&
-    (row.avatarUrl === null || (typeof row.avatarUrl === "string" && row.avatarUrl.length <= 2_048)) &&
+    (row.avatarUrl === null ||
+      (typeof row.avatarUrl === "string" &&
+        row.avatarUrl.length <= 2_048 &&
+        isPublicHttpUrl(row.avatarUrl))) &&
     isStringArray(row.expertiseTags, 100, 200) &&
     typeof row.disclosureText === "string" &&
     row.disclosureText.length <= 2_000
@@ -99,7 +111,10 @@ function toPublicSnapshot(persona: PersonaSnapshotRow): PersonaPublicSnapshot {
     shortBio: persona.short_bio,
     authorType: persona.author_type,
     version: persona.version,
-    avatarUrl: persona.avatar_url,
+    avatarUrl:
+      persona.avatar_url && isPublicHttpUrl(persona.avatar_url)
+        ? persona.avatar_url
+        : null,
     expertiseTags: persona.expertise_tags ?? [],
     disclosureText: persona.disclosure_text,
   };
@@ -107,7 +122,8 @@ function toPublicSnapshot(persona: PersonaSnapshotRow): PersonaPublicSnapshot {
 
 async function loadPersonaSnapshot(
   client: AdminDatabaseClient,
-  personaId: string
+  personaId: string,
+  allowInactive: boolean
 ): Promise<PersonaPublicSnapshot> {
   const { data, error } = await client
     .from("blog_author_personas")
@@ -124,11 +140,15 @@ async function loadPersonaSnapshot(
       "Persona support is not available in this deployment yet."
     );
   }
-  if (!data || data.status === "soft_deleted") {
+  if (
+    !data ||
+    data.status === "soft_deleted" ||
+    (!allowInactive && data.status !== "active")
+  ) {
     throw new BlogPostWriteError(
       "INVALID_REFERENCE",
       400,
-      "The selected author persona is no longer available."
+      "The selected author persona is not active."
     );
   }
   return toPublicSnapshot(data as PersonaSnapshotRow);
@@ -153,7 +173,10 @@ async function resolvePersonaSnapshot(
     return existing.author_persona_snapshot_json;
   }
 
-  return loadPersonaSnapshot(client, personaId);
+  // Existing posts may deliberately retain or refresh an archived attribution,
+  // but a new assignment must use an active persona. The browser's filtered
+  // selector is convenience only; this is the trusted enforcement boundary.
+  return loadPersonaSnapshot(client, personaId, assignmentUnchanged);
 }
 
 function mapDatabaseWriteError(error: { code?: string; message?: string }): BlogPostWriteError {

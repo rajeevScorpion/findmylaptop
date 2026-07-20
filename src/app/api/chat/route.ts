@@ -217,7 +217,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .insert({ session_id: sessionId, message_count: 0, domain });
 
     if (error) {
-      console.error("Failed to create chat session:", error);
+      console.error("Failed to create chat session", error.code);
       return NextResponse.json({ error: "Session creation failed" }, { status: 500 });
     }
     messageCount = 0;
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         .insert({ session_id: sessionId, message_count: 0, domain });
 
       if (insertError) {
-        console.error("Failed to create replacement chat session:", insertError);
+        console.error("Failed to create replacement chat session", insertError.code);
         return NextResponse.json({ error: "Session creation failed" }, { status: 500 });
       }
       messageCount = 0;
@@ -343,15 +343,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const rawSlugs = parsed.recommendedSlugs;
     const invalidSlugs = rawSlugs.filter((s) => !validSlugs.has(s));
     if (invalidSlugs.length > 0) {
-      console.warn("[chip] AI returned invalid slugs (stripped):", invalidSlugs);
+      console.warn("[chip] AI returned invalid slugs", {
+        count: invalidSlugs.length,
+      });
     }
     chipResponse = {
       message: parsed.message,
       recommendedSlugs: rawSlugs.filter((s) => validSlugs.has(s)).slice(0, 3),
       suggestions: parsed.suggestions,
     };
-  } catch (err) {
-    console.error("OpenAI chat error:", err);
+  } catch {
+    // Provider failures can contain request metadata. Never log chat content.
+    console.error("OpenAI chat request failed");
     return NextResponse.json({ error: "AI response failed" }, { status: 502 });
   }
 
@@ -364,7 +367,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   ];
   const accumulatedSlugs = [...new Set([...existingSlugs, ...chipResponse.recommendedSlugs])];
 
-  await supabase
+  const { error: transcriptError } = await supabase
     .from("chat_sessions")
     .update({
       message_count: messageCount + 1,
@@ -373,6 +376,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       recommended_slugs: accumulatedSlugs,
     })
     .eq("session_id", sessionId);
+  if (transcriptError) {
+    console.error("Chat transcript update failed", transcriptError.code);
+  }
 
   // Learning is best-effort and contains structured signals only. Missing
   // migrations, disabled settings, or learning-store errors never alter the

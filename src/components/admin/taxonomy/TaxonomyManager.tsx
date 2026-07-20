@@ -57,6 +57,25 @@ export function TaxonomyManager({ initial }: { initial: CourseRow[] }) {
     if (data) setRows(data as CourseRow[]);
   }
 
+  async function mutateCourse(payload: Record<string, unknown>): Promise<boolean> {
+    try {
+      const response = await fetch("/api/admin/taxonomy/courses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(json.error ?? "Could not update the taxonomy.");
+        return false;
+      }
+      return true;
+    } catch {
+      setError("Network error. Please retry.");
+      return false;
+    }
+  }
+
   async function handleAdd() {
     setError(null);
     const category = addCategory.trim();
@@ -66,16 +85,9 @@ export function TaxonomyManager({ initial }: { initial: CourseRow[] }) {
       return;
     }
     setAdding(true);
-    // Place new row after the highest sort_order in this domain.
-    const maxSort = domainRows.reduce((m, r) => Math.max(m, r.sort_order), 0);
-    const { error: err } = await supabase
-      .from("courses")
-      .insert({ domain, category, name, sort_order: maxSort + 1 });
+    const saved = await mutateCourse({ action: "add", domain, category, name });
     setAdding(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
+    if (!saved) return;
     setAddCategory("");
     setAddName("");
     await refresh();
@@ -98,30 +110,28 @@ export function TaxonomyManager({ initial }: { initial: CourseRow[] }) {
       return;
     }
     setBusyId(id);
-    const { error: err } = await supabase
-      .from("courses")
-      .update({ category, name, sort_order: editSort })
-      .eq("id", id);
+    const saved = await mutateCourse({
+      action: "update",
+      courseId: id,
+      category,
+      name,
+      sortOrder: editSort,
+    });
     setBusyId(null);
-    if (err) {
-      setError(err.message);
-      return;
-    }
+    if (!saved) return;
     setEditingId(null);
     await refresh();
   }
 
   async function toggleActive(row: CourseRow, value: boolean) {
     setBusyId(row.id);
-    const { error: err } = await supabase
-      .from("courses")
-      .update({ is_active: value })
-      .eq("id", row.id);
+    const saved = await mutateCourse({
+      action: "set_active",
+      courseId: row.id,
+      value,
+    });
     setBusyId(null);
-    if (err) {
-      setError(err.message);
-      return;
-    }
+    if (!saved) return;
     await refresh();
   }
 
@@ -133,12 +143,9 @@ export function TaxonomyManager({ initial }: { initial: CourseRow[] }) {
     )
       return;
     setBusyId(row.id);
-    const { error: err } = await supabase.from("courses").delete().eq("id", row.id);
+    const saved = await mutateCourse({ action: "delete", courseId: row.id });
     setBusyId(null);
-    if (err) {
-      setError(err.message);
-      return;
-    }
+    if (!saved) return;
     await refresh();
   }
 

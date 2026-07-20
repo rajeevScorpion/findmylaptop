@@ -30,8 +30,10 @@ async function getAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new AmazonApiError(res.status, `Token fetch failed: ${text}`);
+    // Provider error bodies can contain request/account metadata. Keep them
+    // out of logs, API responses, and durable job errors.
+    res.body?.cancel().catch(() => {});
+    throw new AmazonApiError(res.status, `Token fetch failed (${res.status}).`);
   }
 
   const data = await res.json();
@@ -169,13 +171,13 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new AmazonApiError(res.status, `GetItems failed (${res.status}): ${text}`);
+    res.body?.cancel().catch(() => {});
+    throw new AmazonApiError(res.status, `GetItems failed (${res.status}).`);
   }
 
   const data = await res.json();
 
-  // Try multiple known response shapes — log raw so we can debug if neither matches
+  // Try the documented response shape plus bounded compatibility fallbacks.
   const item =
     data?.itemsResult?.items?.[0] ??
     data?.items?.[0] ??
@@ -183,22 +185,14 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
     null;
 
   if (!item) {
-    // Expose the raw response so we can see the actual structure
-    throw new AmazonApiError(
-      404,
-      `No product found for ASIN ${asin}. Raw response: ${JSON.stringify(data)}`
-    );
+    throw new AmazonApiError(404, `No product found for ASIN ${asin}.`);
   }
 
   const listing = item?.offersV2?.listings?.[0];
   const { display: priceDisplay, amount: priceAmount } = extractListingPrice(listing);
   if (!priceDisplay) {
-    // Price is the one field the AI can't infer — log the raw shape so we can
-    // chase it if Amazon nests it somewhere new instead of silently blanking it.
-    console.warn(
-      `[amazon] No price parsed for ASIN ${asin}. Raw offersV2:`,
-      JSON.stringify(item?.offersV2 ?? null)
-    );
+    // Missing price remains unknown; do not persist or log provider payloads.
+    console.warn(`[amazon] No price parsed for ASIN ${asin}.`);
   }
   return {
     asin,

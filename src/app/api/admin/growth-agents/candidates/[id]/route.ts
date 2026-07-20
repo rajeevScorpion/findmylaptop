@@ -35,7 +35,7 @@ function routeError(error: unknown): Response {
       getAgentErrorHttpStatus(error)
     );
   }
-  console.error("Product candidate review route failed", error);
+  console.error("Product candidate review route failed");
   return json({ error: "Product candidate review failed." }, 500);
 }
 

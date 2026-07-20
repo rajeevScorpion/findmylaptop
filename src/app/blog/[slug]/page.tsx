@@ -7,6 +7,7 @@ import { getPublishedPostBySlug, getRelatedPosts } from "@/lib/blog/queries";
 import { BlockRenderer } from "@/components/blog/BlockRenderer";
 import { ShareButton } from "@/components/blog/ShareButton";
 import { AuthorCard } from "@/components/blog/AuthorCard";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { buildToc } from "@/lib/blog/toc";
 import type { BlogContentDoc, Block, FaqItem } from "@/lib/blog/types";
 import { getAllPublishedLaptops } from "@/lib/laptop-queries";
@@ -141,7 +142,7 @@ export default async function BlogPostPage({ params }: Props) {
         <script
           key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(obj) }}
         />
       ))}
 

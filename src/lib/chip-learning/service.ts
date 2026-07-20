@@ -18,6 +18,8 @@ const CHIP_PROFILE_SELECT =
   "id, anonymous_session_hash, domain, budget_min, budget_max, role_tags, course_tags, software_tags, brand_preferences, priority_tags, intent_tags, confidence, signals_count, last_seen_at, expires_at, created_at, updated_at";
 const TAG_PATTERN = /^[a-z0-9][a-z0-9:-]{0,63}$/;
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,199}$/;
+const RETENTION_BATCH_SIZE = 500;
+const RETENTION_MAX_BATCHES = 10;
 
 function databaseError(message: string, cause: unknown): AgentError {
   return new AgentError({
@@ -302,7 +304,12 @@ export async function recordChipLearningTurnBestEffort(
 export async function deleteExpiredChipLearningData(
   now: Date = new Date(),
   client: GrowthAgentDatabaseClient = createAdminClient()
-): Promise<{ eventsDeleted: number; profilesDeleted: number }> {
+): Promise<{
+  eventsDeleted: number;
+  profilesDeleted: number;
+  eventsCapacityReached: boolean;
+  profilesCapacityReached: boolean;
+}> {
   if (Number.isNaN(now.getTime())) {
     throw new AgentError({
       code: "VALIDATION_ERROR",
@@ -310,28 +317,77 @@ export async function deleteExpiredChipLearningData(
     });
   }
   const cutoff = now.toISOString();
-  const [events, profiles] = await Promise.all([
-    client
-      .from("chip_interaction_events")
-      .delete()
-      .lte("expires_at", cutoff)
-      .select("id"),
-    client
-      .from("chip_session_profiles")
-      .delete()
-      .lte("expires_at", cutoff)
-      .select("id"),
-  ]);
+  let eventsDeleted = 0;
+  let profilesDeleted = 0;
+  let eventsNeedAnotherBatch = true;
+  let profilesNeedAnotherBatch = true;
 
-  if (events.error || profiles.error) {
-    throw databaseError(
-      "Could not delete expired Chip learning data.",
-      events.error ?? profiles.error
-    );
+  for (let batch = 0; batch < RETENTION_MAX_BATCHES; batch += 1) {
+    const eventCandidates: {
+      data: Array<{ id: unknown }> | null;
+      error: unknown;
+    } = eventsNeedAnotherBatch
+      ? await client
+          .from("chip_interaction_events")
+          .select("id")
+          .lte("expires_at", cutoff)
+          .limit(RETENTION_BATCH_SIZE)
+      : { data: [], error: null };
+    const profileCandidates: {
+      data: Array<{ id: unknown }> | null;
+      error: unknown;
+    } = profilesNeedAnotherBatch
+      ? await client
+          .from("chip_session_profiles")
+          .select("id")
+          .lte("expires_at", cutoff)
+          .limit(RETENTION_BATCH_SIZE)
+      : { data: [], error: null };
+    if (eventCandidates.error || profileCandidates.error) {
+      throw databaseError(
+        "Could not select expired Chip learning data.",
+        eventCandidates.error ?? profileCandidates.error
+      );
+    }
+    const eventIds = (eventCandidates.data ?? []).map((row) => row.id as string);
+    const profileIds = (profileCandidates.data ?? []).map((row) => row.id as string);
+    eventsNeedAnotherBatch = eventIds.length === RETENTION_BATCH_SIZE;
+    profilesNeedAnotherBatch = profileIds.length === RETENTION_BATCH_SIZE;
+
+    const [events, profiles] = await Promise.all([
+      eventIds.length
+        ? client
+            .from("chip_interaction_events")
+            .delete()
+            .in("id", eventIds)
+            .lte("expires_at", cutoff)
+            .select("id")
+        : Promise.resolve({ data: [], error: null }),
+      profileIds.length
+        ? client
+            .from("chip_session_profiles")
+            .delete()
+            .in("id", profileIds)
+            .lte("expires_at", cutoff)
+            .select("id")
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+    if (events.error || profiles.error) {
+      throw databaseError(
+        "Could not delete expired Chip learning data.",
+        events.error ?? profiles.error
+      );
+    }
+    eventsDeleted += events.data?.length ?? 0;
+    profilesDeleted += profiles.data?.length ?? 0;
+    if (!eventsNeedAnotherBatch && !profilesNeedAnotherBatch) break;
   }
+
   return {
-    eventsDeleted: events.data?.length ?? 0,
-    profilesDeleted: profiles.data?.length ?? 0,
+    eventsDeleted,
+    profilesDeleted,
+    eventsCapacityReached: eventsNeedAnotherBatch,
+    profilesCapacityReached: profilesNeedAnotherBatch,
   };
 }
 

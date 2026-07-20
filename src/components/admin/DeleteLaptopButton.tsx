@@ -14,7 +14,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
 
 interface DeleteLaptopButtonProps {
   laptopId: string;
@@ -26,9 +25,23 @@ export function DeleteLaptopButton({ laptopId, laptopName }: DeleteLaptopButtonP
 
   const handleDelete = async () => {
     setLoading(true);
-    const supabase = createClient();
-    await supabase.from("laptops").delete().eq("id", laptopId);
-    window.location.reload();
+    try {
+      const response = await fetch("/api/admin/laptops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", laptopId }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        window.alert(json.error ?? "Could not delete the laptop.");
+        return;
+      }
+      window.location.reload();
+    } catch {
+      window.alert("Network error. Please retry.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

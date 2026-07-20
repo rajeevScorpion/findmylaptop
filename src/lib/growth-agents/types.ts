@@ -63,6 +63,7 @@ export interface GrowthAgentSettings {
     rawProductPayloadsDays: number;
     chipInteractionEventsDays: number;
     anonymousSessionProfilesDays: number;
+    chatTranscriptsDays: number;
     agentJobsDays: number;
     affiliateClickEventsDays: number;
     auditEventsDays: number;

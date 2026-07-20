@@ -101,6 +101,10 @@ export function resolveAgentSettings(
         values,
         AGENT_SETTING_KEYS.retentionAnonymousSessionProfilesDays
       ) as number,
+      chatTranscriptsDays: resolvedValue(
+        values,
+        AGENT_SETTING_KEYS.retentionChatTranscriptsDays
+      ) as number,
       agentJobsDays: resolvedValue(
         values,
         AGENT_SETTING_KEYS.retentionAgentJobsDays
@@ -181,7 +185,7 @@ export async function updateAgentSettings(
   if (updates.length < 1 || updates.length > AGENT_SETTING_KEY_LIST.length) {
     throw new AgentError({
       code: "VALIDATION_ERROR",
-      message: "Provide between 1 and 13 growth-agent setting updates.",
+      message: `Provide between 1 and ${AGENT_SETTING_KEY_LIST.length} growth-agent setting updates.`,
     });
   }
 

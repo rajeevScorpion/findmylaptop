@@ -9,13 +9,21 @@ export const sourceKeySchema = z
   .max(64)
   .regex(SOURCE_KEY_PATTERN, "Use lowercase letters, numbers, hyphens, or underscores");
 
+const httpUrlSchema = z
+  .url()
+  .max(2_048)
+  .refine((value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  }, "Only HTTP or HTTPS URLs are allowed");
+
 export const sourceProductSchema = z
   .object({
     sourceKey: sourceKeySchema,
     sourceProductId: z.string().trim().min(1).max(256).optional(),
     title: z.string().trim().min(1).max(500),
-    url: z.url(),
-    affiliateUrl: z.url().optional(),
+    url: httpUrlSchema,
+    affiliateUrl: httpUrlSchema.optional(),
     brand: z.string().trim().min(1).max(160).optional(),
     model: z.string().trim().min(1).max(200).optional(),
     cpu: z.unknown().optional(),
@@ -35,9 +43,9 @@ export const sourceProductSchema = z
     price: z.unknown().optional(),
     priceFetchedAt: z.iso.datetime({ offset: true }).optional(),
     availability: z.string().trim().min(1).max(200).optional(),
-    imageUrl: z.url().optional(),
+    imageUrl: httpUrlSchema.optional(),
     fetchedAt: z.iso.datetime({ offset: true }),
-    features: z.array(z.string()).optional(),
+    features: z.array(z.string().trim().min(1).max(2_000)).max(200).optional(),
     rawPayload: z.unknown(),
   })
   .strict();
@@ -107,9 +115,9 @@ export const normalizedLaptopSchema = z
     priceFetchedAt: z.iso.datetime({ offset: true }).optional(),
     priceFreshness: z.enum(["fresh", "stale", "unknown", "not_provided"]),
     availability: z.string().min(1).max(200).optional(),
-    url: z.url(),
-    affiliateUrl: z.url().optional(),
-    imageUrl: z.url().optional(),
+    url: httpUrlSchema,
+    affiliateUrl: httpUrlSchema.optional(),
+    imageUrl: httpUrlSchema.optional(),
     fetchedAt: z.iso.datetime({ offset: true }),
     fitTags: z.array(z.string()),
     riskTags: z.array(z.string()),
@@ -221,7 +229,7 @@ export interface SourceAdapter {
 export const ingestCandidateSchema = z.object({
   sourceKey: sourceKeySchema.default("manual"),
   productId: z.string().trim().min(1).max(256).optional(),
-  url: z.url().optional(),
+  url: httpUrlSchema.optional(),
   payload: z.unknown().optional(),
 });
 export type IngestCandidateInput = z.infer<typeof ingestCandidateSchema>;

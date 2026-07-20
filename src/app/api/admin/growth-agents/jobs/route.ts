@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { connection } from "next/server";
 import {
   adminAuthorizationErrorResponse,
   requireAdmin,
@@ -42,11 +43,12 @@ function routeError(error: unknown): Response {
   if (isAgentError(error)) {
     return json({ error: error.message, code: error.code }, getAgentErrorHttpStatus(error));
   }
-  console.error("Growth-agent jobs route failed", error);
+  console.error("Growth-agent jobs route failed");
   return json({ error: "Growth-agent jobs request failed." }, 500);
 }
 
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
     await requireAdmin();
     const url = new URL(request.url);

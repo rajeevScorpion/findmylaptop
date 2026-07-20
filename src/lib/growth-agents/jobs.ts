@@ -19,6 +19,26 @@ const AGENT_JOB_SELECT =
 
 const JOB_TYPE_PATTERN = /^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)+$/;
 
+export interface ListDispatchableAgentJobsOptions {
+  jobType?: string;
+  retryOnly?: boolean;
+  limit?: number;
+  now?: Date;
+}
+
+export interface ReclaimExpiredAgentJobsOptions {
+  jobType?: string;
+  limit?: number;
+  now?: Date;
+}
+
+export interface ReclaimExpiredAgentJobsResult {
+  inspected: number;
+  requeued: number;
+  failed: number;
+  skipped: number;
+}
+
 function databaseError(message: string, cause: unknown): AgentError {
   return new AgentError({
     code: "DATABASE_ERROR",
@@ -159,6 +179,184 @@ export async function listAgentJobs(
   return data as unknown as AgentJobRecord[];
 }
 
+export function isAgentJobDispatchable(
+  job: AgentJobRecord,
+  now = new Date()
+): boolean {
+  const nowTime = now.getTime();
+  const scheduledTime = new Date(job.scheduled_for).getTime();
+  const retryTime = job.next_retry_at
+    ? new Date(job.next_retry_at).getTime()
+    : null;
+  return (
+    job.status === "queued" &&
+    job.attempt_count < job.max_attempts &&
+    Number.isFinite(scheduledTime) &&
+    scheduledTime <= nowTime &&
+    (retryTime === null || (Number.isFinite(retryTime) && retryTime <= nowTime))
+  );
+}
+
+/** List bounded queued work which is eligible at this poll instant. */
+export async function listDispatchableAgentJobs(
+  options: ListDispatchableAgentJobsOptions = {},
+  client: GrowthAgentDatabaseClient = createAdminClient()
+): Promise<AgentJobRecord[]> {
+  const limit = options.limit ?? 25;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new AgentError({
+      code: "VALIDATION_ERROR",
+      message: "Dispatch limit must be an integer between 1 and 100.",
+    });
+  }
+  const now = (options.now ?? new Date()).toISOString();
+  let query = client
+    .from("agent_jobs")
+    .select(AGENT_JOB_SELECT)
+    .eq("status", "queued")
+    .lte("scheduled_for", now)
+    .order("scheduled_for", { ascending: true })
+    .limit(limit);
+
+  // max_attempts cannot be compared to attempt_count through PostgREST's
+  // column filter syntax, so the final bounded result is checked in memory.
+  if (options.jobType) query = query.eq("job_type", options.jobType);
+  if (options.retryOnly) {
+    query = query.not("next_retry_at", "is", null).lte("next_retry_at", now);
+  } else {
+    query = query.or(`next_retry_at.is.null,next_retry_at.lte.${now}`);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) {
+    throw databaseError("Could not list dispatchable growth-agent jobs.", error);
+  }
+  return (data as unknown as AgentJobRecord[]).filter((job) =>
+    isAgentJobDispatchable(job, new Date(now))
+  );
+}
+
+export function getExpiredLeaseRecovery(
+  job: AgentJobRecord,
+  now = new Date()
+): { status: "queued" | "failed"; nextRetryAt: string | null; finishedAt: string | null } | null {
+  const expiresAt = job.lock_expires_at
+    ? new Date(job.lock_expires_at).getTime()
+    : Number.NaN;
+  if (
+    job.status !== "running" ||
+    !job.lock_token ||
+    !Number.isFinite(expiresAt) ||
+    expiresAt > now.getTime()
+  ) {
+    return null;
+  }
+  const exhausted = job.attempt_count >= job.max_attempts;
+  return exhausted
+    ? { status: "failed", nextRetryAt: null, finishedAt: now.toISOString() }
+    : { status: "queued", nextRetryAt: now.toISOString(), finishedAt: null };
+}
+
+/**
+ * Reclaim abandoned worker leases with lock-token and expiry preconditions.
+ * The former worker can no longer complete a reclaimed job because its token
+ * is cleared atomically. Exhausted jobs are terminal instead of looping.
+ */
+export async function reclaimExpiredAgentJobs(
+  options: ReclaimExpiredAgentJobsOptions = {},
+  client: GrowthAgentDatabaseClient = createAdminClient()
+): Promise<ReclaimExpiredAgentJobsResult> {
+  const limit = options.limit ?? 25;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new AgentError({
+      code: "VALIDATION_ERROR",
+      message: "Lease recovery limit must be an integer between 1 and 100.",
+    });
+  }
+  const now = options.now ?? new Date();
+  const nowIso = now.toISOString();
+  let query = client
+    .from("agent_jobs")
+    .select(AGENT_JOB_SELECT)
+    .eq("status", "running")
+    .not("lock_expires_at", "is", null)
+    .lte("lock_expires_at", nowIso)
+    .order("lock_expires_at", { ascending: true })
+    .limit(limit);
+  if (options.jobType) query = query.eq("job_type", options.jobType);
+
+  const { data, error } = await query;
+  if (error || !data) {
+    throw databaseError("Could not inspect expired growth-agent leases.", error);
+  }
+
+  const result: ReclaimExpiredAgentJobsResult = {
+    inspected: data.length,
+    requeued: 0,
+    failed: 0,
+    skipped: 0,
+  };
+  for (const row of data as unknown as AgentJobRecord[]) {
+    const recovery = getExpiredLeaseRecovery(row, now);
+    if (!recovery) {
+      result.skipped += 1;
+      continue;
+    }
+    if (row.job_type === "research.calendar") {
+      const { data: outcome, error: recoveryError } = await client.rpc(
+        "reclaim_research_calendar_lease",
+        {
+          p_agent_job_id: row.id,
+          p_execution_token: row.lock_token!,
+          p_expected_lock_expires_at: row.lock_expires_at!,
+          p_now: nowIso,
+        }
+      );
+      if (recoveryError) {
+        throw databaseError(
+          "Could not reclaim an expired research-calendar lease.",
+          recoveryError
+        );
+      }
+      if (outcome === "requeued") result.requeued += 1;
+      else if (outcome === "failed") result.failed += 1;
+      else result.skipped += 1;
+      continue;
+    }
+    const { data: recovered, error: recoveryError } = await client
+      .from("agent_jobs")
+      .update({
+        status: recovery.status,
+        error_code: "WORKER_LEASE_EXPIRED",
+        error_message: "The previous worker lease expired before completion.",
+        next_retry_at: recovery.nextRetryAt,
+        finished_at: recovery.finishedAt,
+        lock_owner: null,
+        lock_token: null,
+        locked_at: null,
+        lock_expires_at: null,
+      })
+      .eq("id", row.id)
+      .eq("status", "running")
+      .eq("lock_token", row.lock_token!)
+      .eq("lock_expires_at", row.lock_expires_at!)
+      .lte("lock_expires_at", nowIso)
+      .select("id")
+      .maybeSingle();
+    if (recoveryError) {
+      throw databaseError("Could not reclaim an expired growth-agent lease.", recoveryError);
+    }
+    if (!recovered) {
+      result.skipped += 1;
+    } else if (recovery.status === "queued") {
+      result.requeued += 1;
+    } else {
+      result.failed += 1;
+    }
+  }
+  return result;
+}
+
 /**
  * Optimistically claim one known job. The conditional update is the durable
  * concurrency boundary; only one contender can move queued -> running.
@@ -187,9 +385,7 @@ export async function claimAgentJob(
   const now = options.now ?? new Date();
   if (
     !current ||
-    current.status !== "queued" ||
-    current.attempt_count >= current.max_attempts ||
-    new Date(current.scheduled_for).getTime() > now.getTime()
+    !isAgentJobDispatchable(current, now)
   ) {
     return null;
   }
@@ -217,6 +413,7 @@ export async function claimAgentJob(
     .eq("status", "queued")
     .eq("attempt_count", current.attempt_count)
     .lte("scheduled_for", lockedAt)
+    .or(`next_retry_at.is.null,next_retry_at.lte.${lockedAt}`)
     .select(AGENT_JOB_SELECT)
     .maybeSingle();
 

@@ -26,6 +26,7 @@ const settings = {
     rawProductPayloadsDays: 30,
     chipInteractionEventsDays: 30,
     anonymousSessionProfilesDays: 30,
+    chatTranscriptsDays: 30,
     agentJobsDays: 30,
     affiliateClickEventsDays: 90,
     auditEventsDays: 180,

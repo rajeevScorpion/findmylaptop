@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ExternalLink,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
 type Laptop = {
   id: string;
@@ -194,18 +193,26 @@ export function RefreshPricesPanel({ laptops: initialLaptops }: { laptops: Lapto
 
   async function republish(laptopId: string) {
     setRepublishingId(laptopId);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("laptops")
-      .update({ is_published: true })
-      .eq("id", laptopId);
-
-    if (!error) {
+    setErrorMsg(null);
+    try {
+      const response = await fetch("/api/admin/laptops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_published", laptopId, value: true }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setErrorMsg(json.error ?? "Could not republish the laptop.");
+        return;
+      }
       setLaptops((prev) =>
         prev.map((l) => (l.id === laptopId ? { ...l, is_published: true } : l))
       );
+    } catch {
+      setErrorMsg("Network error. Please retry.");
+    } finally {
+      setRepublishingId(null);
     }
-    setRepublishingId(null);
   }
 
   const anyBusy = busy !== null;

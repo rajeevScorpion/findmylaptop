@@ -54,9 +54,9 @@ async function logGeneration(row: {
       tokens_cached: row.usage?.tokens_cached ?? null,
       created_by: row.created_by ?? null,
     });
-  } catch (e) {
+  } catch {
     // Logging must never break generation.
-    console.error("ai_generation_logs insert failed:", e);
+    console.error("ai_generation_logs insert failed");
   }
 }
 
@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
     let persona;
     try {
       persona = await getPersonaById(input.authorPersonaId);
-    } catch (error) {
-      console.error("blog AI persona lookup failed:", error);
+    } catch {
+      console.error("blog AI persona lookup failed");
       return NextResponse.json(
         { error: "The author persona could not be loaded." },
         { status: 500 }
@@ -223,7 +223,12 @@ export async function POST(request: NextRequest) {
       httpStatus = 429;
     }
 
-    console.error("blog AI generate error:", err);
+    // Provider errors can include request metadata. Log only bounded
+    // operational fields, never the prompt, generated output, or credentials.
+    console.error("blog AI generation failed", {
+      code: typeof code === "string" ? code.slice(0, 120) : undefined,
+      status: typeof status === "number" ? status : undefined,
+    });
     await logGeneration({
       generation_type: input.generationType,
       output_status: code === "invalid_format" ? "invalid" : "error",

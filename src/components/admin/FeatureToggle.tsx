@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Star } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
 interface FeatureToggleProps {
   laptopId: string;
@@ -20,22 +19,18 @@ export function FeatureToggle({ laptopId, initialFeatured }: FeatureToggleProps)
     const next = !featured;
     setFeatured(next); // optimistic
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("laptops")
-      .update({ feature_on_home: next })
-      .eq("id", laptopId);
-
-    if (error) {
-      setFeatured(!next); // revert
-    } else {
-      fetch("/api/admin/revalidate", {
+    try {
+      const response = await fetch("/api/admin/laptops", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: "laptops" }),
+        body: JSON.stringify({ action: "set_featured", laptopId, value: next }),
       });
+      if (!response.ok) setFeatured(!next);
+    } catch {
+      setFeatured(!next); // revert
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

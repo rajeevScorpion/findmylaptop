@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSafeInternalBlogHref } from "@/lib/blog/links";
 
 // ---- Block schemas ---------------------------------------------------------
 
@@ -56,7 +57,12 @@ export const ctaBlockSchema = z.object({
   variant: z.string().optional(),
   title: z.string(),
   body: z.string().optional(),
-  href: z.string(),
+  href: z
+    .string()
+    .trim()
+    .min(1)
+    .max(500)
+    .refine(isSafeInternalBlogHref, "CTA links must use an internal LaptopFinder path"),
   label: z.string().optional(),
 });
 
@@ -90,7 +96,10 @@ export const blogContentDocSchema = z.object({
 
 // ---- AI generation input/output -------------------------------------------
 
-export const blogAudienceSchema = z.array(z.string()).default([]);
+export const blogAudienceSchema = z
+  .array(z.string().trim().min(1).max(120))
+  .max(30)
+  .default([]);
 
 export const targetLengthSchema = z.enum(["short", "medium", "long"]).default("medium");
 
@@ -103,25 +112,32 @@ export const blogGenerateInputSchema = z.object({
     "faqs",
     "section",
   ]),
-  topic: z.string().min(3, "Topic is required"),
-  brief: z.string().optional().default(""),
+  topic: z.string().trim().min(3, "Topic is required").max(500),
+  brief: z.string().max(8_000).optional().default(""),
   audience: blogAudienceSchema,
-  primaryKeyword: z.string().optional().default(""),
-  secondaryKeywords: z.array(z.string()).optional().default([]),
-  templateType: z.string().optional().default("buying_guide"),
+  primaryKeyword: z.string().max(200).optional().default(""),
+  secondaryKeywords: z
+    .array(z.string().trim().min(1).max(200))
+    .max(30)
+    .optional()
+    .default([]),
+  templateType: z.string().max(120).optional().default("buying_guide"),
   includeProducts: z.boolean().optional().default(false),
   // Desired article length; drives word-count guidance + max_tokens.
   targetLength: targetLengthSchema,
   // Admin's near-full concept/source text. When present, the AI preserves it
   // closely and only fine-tunes/structures it (it does not write from scratch).
   // Also reused to pass the current article body as context for metadata.
-  sourceText: z.string().optional(),
+  sourceText: z.string().max(100_000).optional(),
   // Category names the model may suggest from (never invents new ones).
-  availableCategories: z.array(z.string()).optional(),
+  availableCategories: z.array(z.string().max(160)).max(100).optional(),
   // For "section" rewrites: the text to improve.
-  sectionText: z.string().optional(),
+  sectionText: z.string().max(30_000).optional(),
   // Optional grounded product facts passed from the DB (never invented by AI).
-  productFacts: z.array(z.record(z.string(), z.unknown())).optional(),
+  productFacts: z
+    .array(z.record(z.string().max(120), z.unknown()))
+    .max(25)
+    .optional(),
   // The API resolves this ID to a trusted, active persona. Persona prompt data
   // is deliberately never accepted from the browser.
   authorPersonaId: z.string().uuid().optional(),

@@ -11,9 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ProcessWithAI } from "./ProcessWithAI";
-import { createClient } from "@/lib/supabase/client";
 import { laptopFormSchema } from "@/lib/schemas";
-import { generateSlug } from "@/lib/recommendationEngine";
 import { TIER_LABELS } from "@/lib/constants";
 import { DOMAINS, type DomainId } from "@/lib/domains";
 import type { DomainTaxonomy } from "@/lib/taxonomy";
@@ -160,14 +158,7 @@ export function LaptopForm({ laptop, taxonomies, onPreviewDuplicate }: LaptopFor
     setSaving(true);
     setSaveError(null);
 
-    const supabase = createClient();
-    // For new laptops: generate a UUID now and bake it into the slug to guarantee uniqueness
-    const newId = laptop ? undefined : crypto.randomUUID();
-    const slug = laptop?.slug ?? generateSlug(data.name, newId);
-
     const payload = {
-      ...(newId ? { id: newId } : {}),
-      slug,
       name: data.name,
       domain: data.domain,
       brand: data.brand || null,
@@ -202,26 +193,29 @@ export function LaptopForm({ laptop, taxonomies, onPreviewDuplicate }: LaptopFor
       raw_input: data.raw_input || null,
     };
 
-    let error;
-    if (laptop) {
-      ({ error } = await supabase.from("laptops").update(payload).eq("id", laptop.id));
-    } else {
-      ({ error } = await supabase.from("laptops").insert(payload));
-    }
+    try {
+      const response = await fetch("/api/admin/laptops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save",
+          laptopId: laptop?.id ?? null,
+          values: payload,
+        }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setSaveError(json.error ?? "Could not save the laptop.");
+        return;
+      }
 
-    if (error) {
-      setSaveError(error.message);
+      router.push("/admin/laptops");
+      router.refresh();
+    } catch {
+      setSaveError("Network error. Please retry.");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    fetch("/api/admin/revalidate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tag: "laptops" }),
-    });
-    router.push("/admin/laptops");
-    router.refresh();
   };
 
   const toggleTag = (tag: string) => {

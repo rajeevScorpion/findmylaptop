@@ -125,4 +125,42 @@ describe("writeBlogPost", () => {
     expect(row.author_persona_version).toBe(4);
     expect(row.author_type).toBe("ai_persona");
   });
+
+  it("rejects an inactive persona for a new attribution", async () => {
+    const personaId = "27000000-0000-4000-8000-000000000002";
+    const personaQuery = {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              id: personaId,
+              slug: "archived-guide",
+              display_name: "Archived Guide",
+              public_role: "Editorial Guide",
+              short_bio: "An archived editorial persona.",
+              author_type: "ai_persona",
+              version: 2,
+              avatar_url: null,
+              expertise_tags: ["laptops"],
+              disclosure_text: "Editorial persona, not a real individual.",
+              status: "archived",
+            },
+            error: null,
+          }),
+        })),
+      })),
+    };
+    const client = {
+      from: vi.fn((table: string) =>
+        table === "blog_author_personas" ? personaQuery : {}
+      ),
+    };
+    const value = input();
+    value.authorPersonaId = personaId;
+    value.refreshPersonaSnapshot = true;
+
+    await expect(
+      writeBlogPost(value, "trusted-admin@example.com", client as never)
+    ).rejects.toMatchObject({ code: "INVALID_REFERENCE", status: 400 });
+  });
 });

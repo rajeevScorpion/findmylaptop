@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 interface InlinePriceEditProps {
   laptopId: string;
@@ -51,23 +50,22 @@ export function InlinePriceEdit({ laptopId, initialPrice, initialLabel }: Inline
     setEditing(false);
     setSaving(true);
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("laptops")
-      .update({ price_approx: next, price_label: nextLabel })
-      .eq("id", laptopId);
-
-    if (error) {
-      setPrice(prevPrice);
-      setLabel(prevLabel);
-    } else {
-      fetch("/api/admin/revalidate", {
+    try {
+      const response = await fetch("/api/admin/laptops", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: "laptops" }),
+        body: JSON.stringify({ action: "set_price", laptopId, value: next }),
       });
+      if (!response.ok) {
+        setPrice(prevPrice);
+        setLabel(prevLabel);
+      }
+    } catch {
+      setPrice(prevPrice);
+      setLabel(prevLabel);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   function handleBlur() {

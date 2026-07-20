@@ -31,16 +31,18 @@ export function readBearerToken(
 
 export function verifyCronSecret(
   candidate: string | null | undefined,
-  expected: string | null | undefined =
-    process.env.AGENT_CRON_SECRET || process.env.CRON_SECRET
+  expected?: string | null
 ): boolean {
-  return constantTimeSecretMatches(candidate, expected);
+  const configured =
+    expected !== undefined
+      ? [expected]
+      : [process.env.AGENT_CRON_SECRET, process.env.CRON_SECRET];
+  return configured.some((secret) => constantTimeSecretMatches(candidate, secret));
 }
 
 export function verifyCronRequest(
   request: Pick<Request, "headers">,
-  expected: string | null | undefined =
-    process.env.AGENT_CRON_SECRET || process.env.CRON_SECRET
+  expected?: string | null
 ): boolean {
   return verifyCronSecret(
     readBearerToken(request.headers.get("authorization")),

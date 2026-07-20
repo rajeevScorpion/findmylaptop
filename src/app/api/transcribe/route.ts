@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getGrowthAgentModel } from "@/lib/growth-agents/models";
 
 // Cap uploads so a runaway recording can't blow up the request / API bill.
 const MAX_BYTES = 10 * 1024 * 1024; // ~10 MB
@@ -25,11 +26,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const result = await openai.audio.transcriptions.create({
       file,
-      model: "whisper-1",
+      model: getGrowthAgentModel("transcription"),
     });
     return NextResponse.json({ text: result.text ?? "" });
-  } catch (err) {
-    console.error("Whisper transcription error:", err);
+  } catch {
+    // Provider errors can contain request metadata. Never log audio or output.
+    console.error("Audio transcription request failed");
     return NextResponse.json({ error: "Transcription failed" }, { status: 502 });
   }
 }

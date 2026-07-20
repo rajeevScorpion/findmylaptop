@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import {
+  adminAuthorizationErrorResponse,
+  requireAdmin,
+} from "@/lib/admin/authorization";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAsin } from "@/lib/amazon-creators";
 
 // One-time (re-runnable) backfill: resolves the stored amazon_affiliate_url of
@@ -8,23 +12,16 @@ import { resolveAsin } from "@/lib/amazon-creators";
 // POST with no body. Returns a per-row summary. Safe to run repeatedly — it
 // only touches rows where asin IS NULL.
 
-function isAdminEmail(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return adminEmails.includes(email.toLowerCase());
-}
-
 export async function POST(_request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminEmail(user.email ?? ""))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    await requireAdmin();
+  } catch (error) {
+    return (
+      adminAuthorizationErrorResponse(error) ??
+      NextResponse.json({ error: "Could not authorize request" }, { status: 500 })
+    );
+  }
+  const supabase = createAdminClient();
 
   // Fetch all rows and filter in code — avoids any quirk with filtering on a
   // freshly-added column before PostgREST's schema cache catches up.

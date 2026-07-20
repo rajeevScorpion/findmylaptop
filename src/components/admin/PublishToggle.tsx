@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { createClient } from "@/lib/supabase/client";
 
 interface PublishToggleProps {
   laptopId: string;
@@ -18,22 +17,18 @@ export function PublishToggle({ laptopId, initialPublished }: PublishToggleProps
     const next = !published;
     setPublished(next); // optimistic
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("laptops")
-      .update({ is_published: next })
-      .eq("id", laptopId);
-
-    if (error) {
-      setPublished(!next); // revert
-    } else {
-      fetch("/api/admin/revalidate", {
+    try {
+      const response = await fetch("/api/admin/laptops", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tag: "laptops" }),
+        body: JSON.stringify({ action: "set_published", laptopId, value: next }),
       });
+      if (!response.ok) setPublished(!next);
+    } catch {
+      setPublished(!next); // revert
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

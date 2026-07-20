@@ -298,12 +298,6 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
     if (!sessionId || feedbackSubmitting) return;
     setFeedbackSubmitting(true);
 
-    const allSlugs = messages.flatMap((m) => m.recommendedSlugs ?? []);
-    const uniqueSlugs = [...new Set(allSlugs)];
-    const transcript = messages
-      .filter((m) => m.id !== "greeting")
-      .map((m) => ({ role: m.role, content: m.content }));
-
     try {
       await fetch("/api/chat/feedback", {
         method: "POST",
@@ -312,9 +306,6 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
           session_id: sessionId,
           rating,
           comment: comment?.trim() || undefined,
-          transcript,
-          recommended_slugs: uniqueSlugs,
-          message_count: transcript.length,
         }),
       });
       try { sessionStorage.setItem(keys.rated, "1"); } catch {}
@@ -658,6 +649,7 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
                       value={feedbackComment}
                       onChange={(e) => setFeedbackComment(e.target.value)}
                       placeholder="Optional..."
+                      maxLength={2000}
                       rows={2}
                       className="text-xs resize-none rounded-lg border-border/50 bg-background/50"
                     />
@@ -747,6 +739,10 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
                   <Send className="w-3.5 h-3.5" />
                 </Button>
               </div>
+              <p className="mt-1.5 px-1 text-[9px] leading-relaxed text-muted-foreground/70">
+                Anonymous chats are stored temporarily for quality review. Don&apos;t
+                share names, contact details, or other sensitive information.
+              </p>
             </div>
           </motion.div>
         )}

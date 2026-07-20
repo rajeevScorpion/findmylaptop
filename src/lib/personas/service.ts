@@ -73,6 +73,16 @@ const DEFAULT_PERMISSIONS: PersonaPermissions = {
   alwaysRequiresManualReview: true,
 };
 
+function safeAvatarUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 function mapPersona(row: PersonaRow): BlogAuthorPersona {
   return {
     id: row.id,
@@ -84,7 +94,7 @@ function mapPersona(row: PersonaRow): BlogAuthorPersona {
     authorType: row.author_type,
     status: row.status,
     version: row.version,
-    avatarUrl: row.avatar_url,
+    avatarUrl: safeAvatarUrl(row.avatar_url),
     expertiseTags: row.expertise_tags ?? [],
     targetAudienceTags: row.target_audience_tags ?? [],
     topicCategoryTags: row.topic_category_tags ?? [],
@@ -174,7 +184,7 @@ async function logAudit(
     actor_email: actorEmail,
     metadata_json: metadata,
   });
-  if (error) console.error("[personas] audit insert failed:", error.message);
+  if (error) console.error("[personas] audit insert failed", error.code);
 }
 
 export async function listPersonas(options?: {
@@ -327,6 +337,14 @@ function statusEvent(previous: PersonaStatus, next: PersonaStatus): string {
 export async function updatePersona(id: string, patch: PersonaUpdate, actorEmail: string) {
   const existing = await getPersonaById(id);
   if (!existing) return null;
+  if (patch.slug && patch.slug !== existing.slug) {
+    const usage = await getPersonaUsage(id);
+    if (usage.totalPosts > 0) {
+      throw new Error(
+        "Persona slugs cannot change after a draft or published post stores that attribution."
+      );
+    }
+  }
   if (
     !hasTransparentPersonaDisclosure(
       patch.authorType ?? existing.authorType,
@@ -506,8 +524,10 @@ export async function previewPersona(
       if (response.output_text.trim()) {
         result = { text: response.output_text.trim(), usedAi: true, model };
       }
-    } catch (error) {
-      console.error("[personas] preview generation fell back:", error);
+    } catch {
+      // Provider failures can contain request metadata. Keep previews usable
+      // without writing persona prompts or admin topics to server logs.
+      console.error("[personas] preview generation fell back");
     }
   }
   await logAudit(persona.id, "persona.preview_generated", actorEmail, {

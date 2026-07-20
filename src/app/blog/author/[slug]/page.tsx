@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { getBlogFlags } from "@/lib/flags";
+import { serializeJsonLd } from "@/lib/json-ld";
 import {
   getPublicPersonaBySlug,
   getPublishedPostsForPersona,
@@ -68,7 +69,7 @@ export default async function BlogAuthorPage({ params }: Props) {
     <div className="min-h-screen bg-background px-4 py-12 text-foreground sm:py-16">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(profileSchema) }}
       />
       <div className="mx-auto max-w-5xl">
         <SiteHeader showCta className="mb-8" />

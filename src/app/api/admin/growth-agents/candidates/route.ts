@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import {
   adminAuthorizationErrorResponse,
   requireAdmin,
@@ -19,6 +20,7 @@ const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",
   Vary: "Cookie",
 };
+const MAX_IMPORT_REQUEST_BYTES = 512 * 1024;
 
 function json(data: unknown, status = 200): Response {
   return Response.json(data, { status, headers: PRIVATE_HEADERS });
@@ -38,11 +40,12 @@ function routeError(error: unknown): Response {
       getAgentErrorHttpStatus(error)
     );
   }
-  console.error("Product candidates route failed", error);
+  console.error("Product candidates route failed");
   return json({ error: "Product candidate request failed." }, 500);
 }
 
 export async function GET(request: Request): Promise<Response> {
+  await connection();
   try {
     await requireAdmin();
     const url = new URL(request.url);
@@ -67,9 +70,18 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   try {
     const admin = await requireAdmin();
+    if (
+      !request.headers.get("content-type")?.toLowerCase().includes("application/json")
+    ) {
+      return json({ error: "Content-Type must be application/json." }, 415);
+    }
     let body: unknown;
     try {
-      body = await request.json();
+      const raw = await request.text();
+      if (new TextEncoder().encode(raw).byteLength > MAX_IMPORT_REQUEST_BYTES) {
+        return json({ error: "Candidate import is too large." }, 413);
+      }
+      body = JSON.parse(raw);
     } catch {
       return json({ error: "Invalid JSON body." }, 400);
     }
