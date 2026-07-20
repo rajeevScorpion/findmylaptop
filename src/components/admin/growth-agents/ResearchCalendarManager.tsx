@@ -14,6 +14,15 @@ import type {
 
 const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+const DAY_LIST_FIELDS = [
+  "keywords",
+  "target_audience",
+  "preferred_persona_slugs",
+  "source_priority",
+] as const;
+type DayListField = (typeof DAY_LIST_FIELDS)[number];
+type DayListDrafts = Record<string, Record<DayListField, string>>;
+
 function csv(value: string[]): string {
   return value.join(", ");
 }
@@ -23,6 +32,17 @@ function fromCsv(value: string): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function listDraftsForDays(days: ResearchCalendarDay[]): DayListDrafts {
+  return Object.fromEntries(
+    days.map((day) => [
+      day.id,
+      Object.fromEntries(
+        DAY_LIST_FIELDS.map((field) => [field, csv(day[field])])
+      ),
+    ])
+  ) as DayListDrafts;
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -74,6 +94,12 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
   const [dayDrafts, setDayDrafts] = useState<Record<string, ResearchCalendarDay>>(
     Object.fromEntries(initialDashboard.days.map((day) => [day.id, day]))
   );
+  // Keep the user's exact comma-separated text while typing. The parsed arrays
+  // still update immediately, but a trailing comma is no longer erased before
+  // the next value can be entered.
+  const [dayListDrafts, setDayListDrafts] = useState<DayListDrafts>(() =>
+    listDraftsForDays(initialDashboard.days)
+  );
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +116,7 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
     setDashboard(next);
     if (next.calendar) setCalendarDraft(next.calendar);
     setDayDrafts(Object.fromEntries(next.days.map((day) => [day.id, day])));
+    setDayListDrafts(listDraftsForDays(next.days));
   }
 
   async function save(payload: Record<string, unknown>, key: string) {
@@ -154,6 +181,27 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
       ...current,
       [id]: { ...current[id], ...patch },
     }));
+  }
+
+  function patchDayList(id: string, field: DayListField, value: string) {
+    setDayListDrafts((current) => ({
+      ...current,
+      [id]: {
+        ...current[id],
+        [field]: value,
+      },
+    }));
+    setDayDrafts((current) => ({
+      ...current,
+      [id]: {
+        ...current[id],
+        [field]: fromCsv(value),
+      },
+    }));
+  }
+
+  function dayListValue(day: ResearchCalendarDay, field: DayListField): string {
+    return dayListDrafts[day.id]?.[field] ?? csv(day[field]);
   }
 
   const inputClass = "bg-background/50";
@@ -382,19 +430,22 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Keywords (comma separated)</Label>
-              <Input className={inputClass} value={csv(day.keywords)} onChange={(event) => patchDay(day.id, { keywords: fromCsv(event.target.value) })} />
+              <Input className={inputClass} value={dayListValue(day, "keywords")} onChange={(event) => patchDayList(day.id, "keywords", event.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Target audiences</Label>
-              <Input className={inputClass} value={csv(day.target_audience)} onChange={(event) => patchDay(day.id, { target_audience: fromCsv(event.target.value) })} />
+              <Label className="text-xs">Target audiences (comma separated)</Label>
+              <Input className={inputClass} value={dayListValue(day, "target_audience")} onChange={(event) => patchDayList(day.id, "target_audience", event.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Preferred persona slugs</Label>
-              <Input className={inputClass} value={csv(day.preferred_persona_slugs)} onChange={(event) => patchDay(day.id, { preferred_persona_slugs: fromCsv(event.target.value) })} />
+              <Label className="text-xs">Preferred persona slugs (comma separated)</Label>
+              <Input className={inputClass} value={dayListValue(day, "preferred_persona_slugs")} onChange={(event) => patchDayList(day.id, "preferred_persona_slugs", event.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Source priority</Label>
-              <Input className={inputClass} value={csv(day.source_priority)} onChange={(event) => patchDay(day.id, { source_priority: fromCsv(event.target.value) })} />
+              <Label className="text-xs">Source priority groups (comma separated)</Label>
+              <Input className={inputClass} value={dayListValue(day, "source_priority")} onChange={(event) => patchDayList(day.id, "source_priority", event.target.value)} />
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Examples: official-software, official-documentation, official-platform, or approved-web.
+              </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {(["min_posts", "target_posts", "max_posts"] as const).map((field) => (
