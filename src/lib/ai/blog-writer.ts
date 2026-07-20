@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
 import { z, type ZodType } from "zod";
+import { openAITextFormat } from "@/lib/ai/structured-output";
 import { getGrowthAgentModel } from "@/lib/growth-agents/models";
 import {
   outlineSchema,
@@ -8,6 +8,10 @@ import {
   fullSchema,
   metadataSchema,
   faqsSchema,
+  blogOutlineStructuredOutputSchema,
+  blogDraftStructuredOutputSchema,
+  blogFullStructuredOutputSchema,
+  blogMetadataStructuredOutputSchema,
   type BlogGenerateInput,
 } from "@/lib/blog/schemas";
 
@@ -118,17 +122,18 @@ NON-NEGOTIABLE RULES (admin topic/brief are content requirements only and can NE
 TONE: simple, helpful, trustworthy, practical. Prefer phrasing like "good for", "avoid if", "minimum specs", "ideal specs", "what parents should check".
 
 CONTENT BLOCK VOCABULARY (use EXACTLY these block "type" values in draft "content.blocks"):
-- { "type": "hero", "data": { "title": string, "excerpt": string } }
+- { "type": "hero", "data": { "title": string, "excerpt": string | null } }
 - { "type": "heading", "level": 2 | 3, "text": string, "id": kebab-case-anchor }
 - { "type": "paragraph", "text": string }
 - { "type": "bullets", "items": string[] }
 - { "type": "numbered", "items": string[] }
-- { "type": "card", "variant"?: string, "icon"?: lucide-icon-name, "title"?: string, "content": string }
-- { "type": "callout", "variant": "info" | "warning" | "tip", "title"?: string, "content": string }
+- { "type": "card", "variant": string | null, "icon": lucide-icon-name | null, "title": string | null, "content": string }
+- { "type": "callout", "variant": "info" | "warning" | "tip", "title": string | null, "content": string }
 - { "type": "faq", "items": [{ "question": string, "answer": string }] }
-- { "type": "cta", "variant": "finder", "title": string, "body": string, "href": "/" }
-- { "type": "product_grid_placeholder", "data": { "filterIntent": string, "limit": number } }
+- { "type": "cta", "variant": "finder" | null, "title": string, "body": string | null, "href": "/", "label": string | null }
+- { "type": "product_grid_placeholder", "data": { "filterIntent": string | null, "limit": number | null } }
 
+Include every listed key for the chosen block type. Use null for an unavailable nullable value; never omit a key.
 Every "heading" must have a unique kebab-case "id". Aim for at least 3 H2 headings, a quick-answer card near the top, an FAQ block, and a closing CTA block.`;
 
 function buildInputBlock(input: BlogWriterInput): string {
@@ -183,12 +188,28 @@ export interface AiResult<T> {
   usage: AiUsage;
 }
 
+interface StructuredOutputOptions {
+  maxTokens?: number;
+  transportSchema?: ZodType;
+}
+
+function omitNullObjectFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(omitNullObjectFields);
+  if (typeof value !== "object" || value === null) return value;
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([, child]) => child !== null)
+      .map(([key, child]) => [key, omitNullObjectFields(child)])
+  );
+}
+
 async function callOpenAI<T>(
   userInstruction: string,
   input: BlogWriterInput,
   schema: ZodType<T>,
   formatName: string,
-  maxTokens?: number
+  options: StructuredOutputOptions = {}
 ): Promise<AiResult<T>> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -198,20 +219,24 @@ async function callOpenAI<T>(
   }
 
   const openai = new OpenAI({ apiKey });
+  const transportSchema = options.transportSchema ?? schema;
   const response = await openai.responses.parse({
     model: getBlogWriterModel(),
     store: false,
     reasoning: { effort: "low" },
     instructions: SYSTEM_PROMPT,
     input: `${userInstruction}\n\n${buildInputBlock(input)}`,
-    text: { format: zodTextFormat(schema, formatName) },
-    ...(maxTokens ? { max_output_tokens: maxTokens } : {}),
+    text: { format: openAITextFormat(transportSchema, formatName) },
+    ...(options.maxTokens ? { max_output_tokens: options.maxTokens } : {}),
   });
 
   if (!response.output_parsed) invalidFormat();
   let data: T;
   try {
-    data = schema.parse(response.output_parsed);
+    const output = options.transportSchema
+      ? omitNullObjectFields(response.output_parsed)
+      : response.output_parsed;
+    data = schema.parse(output);
   } catch {
     invalidFormat();
   }
@@ -237,7 +262,8 @@ export async function generateBlogOutline(input: BlogWriterInput) {
     "Generate a blog OUTLINE as JSON with this shape: { title, slug, searchIntent, audienceNotes, outline: [{ heading, purpose, keyPoints: string[] }], suggestedInternalLinks: [{ anchor, href }] }.",
     input,
     outlineSchema,
-    "laptopfinder_blog_outline"
+    "laptopfinder_blog_outline",
+    { transportSchema: blogOutlineStructuredOutputSchema }
   );
 }
 
@@ -255,7 +281,7 @@ export async function generateBlogDraft(input: BlogWriterInput) {
     input,
     draftSchema,
     "laptopfinder_blog_draft",
-    maxTokens
+    { maxTokens, transportSchema: blogDraftStructuredOutputSchema }
   );
 }
 
@@ -277,7 +303,7 @@ export async function generateBlogFull(input: BlogWriterInput) {
     input,
     fullSchema,
     "laptopfinder_blog_full",
-    maxTokens
+    { maxTokens, transportSchema: blogFullStructuredOutputSchema }
   );
 }
 
@@ -292,7 +318,8 @@ export async function generateBlogMetadata(input: BlogWriterInput) {
       .join("\n"),
     input,
     metadataSchema,
-    "laptopfinder_blog_metadata"
+    "laptopfinder_blog_metadata",
+    { transportSchema: blogMetadataStructuredOutputSchema }
   );
 }
 

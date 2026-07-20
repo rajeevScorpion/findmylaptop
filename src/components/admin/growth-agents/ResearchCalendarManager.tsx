@@ -37,6 +37,37 @@ interface Props {
   initialDashboard: ResearchCalendarDashboard;
 }
 
+interface ResearchRunApiResponse {
+  error?: unknown;
+  result?: {
+    status?: string;
+    message?: unknown;
+    packetsProduced?: number;
+  };
+  dashboard?: ResearchCalendarDashboard;
+}
+
+async function readJsonResponse<T>(response: Response): Promise<T | null> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function runErrorMessage(
+  response: Response,
+  payload: ResearchRunApiResponse | null
+): string {
+  if (typeof payload?.error === "string" && payload.error.trim()) {
+    return payload.error;
+  }
+  if (typeof payload?.result?.message === "string" && payload.result.message.trim()) {
+    return payload.result.message;
+  }
+  return `Research run failed (HTTP ${response.status}).`;
+}
+
 export function ResearchCalendarManager({ initialDashboard }: Props) {
   const [dashboard, setDashboard] = useState(initialDashboard);
   const [calendarDraft, setCalendarDraft] = useState(initialDashboard.calendar!);
@@ -92,13 +123,23 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ calendarDayId: dayId, createBlogDrafts: true }),
       });
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.error ?? "Research run failed.");
-      if (json.dashboard) applyDashboard(json.dashboard);
+      const json = await readJsonResponse<ResearchRunApiResponse>(response);
+      if (json?.dashboard) applyDashboard(json.dashboard);
+      if (!response.ok) throw new Error(runErrorMessage(response, json));
+      if (!json) throw new Error("The research run returned an invalid response.");
+
+      const resultMessage =
+        typeof json.result?.message === "string" ? json.result.message : null;
+      if (json.result?.status === "disabled") {
+        setError(
+          resultMessage ?? "The research calendar or selected day is disabled."
+        );
+        return;
+      }
       setMessage(
         json.result?.status === "duplicate"
           ? "That scheduled run was already processed."
-          : json.result?.message ??
+          : resultMessage ??
               `Run completed with ${json.result?.packetsProduced ?? 0} research packet(s).`
       );
     } catch (cause) {
@@ -282,8 +323,24 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
         </Button>
       </div>
 
-      {error && <p className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive">{error}</p>}
-      {message && <p className="rounded-lg bg-primary/10 p-3 text-xs text-primary">{message}</p>}
+      {error && (
+        <p
+          role="alert"
+          aria-atomic="true"
+          className="break-words rounded-lg bg-destructive/10 p-3 text-xs text-destructive"
+        >
+          {error}
+        </p>
+      )}
+      {message && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="break-words rounded-lg bg-primary/10 p-3 text-xs text-primary"
+        >
+          {message}
+        </p>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-2">
         {orderedDays.map((day) => (
@@ -300,6 +357,8 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
                   size="sm"
                   className="gap-1.5"
                   disabled={Boolean(busy)}
+                  aria-label={`Run ${DAY_NAMES[day.weekday]} research now`}
+                  aria-busy={busy === `run:${day.id}`}
                   onClick={() => runNow(day.id)}
                 >
                   {busy === `run:${day.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
@@ -410,7 +469,7 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
                     <span className="text-muted-foreground">{formatDate(run.created_at)}</span>
                   </div>
                   <p className="mt-1 text-muted-foreground">{run.packets_produced} packet(s), {run.drafts_produced} draft(s)</p>
-                  {run.error_message && <p className="mt-1 text-destructive">{run.error_message}</p>}
+                  {run.error_message && <p className="mt-1 break-words text-destructive">{run.error_message}</p>}
                 </div>
               ))}
             </div>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/http-url";
 
 export const personaStatusSchema = z.enum([
   "draft",
@@ -44,10 +45,7 @@ const nullableHttpUrlSchema = z
   .string()
   .url()
   .max(2_048)
-  .refine((value) => {
-    const protocol = new URL(value).protocol;
-    return protocol === "http:" || protocol === "https:";
-  }, "Only HTTP or HTTPS URLs are allowed")
+  .refine(isHttpUrl, "Only HTTP or HTTPS URLs are allowed")
   .nullable();
 
 const personaBaseSchema = z.object({

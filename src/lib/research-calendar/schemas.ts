@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/http-url";
 
 export const calendarModeSchema = z.enum([
   "draft_only",
@@ -164,10 +165,7 @@ export const generatedFindingSchema = z.object({
     .string()
     .url()
     .max(2_048)
-    .refine((value) => {
-      const protocol = new URL(value).protocol;
-      return protocol === "http:" || protocol === "https:";
-    }),
+    .refine(isHttpUrl, "Only HTTP or HTTPS URLs are allowed"),
   sourceTitle: z.string().min(1).max(240),
   publishedAt: z.string().nullable(),
   confidenceScore: z.number().min(0).max(100),

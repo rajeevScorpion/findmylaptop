@@ -52,6 +52,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     return json(
       {
+        ...(outcome.status === "failed" ? { error: outcome.message } : {}),
         result: outcome,
         dashboard: await getResearchCalendarDashboard(),
       },

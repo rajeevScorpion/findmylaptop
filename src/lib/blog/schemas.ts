@@ -199,6 +199,139 @@ export const faqsSchema = z.object({
   ),
 });
 
+// ---- OpenAI Structured Outputs transport ---------------------------------
+//
+// Structured Outputs requires every object key to be required. Fields that
+// are optional in the admin/CMS domain model are therefore required-but-null
+// at the provider boundary, then normalized back to omitted fields by the
+// writer. Keep this separate from blogContentDocSchema: stored admin content
+// intentionally remains forward-compatible with unknown future blocks.
+
+const nullableStringSchema = z.string().nullable();
+
+export const generatedBlogBlockSchema = z.union([
+  z.object({
+    type: z.literal("hero"),
+    data: z.object({
+      title: z.string(),
+      excerpt: nullableStringSchema,
+    }),
+  }),
+  z.object({
+    type: z.literal("heading"),
+    level: z.union([z.literal(2), z.literal(3)]),
+    text: z.string().min(1),
+    id: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("paragraph"),
+    text: z.string(),
+  }),
+  z.object({
+    type: z.literal("bullets"),
+    items: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal("numbered"),
+    items: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal("card"),
+    variant: nullableStringSchema,
+    icon: nullableStringSchema,
+    title: nullableStringSchema,
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal("callout"),
+    variant: z.enum(["info", "warning", "tip"]),
+    title: nullableStringSchema,
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal("faq"),
+    items: z.array(
+      z.object({ question: z.string().min(1), answer: z.string().min(1) })
+    ),
+  }),
+  z.object({
+    type: z.literal("cta"),
+    variant: nullableStringSchema,
+    title: z.string(),
+    body: nullableStringSchema,
+    href: z
+      .string()
+      .trim()
+      .min(1)
+      .max(500)
+      .refine(
+        isSafeInternalBlogHref,
+        "CTA links must use an internal LaptopFinder path"
+      ),
+    label: nullableStringSchema,
+  }),
+  z.object({
+    type: z.literal("product_grid_placeholder"),
+    data: z.object({
+      filterIntent: nullableStringSchema,
+      limit: z.number().int().nullable(),
+    }),
+  }),
+]);
+
+export const generatedBlogContentDocSchema = z.object({
+  type: z.literal("doc"),
+  blocks: z.array(generatedBlogBlockSchema),
+});
+
+export const blogOutlineStructuredOutputSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  searchIntent: nullableStringSchema,
+  audienceNotes: nullableStringSchema,
+  outline: z.array(
+    z.object({
+      heading: z.string(),
+      purpose: nullableStringSchema,
+      keyPoints: z.array(z.string()).nullable(),
+    })
+  ),
+  suggestedInternalLinks: z
+    .array(z.object({ anchor: z.string(), href: z.string() }))
+    .nullable(),
+});
+
+export const blogDraftStructuredOutputSchema = z.object({
+  title: z.string(),
+  slug: nullableStringSchema,
+  excerpt: nullableStringSchema,
+  content: generatedBlogContentDocSchema,
+});
+
+export const blogMetadataStructuredOutputSchema = z.object({
+  meta_title: z.string(),
+  meta_description: z.string(),
+  og_title: nullableStringSchema,
+  og_description: nullableStringSchema,
+  primary_keyword: nullableStringSchema,
+  secondary_keywords: z.array(z.string()).nullable(),
+  suggested_category: nullableStringSchema,
+});
+
+export const blogFullStructuredOutputSchema = z.object({
+  title: z.string(),
+  slug: nullableStringSchema,
+  excerpt: nullableStringSchema,
+  primary_keyword: nullableStringSchema,
+  secondary_keywords: z.array(z.string()).nullable(),
+  meta_title: nullableStringSchema,
+  meta_description: nullableStringSchema,
+  og_title: nullableStringSchema,
+  og_description: nullableStringSchema,
+  suggested_category: nullableStringSchema,
+  content: generatedBlogContentDocSchema,
+});
+
 // Validate a generated draft document's individual blocks, returning the list
 // of blocks that failed validation (renderer can still show valid ones).
 export function validateGeneratedBlocks(blocks: unknown[]): {

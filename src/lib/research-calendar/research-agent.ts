@@ -1,7 +1,7 @@
 import "server-only";
 
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
+import { openAITextFormat } from "@/lib/ai/structured-output";
 import { getGrowthAgentModel } from "@/lib/growth-agents/models";
 import { generatedResearchResultSchema } from "./schemas";
 import type {
@@ -219,7 +219,7 @@ export async function runResearchAgent(input: {
     ],
     include: ["web_search_call.action.sources"],
     text: {
-      format: zodTextFormat(
+      format: openAITextFormat(
         generatedResearchResultSchema,
         "laptopfinder_research_packets"
       ),

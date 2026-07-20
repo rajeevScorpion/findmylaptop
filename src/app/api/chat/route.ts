@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
+import { openAITextFormat } from "@/lib/ai/structured-output";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ChatApiRequest, ChatApiResponse, ChipJsonOutput } from "@/lib/types";
 import { DOMAINS, isDomainId, type DomainId } from "@/lib/domains";
@@ -331,7 +331,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         content: message.content,
       })),
       text: {
-        format: zodTextFormat(chipResponseSchema, "laptopfinder_chip_response"),
+        format: openAITextFormat(chipResponseSchema, "laptopfinder_chip_response"),
       },
     });
     if (!response.output_parsed) {

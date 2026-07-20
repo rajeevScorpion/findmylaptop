@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/http-url";
 
 export const SOURCE_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
@@ -12,10 +13,7 @@ export const sourceKeySchema = z
 const httpUrlSchema = z
   .url()
   .max(2_048)
-  .refine((value) => {
-    const protocol = new URL(value).protocol;
-    return protocol === "http:" || protocol === "https:";
-  }, "Only HTTP or HTTPS URLs are allowed");
+  .refine(isHttpUrl, "Only HTTP or HTTPS URLs are allowed");
 
 export const sourceProductSchema = z
   .object({
