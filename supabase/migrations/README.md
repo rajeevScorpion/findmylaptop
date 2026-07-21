@@ -43,7 +43,7 @@ Run the rollbacks in **reverse** order:
 `public.handle_updated_at()` — that function is shared with the pre-existing
 `laptops` table.
 
-## Autonomous growth-agent migrations (024–032)
+## Autonomous growth-agent migrations (024–033)
 
 These migrations are not applied automatically. Apply them to staging in this
 exact order:
@@ -58,11 +58,21 @@ exact order:
 030_create_affiliate_click_events.sql
 031_harden_chat_and_blog_access.sql
 032_harden_catalog_and_taxonomy_access.sql
+033_add_research_novelty.sql
 ```
+
+Migration 033 is required by the deterministic Research Calendar novelty code.
+It adds calendar policy fields, packet novelty audit fields, typed no-topic
+reasons, permanent exact-title claims, and the global novelty lease that
+serializes history loading through packet persistence. Deploy compatible
+preview code with the Research Agent disabled, confirm migration 032 is already
+present, and then run `033_add_research_novelty.sql` manually against staging.
+No application deployment or environment variable applies this migration.
 
 Rollback is destructive and must be run in exact reverse order:
 
 ```text
+033_add_research_novelty_rollback.sql
 032_harden_catalog_and_taxonomy_access_rollback.sql
 031_harden_chat_and_blog_access_rollback.sql
 030_create_affiliate_click_events_rollback.sql
@@ -73,6 +83,13 @@ Rollback is destructive and must be run in exact reverse order:
 025_create_product_research_rollback.sql
 024_create_agent_foundations_rollback.sql
 ```
+
+Before running `033_add_research_novelty_rollback.sql`, stop Research Calendar
+work and deploy code that no longer reads migration-033 fields or calls its
+functions. Run the 033 rollback manually before rollback 032. It removes the
+novelty metadata, exact-title claims, and global lease and restores the earlier
+research persistence/completion functions. Never apply a staging or production
+forward/rollback migration without the required explicit approval.
 
 See `docs/AUTONOMOUS_AGENTS_RUNBOOK.md` for environment setup, staged
 activation, safety checks, and rollback preparation.

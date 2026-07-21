@@ -44,7 +44,7 @@ Manual JSON or an approved marketplace adapter becomes a normalized candidate. A
 
 **Purpose:** editorial web research.
 
-A configured day and theme cause the Research Agent to search approved web domains. Valid evidence becomes a research packet. It does not consume Product Research Queue candidates.
+A configured day and theme cause the Research Agent to search approved web domains. Before a topic can become a research packet, deterministic server checks compare it across the platform with recent research packets and non-archived CMS posts. It does not consume Product Research Queue candidates.
 
 - **Path:** Admin → Growth Agents → Research Calendar
 - **Route:** `/admin/growth-agents/calendar`
@@ -103,20 +103,26 @@ Approval in Research Queue is not publication. The final public gate is always t
 
 ```mermaid
 flowchart TD
-  A[Calendar day or Run now] --> B[Research safety gates]
-  B --> C[Web research on approved domains]
-  C --> D{Evidence meets threshold?}
-  D -->|No| E[No-good-topic or admin-review packet]
-  D -->|Yes| F[Ready research packet]
-  F --> G[Eligible active persona]
-  G --> H[Structured draft generation]
-  H --> I{Quality gates pass?}
-  I -->|No| J[Quality-blocked artifact; no CMS post]
-  I -->|Yes| K[CMS status: AI generated]
-  K --> L[Admin fact-checks and edits]
-  L --> M{Published and Public Blog enabled?}
-  M -->|No| N[Remains non-public]
-  M -->|Yes| O[Public blog]
+  A[Calendar day or Run now] --> B[Claim global novelty lease]
+  B --> C[Load platform topic history]
+  C --> D[Rotate recent primary sources]
+  D --> E[Web research on approved domains]
+  E --> F{Evidence and freshness pass?}
+  F -->|No| G[Release lease and record typed reason]
+  F -->|Yes| H{New compared with history?}
+  H -->|No| G
+  H -->|Yes| I[Persist packet and atomically claim exact title]
+  I --> J[Release novelty lease]
+  J --> K[Ready research packet]
+  K --> L[Eligible active persona]
+  L --> M[Structured draft generation]
+  M --> N{Quality gates pass?}
+  N -->|No| O[Quality-blocked artifact; no CMS post]
+  N -->|Yes| P[CMS status: AI generated]
+  P --> Q[Admin fact-checks and edits]
+  Q --> R{Published and Public Blog enabled?}
+  R -->|No| S[Remains non-public]
+  R -->|Yes| T[Public blog]
 ```
 
 No current agent path auto-publishes a Blog post.
@@ -142,7 +148,7 @@ The browser should not receive service-role or provider credentials. Catalog, CM
 
 1. Confirm the hostname is `dev.laptopfinder.cc` and the database is staging.
 2. Sign in with an account included in `ADMIN_EMAILS`.
-3. Confirm migrations 024–032 are available and have been applied manually in order where required.
+3. Confirm migrations 024–033 are available and have been applied manually in order where required.
 4. Keep Research, Blogging, Chip Learning, and Affiliate capabilities off; keep Safe mode on; keep the Calendar paused.
 5. Configure **Settings** conservatively: disclaimer, contact link, and only ready public domains.
 6. Build **Taxonomy** before tagging laptops.
@@ -172,6 +178,7 @@ The browser should not receive service-role or provider credentials. Catalog, CM
 ### Daily when agents are enabled
 
 - Review recent Research Calendar runs.
+- Read the displayed no-topic reason when a run creates no packet; duplicate, freshness, evidence, source-rotation, and source-configuration outcomes are operational information rather than provider failures.
 - Inspect new research packets and Agent Draft artifacts.
 - Leave uncertain results in review, draft, stale, or quality-blocked states.
 
@@ -219,6 +226,20 @@ For a broad incident, turn on both stop controls, turn off each affected capabil
 - Run now still requires the selected day enabled, Research Agent enabled, Emergency Stop off, and Global Pause off.
 - Scheduled runs additionally require the Calendar enabled and unpaused.
 - The bundled cron polls once per day around 03:30 UTC / 09:00 IST. Stored day times are not precise with a once-daily poll.
+
+### Research awareness is supplied by the server
+
+Every Research Agent call is stateless. It does not remember an earlier call, and the novelty workflow does not use embeddings or hidden model memory. Before each call, the server loads the configured platform history and supplies recent covered topics as context. After generation, the server independently applies that history as a deterministic acceptance gate.
+
+The default policy compares candidates with non-rejected research packets and non-archived CMS posts from the previous 180 days. Rejected packets are deliberately remembered for only 30 days, even when the configured history window is wider. An administrator can set the main window from 90 to 365 days and the similarity cutoff from 20% to 95%; the default cutoff is 62%. Lowering the cutoff rejects more related angles.
+
+The percentage controls the weighted semantic comparison. Hard duplicate anchors can reject independently of that percentage: the same readable normalized-title fingerprint, the same rich subject key, or the same canonical source URL with matching domain, subject/product, and intent. The title fingerprint is normalized title text. The subject key is a separate hash assembled from normalized source-domain, subject/product, intent, audience, content-type, and title-token features.
+
+The server will compare at most 500 eligible history items across packets and posts. If more than 500 qualify, it stops the run before web research rather than silently forgetting older coverage. Shorten the history window, archive obsolete CMS posts, or ask a technical owner to review retention and volume before retrying.
+
+A platform-wide novelty lease allows one Research Calendar run at a time to perform the history load, candidate selection, and packet persistence. A busy run retries instead of selecting against stale parallel history. Persistence also claims the exact-title fingerprint atomically, and that claim remains reserved beyond the normal history window and packet status changes. The lease is released before optional Blog draft generation, so it does not serialize the editorial drafting stage.
+
+When source rotation is enabled, the server checks the last two non-empty research runs for the same calendar day within the previous 14 days. A recently dominant primary domain is withheld from that run. If no approved domain remains, the run safely ends with a `source_rotation` explanation instead of broadening the search. Rotation is separate from topic novelty and never makes an unapproved domain available.
 
 ### Automatic draft gates
 
@@ -526,20 +547,35 @@ These govern AI/agent paths. They do not remove an administrator's manual CMS ca
 - **Path:** Admin → Growth Agents → Research Calendar
 - **Route:** `/admin/growth-agents/calendar`
 
-**Purpose:** plan recurring editorial web research by day, theme, audience, source group, threshold, and volume.
+**Purpose:** plan recurring editorial web research by day, theme, audience, source group, quality threshold, novelty policy, and volume.
 
 **Procedure**
 
 1. Keep the Calendar paused while configuring it.
 2. Use Draft only mode.
 3. Set calendar name, IANA timezone, and daily/weekly caps.
-4. Configure and enable one day: theme, description, keywords, audience, preferred persona slugs, approved source groups, target count, and thresholds.
-5. Keep min ≤ target ≤ max, while noting that current runtime prompting uses target and enforces max; min is not a hard production guarantee.
-6. Save that day.
-7. Use Run now and inspect recent runs and packets.
-8. Improve sources/theme when no qualifying topic is found; do not lower quality merely to force output.
-9. Enable and unpause the Calendar only after the manual test succeeds.
-10. Configure automatic caps and an auto-scheduled persona only after manual drafting succeeds.
+4. Set the Topic history window. The default is 180 days; accepted values are 90–365 days. Rejected packets remain comparison history for only 30 days, regardless of a wider setting.
+5. Keep the Topic similarity cutoff at the recommended 62% until staging results justify a policy change. Lower percentages reject more related topics; higher percentages allow more weighted overlap. Exact-title, exact-subject-key, and same-source/domain/subject/intent anchors can still reject independently of this percentage.
+6. Leave Rotate recently used primary sources enabled unless the available source set is intentionally narrow. It considers the last two non-empty research runs for the same day within the previous 14 days.
+7. Configure and enable one day: theme, description, keywords, audience, preferred persona slugs, approved source groups, target count, and thresholds.
+8. Keep min ≤ target ≤ max, while noting that current runtime prompting uses target and enforces max; min is not a hard production guarantee.
+9. Save schedule control, then save the day.
+10. Use Run now and inspect the amber result notice, Recent runs, and Recent research packets. On a phone, these cards stack vertically; the status, typed reason badge, date, and full wrapped explanation remain readable without horizontal scrolling.
+11. Improve sources or the angle when no qualifying topic is found. Read the displayed reason before changing a threshold, and do not lower quality merely to force output.
+12. Enable and unpause the Calendar only after the manual test succeeds.
+13. Configure automatic caps and an auto-scheduled persona only after manual drafting succeeds.
+
+**How deterministic topic novelty works**
+
+1. The server claims one platform-wide novelty lease. This serializes the history-to-selection-to-persistence section of Research Calendar runs so parallel workers do not make decisions from the same stale snapshot.
+2. It reads platform-wide history from non-rejected research packets and non-archived Blog CMS posts in the configured window. Rejected packets use a separate fixed 30-day window. History is not limited to the selected weekday or persona.
+3. If more than 500 packets and posts are eligible in total, the run fails closed before web research. It never silently truncates history to manufacture novelty.
+4. The eligible history is supplied to the stateless Research Agent as already-covered context. The model itself has no memory of earlier runs.
+5. After web research, the server applies its own weighted semantic feature comparison across title, angle, subject/product, intent, audience, content type, and source overlap. This is deterministic application logic, not an embedding search. The configured percentage is the boundary for this weighted comparison when a strong topic anchor is present.
+6. Separate hard anchors do not depend on the percentage: an exact readable normalized-title fingerprint; an exact rich subject key; or the same canonical source URL with matching domain, subject/product, and intent. The title fingerprint is normalized title text. The subject key is a separate hash built from source-domain, subject/product, intent, audience, content-type, and title-token features.
+7. Accepted packets make an atomic database claim on the exact-title fingerprint, then the server releases the novelty lease before optional Blog draft generation. Concurrent workers therefore cannot both persist the same normalized title.
+
+The main history window defaults to 180 days and the admin range is 90–365 days; rejected packets are still limited to their fixed 30-day window. The default weighted similarity cutoff is 62%. The atomic exact-title claim remains reserved after the ordinary history window and after packet status changes; use a materially accurate new title only when the editorial decision or angle is genuinely different.
 
 **Supported editorial source-priority groups**
 
@@ -557,13 +593,26 @@ Marketplace/internal keys alone intentionally produce no web packet. Marketplace
 
 - `succeeded`: requested safe work persisted.
 - `partial`: research persisted, but one or more Blog handoffs failed.
-- `no_good_topic`: no evidence met the rules; often a safe outcome rather than a system failure.
+- `no_good_topic`: no candidate passed every evidence, freshness, novelty, and source-policy gate; often a safe outcome rather than a system failure.
 - `needs_admin_review` packet: below threshold. There is no packet approval UI today; revise inputs/threshold responsibly and rerun.
+
+Recent runs show one of these typed explanations where applicable:
+
+- `duplicate_topic`: an exact or sufficiently similar topic exists in platform history, or an exact-title database claim lost a concurrent race.
+- `insufficient_freshness`: the candidate lacked current enough evidence for its time-sensitive claims.
+- `insufficient_evidence`: verified citations or confidence did not meet the research policy.
+- `source_rotation`: the same primary domain was recently dominant for this calendar day and rotation left no alternative domain for this run.
+- `source_configuration`: the day did not resolve to an approved research source.
+- `no_qualifying_candidate`: no candidate passed, or several different rejection causes applied and no single cause described the whole run.
+
+These reason codes explain an expected zero-packet result. A provider, schema, authorization, or database fault remains a failed run instead.
+
+If a failed run says the safe 500-item novelty-history limit was exceeded, do not keep retrying unchanged. Shorten the configured history window, archive genuinely obsolete CMS posts, or ask a technical owner to review data volume and retention. The limit exists so the platform never labels a topic novel after silently dropping eligible history.
 
 <details>
 <summary>Power-user limitation</summary>
 
-Content types, carry-forward behavior, packet expiry, product-card limits, and affiliate-insertion mode exist in the data model but are not editable on the current Calendar screen. Adding those controls requires UI, validation, runtime-behavior, and test review—not documentation alone.
+Content types, carry-forward behavior, packet expiry, product-card limits, and affiliate-insertion mode exist in the data model but are not editable on the current Calendar screen. Topic history, similarity cutoff, and source rotation are calendar-wide controls and are editable under **Schedule control**. Adding other controls requires UI, validation, runtime-behavior, and test review—not documentation alone.
 
 </details>
 
@@ -874,20 +923,24 @@ Forward, in this exact order:
 7. `030_create_affiliate_click_events.sql`
 8. `031_harden_chat_and_blog_access.sql`
 9. `032_harden_catalog_and_taxonomy_access.sql`
+10. `033_add_research_novelty.sql`
 
 Rollback in exact reverse order:
 
-1. `032_harden_catalog_and_taxonomy_access_rollback.sql`
-2. `031_harden_chat_and_blog_access_rollback.sql`
-3. `030_create_affiliate_click_events_rollback.sql`
-4. `029_create_blog_agent_metadata_rollback.sql`
-5. `028_create_chip_learning_rollback.sql`
-6. `027_add_blog_personas_rollback.sql`
-7. `026_create_research_calendar_rollback.sql`
-8. `025_create_product_research_rollback.sql`
-9. `024_create_agent_foundations_rollback.sql`
+1. `033_add_research_novelty_rollback.sql`
+2. `032_harden_catalog_and_taxonomy_access_rollback.sql`
+3. `031_harden_chat_and_blog_access_rollback.sql`
+4. `030_create_affiliate_click_events_rollback.sql`
+5. `029_create_blog_agent_metadata_rollback.sql`
+6. `028_create_chip_learning_rollback.sql`
+7. `027_add_blog_personas_rollback.sql`
+8. `026_create_research_calendar_rollback.sql`
+9. `025_create_product_research_rollback.sql`
+10. `024_create_agent_foundations_rollback.sql`
 
-The database operator runs these manually. Do not apply them merely because this guide is being read or updated.
+The database operator runs these files manually; application deployment does not run them. For migration 033, first deploy compatible preview code with the Research Agent disabled, confirm migration 032 is already present, and then run `033_add_research_novelty.sql` against staging. Migration 033 adds the calendar policy fields, novelty audit metadata, typed no-topic reasons, exact-title claims, and the global novelty lease used to serialize history through packet persistence.
+
+To reverse it, first stop research and deploy code that no longer reads migration-033 fields or calls its functions. Then run `033_add_research_novelty_rollback.sql` before rollback 032 or any earlier rollback. The rollback removes novelty policy/metadata and restores the original migration-026 persistence and completion functions. Do not apply or roll back a migration merely because this guide is being read or updated, and never apply it to production without explicit approval.
 
 ## Glossary
 
@@ -896,6 +949,18 @@ The database operator runs these manually. Do not apply them merely because this
 **Unpublished laptop:** A catalog record visible to admins but not eligible for normal public recommendation.
 
 **Research packet:** A citation-bound editorial topic and evidence bundle.
+
+**Topic history window:** The calendar-wide 90–365 day period used for non-rejected research packets and non-archived CMS posts. The default is 180 days. Rejected packets have a separate fixed 30-day comparison window.
+
+**Topic similarity cutoff:** The server-side weighted semantic comparison boundary. The default is 62%; lower values reject more overlap. Exact-title, exact-subject-key, and same-source/domain/subject/intent anchors can reject independently of it. It does not use embeddings or model memory.
+
+**Exact-title fingerprint:** Readable normalized title text used for exact matching and the permanent atomic database claim.
+
+**Subject key:** A separate rich hash derived from normalized topic features such as source domain, subject/product, intent, audience, content type, and title tokens. It is not the readable title fingerprint.
+
+**Novelty lease:** A platform-wide database lease that lets one Research Calendar run at a time load history, select topics, and persist packets. It is released before optional Blog drafting.
+
+**Source rotation:** An optional pre-search guard that checks the last two non-empty research runs for the same calendar day within 14 days and temporarily withholds recently dominant primary domains. If that removes every approved domain, the run stops with a typed explanation.
 
 **Agent artifact:** The durable record of a Blog generation attempt, quality result, and optional CMS draft.
 

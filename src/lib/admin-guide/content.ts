@@ -137,8 +137,8 @@ export const WORKFLOW_GUIDES: readonly WorkflowGuide[] = [
       {
         label: "Research Calendar",
         href: "/admin/growth-agents/calendar",
-        detail: "Define themes, audiences, evidence thresholds, limits, and schedule state.",
-        gate: "Schedule and source gate",
+        detail: "Define themes, audiences, evidence thresholds, novelty history, source rotation, limits, and schedule state.",
+        gate: "Schedule, source, and novelty gate",
       },
       {
         label: "Agent Drafts",
@@ -199,7 +199,7 @@ export const DEPENDENCY_GROUPS = [
     items: [
       "ADMIN_EMAILS membership is required for every admin route and mutation.",
       "Supabase stores catalog, editorial, agent, feedback, audit, and configuration records.",
-      "Autonomous-agent migrations 024–032 must be applied in order by the operator responsible for the database.",
+      "Autonomous-agent migrations 024–033 must be applied in order by the operator responsible for the database.",
     ],
   },
   {
@@ -251,6 +251,21 @@ export const CURRENT_OPERATIONAL_BOUNDARIES = [
     title: "Manual and scheduled Calendar runs differ",
     detail:
       "Run now ignores the calendar Enabled/Paused state but requires the chosen day enabled, Research Agent on, and both stop switches off. Scheduled runs also require the calendar enabled and unpaused.",
+  },
+  {
+    title: "Research awareness comes from server history",
+    detail:
+      "Every research call is stateless. The server supplies non-rejected research packets and non-archived CMS posts from the selected history window, plus rejected packets from only the last 30 days, then independently applies deterministic novelty checks. More than 500 eligible items stops the run before web research instead of silently dropping history. This does not use embeddings or model memory.",
+  },
+  {
+    title: "The percentage is not the only duplicate guard",
+    detail:
+      "The similarity cutoff controls the weighted comparison. An exact readable title fingerprint, an exact rich subject key, or the same canonical source with matching domain, subject/product, and intent can reject independently of that percentage.",
+  },
+  {
+    title: "Novelty decisions are serialized",
+    detail:
+      "One platform-wide database lease covers history loading, topic selection, and packet persistence. A competing Research Calendar run retries, then sees the first run's saved topics. The lease is released before optional Blog drafting.",
   },
   {
     title: "Automatic publication is not implemented",
@@ -510,31 +525,46 @@ export const ADMIN_SCREEN_GUIDES: readonly AdminScreenGuide[] = [
     label: "Research Calendar",
     route: "/admin/growth-agents/calendar",
     purpose:
-      "Plan recurring evidence-backed editorial research by day, audience, theme, content type, threshold, and output limit.",
+      "Plan recurring evidence-backed editorial research by day, audience, theme, content type, source rotation, novelty policy, threshold, and output limit.",
     useWhen: "Planning the editorial week, testing a research run, or diagnosing missing research packets.",
-    prerequisites: ["Migrations 024–026", "Research capability and provider configuration", "Approved domains/sources", "Cron secret for scheduled runs"],
+    prerequisites: ["Migrations 024–033 applied manually in order, including novelty migration 033 after 032", "Research capability and provider configuration", "Approved domains/sources", "Cron secret for scheduled runs"],
     steps: [
-      { title: "Keep the schedule paused while editing", instruction: "Set name, timezone, Draft only mode, and daily/weekly output caps before enabling execution. Mode is currently stored intent; it does not activate publication behavior." },
+      { title: "Keep the schedule paused while editing", instruction: "Set name, timezone, Draft only mode, daily/weekly output caps, and novelty controls before enabling execution. Mode is currently stored intent; it does not activate publication behavior." },
+      { title: "Set deterministic novelty", instruction: "Under Schedule control, keep the recommended 180-day Topic history window and 62% Topic similarity cutoff unless staging evidence supports a change. The allowed window is 90–365 days; lower percentages reject more weighted overlap. Exact-title, exact-subject-key, and same-source/domain/subject/intent anchors can still reject below that percentage." },
+      { title: "Keep history complete", instruction: "The main window includes non-rejected packets and non-archived CMS posts; rejected packets remain comparison history for only 30 days. If more than 500 items are eligible in total, the run stops before web research. Shorten the window, archive genuinely obsolete CMS posts, or ask a technical owner to review retention and volume." },
+      { title: "Choose source rotation", instruction: "Leave Rotate recently used primary sources on to check the last two non-empty research runs for this same calendar day within 14 days. It withholds recently dominant primary domains; when none of the approved domains remain, the run safely returns a source-rotation explanation instead of broadening the search." },
       { title: "Configure each day", instruction: "Set enabled state, run time, theme, description, keywords, target audiences, preferred persona slugs, and an approved web source-priority group." },
       { title: "Set quality and volume gates", instruction: "Choose min/target/max packet counts plus research-confidence and Blog-quality thresholds. Other stored advanced day fields are not editable on this screen yet." },
-      { title: "Save and test one day", instruction: "Enable and save the selected day, use Run now, and inspect the recent run plus resulting research packets before scheduling it. Run now intentionally bypasses the calendar's Enabled/Paused state, but still requires Research Agent on and both stop switches off." },
+      { title: "Save and test one day", instruction: "Save Schedule control, then enable and save the selected day. Use Run now and inspect the wrapped amber notice, typed reason badge, recent run, and resulting research packets before scheduling it. On mobile, the run status and date stack so the full explanation remains readable. Run now intentionally bypasses the calendar's Enabled/Paused state, but still requires Research Agent on and both stop switches off." },
       { title: "Enable carefully", instruction: "Enable the calendar and clear Paused only after the test succeeds. The built-in schedule polls daily around 09:00 Asia/Kolkata. Scheduled draft handoff also needs Blogging Agent, automatic capacity above zero, and an eligible auto-scheduled persona.", caution: "Auto-publish has no runtime path. More precise run times require an explicitly approved higher-frequency scheduler." },
-      { title: "Monitor outcomes", instruction: "Review succeeded, partial, no-good-topic, and failed runs. A zero-packet run can be the correct outcome when evidence is inadequate." },
+      { title: "Monitor outcomes", instruction: "Review succeeded, partial, no-good-topic, and failed runs. A zero-packet result can correctly report duplicate topic, insufficient freshness, insufficient evidence, source rotation, source configuration, or no qualifying candidate. Read that reason before changing the policy." },
     ],
-    outputs: ["Research schedule runs", "Citation-bound research packets", "Optional blog draft handoff"],
+    outputs: ["Research schedule runs with typed outcomes", "Novelty-checked citation-bound research packets", "Optional blog draft handoff"],
     relationships: [
       { label: "Growth Agents", href: "/admin/growth-agents", relationship: "Supplies capability, stop, source, and retention controls." },
       { label: "Author Personas", href: "/admin/personas", relationship: "Supplies preferred eligible writers." },
       { label: "Agent Drafts", href: "/admin/growth-agents/blog", relationship: "Consumes ready-for-blog packets." },
     ],
     troubleshooting: [
-      { symptom: "Run now produces no topic.", response: "Review allowed domains, source evidence, keywords, theme specificity, and confidence threshold. Do not lower quality merely to force output." },
+      { symptom: "Run now says duplicate topic.", response: "Open Recent runs and read the closest covered title. The server compared platform-wide research packets and non-archived CMS posts in the configured history window; change the angle only when it is genuinely distinct." },
+      { symptom: "The run failed because novelty history exceeded 500 items.", response: "Do not keep retrying unchanged. Shorten the Topic history window, archive genuinely obsolete CMS posts, or ask a technical owner to review retention and data volume. The run stops so it cannot claim novelty from incomplete history." },
+      { symptom: "Run now reports freshness or evidence.", response: "Use current primary sources, narrow the claim, and verify the configured source groups. Do not lower research quality merely to force output." },
+      { symptom: "Run now reports source rotation.", response: "The same primary domain dominated one of the last two non-empty research runs for this day within 14 days and no approved alternative remained. Broaden approved source groups, wait for the cooldown, or deliberately turn rotation off and save the calendar policy." },
+      { symptom: "Run now reports source configuration.", response: "Confirm the day's source-priority groups resolve to approved domains and that any additional RESEARCH_ALLOWED_DOMAINS entries are valid hostnames." },
       { symptom: "Scheduled runs do not start.", response: "Check calendar Enabled/Paused, day Enabled, timezone/run time, Growth Agent stop flags, research capability, and cron authentication." },
       { symptom: "Packets exist but drafts do not.", response: "Check create-draft choice, Blogging Agent state, packet threshold, and eligible persona permissions." },
       { symptom: "A packet says needs admin review but has no review button.", response: "The current UI cannot promote that packet. Improve the theme/sources or responsibly adjust the threshold, then rerun." },
     ],
     powerUser: {
-      decisionPoints: ["Run claims, execution tokens, packet persistence, and completion are fenced for retry safety.", "Research output is accepted only when returned citations match approved exact URLs/domains.", "Research Calendar does not consume Product Research Queue candidates; marketplace-only source priorities intentionally yield no web packet."],
+      decisionPoints: [
+        "Each model call is stateless; server-loaded history supplies awareness before the call and a deterministic semantic feature gate enforces it afterward.",
+        "The main history window defaults to 180 days, while rejected packets use a fixed 30-day window. The combined eligible set is capped at 500 and fails closed rather than truncating.",
+        "The 62% default controls weighted semantic matching. The readable exact-title fingerprint and separate rich subject key are different fields; exact matches and the same canonical source/domain/subject/intent anchor bypass the percentage cutoff.",
+        "A global novelty lease serializes history loading, selection, and persistence. Persistence also atomically claims exact titles, and those claims remain reserved after packet status changes and the ordinary history window.",
+        "Run claims, execution tokens, packet persistence, and completion are fenced for retry safety.",
+        "Research output is accepted only when returned citations match approved exact URLs/domains.",
+        "Research Calendar does not consume Product Research Queue candidates; marketplace-only source priorities intentionally yield no web packet.",
+      ],
       technicalPaths: ["src/lib/research-calendar", "src/app/api/cron/growth-agents/route.ts", "vercel.json"],
     },
   },
@@ -714,6 +744,12 @@ export const GUIDE_GLOSSARY = [
   ["Candidate", "Imported product evidence waiting for an administrator's review."],
   ["Unpublished laptop", "A catalog record visible to admins but not eligible for normal public recommendation."],
   ["Research packet", "A citation-bound topic and evidence bundle produced by the Research Agent."],
+  ["Topic history window", "The 90–365 day comparison period for non-rejected packets and non-archived CMS posts; rejected packets use a separate fixed 30-day window."],
+  ["Topic similarity cutoff", "The weighted semantic comparison boundary. Hard exact and same-source/domain/subject/intent anchors can reject independently of it."],
+  ["Exact-title fingerprint", "Readable normalized title text used for exact matching and the permanent atomic database claim."],
+  ["Subject key", "A separate rich hash derived from normalized topic features; it is not the readable exact-title fingerprint."],
+  ["Novelty lease", "The platform-wide database lease that lets one Research Calendar run at a time load history, select topics, and persist packets."],
+  ["Source rotation", "The optional guard that withholds primary domains dominant in the last two non-empty runs for the same calendar day within 14 days."],
   ["Agent artifact", "The durable record of a blog generation attempt, quality result, and linked CMS draft."],
   ["Persona snapshot", "The stored version of public author attribution attached to a post."],
   ["Safe mode", "A normal staging/review guardrail that keeps affiliate monetization gated; generated content is already review-controlled."],

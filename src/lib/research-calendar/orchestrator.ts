@@ -20,19 +20,32 @@ import type {
 } from "@/lib/growth-agents/types";
 import { runResearchAgent } from "./research-agent";
 import {
+  getResearchNoveltyPolicy,
+  selectNovelResearchPackets,
+} from "./novelty";
+import {
+  claimResearchNoveltyLease,
   createResearchScheduleRun,
   expireStaleResearchPackets,
   finishResearchScheduleRun,
   getResearchCalendarDay,
   listDueResearchDays,
+  listRecentResearchSourceUses,
+  listResearchTopicHistory,
   notifyResearchAdmin,
+  releaseResearchNoveltyLease,
   saveResearchPackets,
 } from "./service";
 import {
   buildScheduleIdempotencyKeyForDate,
   getZonedClock,
 } from "./time";
-import type { ResearchCalendar, ResearchCalendarDay } from "./types";
+import type {
+  ResearchCalendar,
+  ResearchCalendarDay,
+  ResearchSelectionReasonCode,
+  ResearchSelectionSummary,
+} from "./types";
 
 export interface ResearchRunOutcome {
   dayId: string;
@@ -48,6 +61,8 @@ export interface ResearchRunOutcome {
   packetsProduced: number;
   draftsProduced: number;
   message: string;
+  reasonCode?: ResearchSelectionReasonCode | null;
+  selectionSummary?: ResearchSelectionSummary | null;
 }
 
 export interface ResearchPollOutcome {
@@ -91,6 +106,7 @@ function isRetryable(error: unknown): boolean {
     "SOURCE_RATE_LIMITED",
     "SOURCE_UNAVAILABLE",
     "LLM_GENERATION_FAILED",
+    "RESEARCH_NOVELTY_BUSY",
   ].includes(operationalCode(error));
 }
 
@@ -104,6 +120,92 @@ function disabledOutcome(dayId: string, message: string): ResearchRunOutcome {
     draftsProduced: 0,
     message,
   };
+}
+
+const REASON_LABELS: Record<ResearchSelectionReasonCode, string> = {
+  duplicate_topic: "recently covered",
+  insufficient_freshness: "not current enough",
+  insufficient_evidence: "insufficient evidence",
+  source_rotation: "source rotation",
+  no_qualifying_candidate: "no qualifying candidate",
+  source_configuration: "source configuration",
+};
+
+function mergedRejectionCounts(
+  ...counts: Array<Partial<Record<ResearchSelectionReasonCode, number>>>
+): Partial<Record<ResearchSelectionReasonCode, number>> {
+  const result: Partial<Record<ResearchSelectionReasonCode, number>> = {};
+  for (const entry of counts) {
+    for (const [reason, count] of Object.entries(entry) as Array<
+      [ResearchSelectionReasonCode, number | undefined]
+    >) {
+      if (count && count > 0) result[reason] = (result[reason] ?? 0) + count;
+    }
+  }
+  return result;
+}
+
+function selectionReason(input: {
+  packetsAccepted: number;
+  counts: Partial<Record<ResearchSelectionReasonCode, number>>;
+  fallback: ResearchSelectionReasonCode | null;
+}): ResearchSelectionReasonCode | null {
+  if (input.packetsAccepted > 0) return null;
+  const reasons = (Object.entries(input.counts) as Array<
+    [ResearchSelectionReasonCode, number | undefined]
+  >).filter(([, count]) => Boolean(count && count > 0));
+  if (reasons.length === 1) return reasons[0][0];
+  if (reasons.length > 1) return "no_qualifying_candidate";
+  return input.fallback ?? "no_qualifying_candidate";
+}
+
+function noTopicMessage(input: {
+  reason: ResearchSelectionReasonCode;
+  modelReason: string | null;
+  closestTitle: string | null;
+  counts: Partial<Record<ResearchSelectionReasonCode, number>>;
+}): string {
+  if (input.reason === "duplicate_topic") {
+    return input.closestTitle
+      ? `No packet was created because the proposed topic was already covered recently: “${input.closestTitle}”.`
+      : "No packet was created because the proposed topics repeated recent coverage or one another.";
+  }
+  if (input.reason === "source_rotation") {
+    return (
+      input.modelReason ??
+      "No packet was created because every approved primary source is still inside the configured rotation window."
+    );
+  }
+  if (input.reason === "source_configuration") {
+    return (
+      input.modelReason ??
+      "No approved web source is configured for this calendar theme."
+    );
+  }
+  if (input.reason === "insufficient_evidence") {
+    return (
+      input.modelReason ??
+      "No proposed topic retained enough source-backed evidence to create a research packet."
+    );
+  }
+  if (input.reason === "insufficient_freshness") {
+    return (
+      input.modelReason ??
+      "The available official evidence was not current enough for a new research packet."
+    );
+  }
+  const breakdown = (Object.entries(input.counts) as Array<
+    [ResearchSelectionReasonCode, number | undefined]
+  >)
+    .filter(([, count]) => Boolean(count && count > 0))
+    .map(([reason, count]) => `${count} ${REASON_LABELS[reason]}`)
+    .join(", ");
+  return (
+    input.modelReason ??
+    (breakdown
+      ? `No packet was created after deterministic selection (${breakdown}).`
+      : "No topic met the configured research and novelty thresholds.")
+  );
 }
 
 async function notifyResearchAdminBestEffort(
@@ -224,6 +326,7 @@ export async function runResearchCalendarDay(input: {
       message: "Another worker claimed this research run.",
     };
   }
+  const researchExecutionToken = claimedJob.lock_token;
 
   let scheduleRunId: string | null = null;
   let scheduleRunStartedAt: string | null = null;
@@ -264,18 +367,160 @@ export async function runResearchCalendarDay(input: {
       throw new Error("The research schedule run has a stale execution fence.");
     }
 
-    const result = await runResearchAgent({
-      calendar: input.calendar,
-      day: input.day,
-      now,
-    });
-    const packets = await saveResearchPackets({
+    const noveltyLeaseClaimed = await claimResearchNoveltyLease({
       runId: scheduleRunId,
       agentJobId: claimedJob.id,
-      executionToken: claimedJob.lock_token,
-      day: input.day,
-      packets: result.packets,
+      executionToken: researchExecutionToken,
+      now,
     });
+    if (!noveltyLeaseClaimed) {
+      const error = new Error(
+        "Another research run is finalizing deterministic topic selection. This run will retry after the novelty lease is available."
+      );
+      (error as Error & { code?: string; retryable?: boolean }).code =
+        "RESEARCH_NOVELTY_BUSY";
+      (error as Error & { retryable?: boolean }).retryable = true;
+      throw error;
+    }
+
+    const selectionWork = await (async () => {
+      try {
+        const noveltyPolicy = getResearchNoveltyPolicy(input.calendar);
+        if (scheduleRun.run.packets_persisted_at) {
+          // Persistence is idempotent and may have committed even when the
+          // caller lost the response. Resume from those durable rows instead
+          // of attaching a second model call's unrelated audit trail.
+          const packets = await saveResearchPackets({
+            runId: scheduleRunId,
+            agentJobId: claimedJob.id,
+            executionToken: researchExecutionToken,
+            day: input.day,
+            packets: [],
+            now,
+          });
+          const searchedSources = Array.from(
+            new Set(
+              packets.flatMap((packet) =>
+                packet.source_refs_json.map((source) => source.url)
+              )
+            )
+          );
+          const noGoodTopicCode: ResearchSelectionReasonCode | null = packets.length
+            ? null
+            : "no_qualifying_candidate";
+          const recoveryMessage = packets.length
+            ? `Recovered ${packets.length} packet(s) persisted by the prior attempt.`
+            : "The prior attempt already finalized a zero-packet selection. This retry resumed without running web research again.";
+          return {
+            noveltyPolicy,
+            topicHistory: [],
+            result: {
+              packets: [],
+              candidatesEvaluated: packets.length,
+              rejectionCounts: {},
+              noGoodTopicCode,
+              noGoodTopicReason: packets.length ? null : recoveryMessage,
+              responseId: "recovered-persisted-research-run",
+              model: "recovered-persisted-research-run",
+              searchedSources,
+              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+            },
+            noveltySelection: {
+              packets: [],
+              rejections: [],
+              summary: {
+                primaryReason: noGoodTopicCode,
+                message: recoveryMessage,
+                candidatesEvaluated: packets.length,
+                candidatesAccepted: packets.length,
+                rejectionCounts: {},
+                historyWindowDays: noveltyPolicy.windowDays,
+                similarityThreshold:
+                  Math.round(noveltyPolicy.similarityThreshold * 10_000) / 100,
+                closestDuplicate: null,
+              },
+            },
+            packets,
+            recoveredPersistedPackets: true,
+          };
+        }
+        // A retry may see packets persisted by its own earlier leased attempt.
+        // Excluding that run prevents self-rejection; the fenced persistence RPC
+        // returns those existing packets when the retry resumes downstream work.
+        const [loadedTopicHistory, sourceRotationUses] = await Promise.all([
+          listResearchTopicHistory({
+            now,
+            windowDays: noveltyPolicy.windowDays,
+            limit: 500,
+          }),
+          listRecentResearchSourceUses({
+            calendarDayId: input.day.id,
+            currentScheduleRunId: scheduleRunId,
+            now,
+            cooldownDays: noveltyPolicy.sourceCooldownDays,
+            runLimit: noveltyPolicy.sourceCooldownRuns,
+          }),
+        ]);
+        const topicHistory = loadedTopicHistory.filter(
+          (topic) => topic.scheduleRunId !== scheduleRunId
+        );
+        const result = await runResearchAgent({
+          calendar: input.calendar,
+          day: input.day,
+          topicHistory,
+          sourceRotationUses,
+          noveltyPolicy,
+          now,
+        });
+        const noveltySelection = selectNovelResearchPackets({
+          candidates: result.packets,
+          references: topicHistory,
+          audiences: input.day.target_audience,
+          policy: noveltyPolicy,
+          now,
+        });
+        const packets = await saveResearchPackets({
+          runId: scheduleRunId,
+          agentJobId: claimedJob.id,
+          executionToken: researchExecutionToken,
+          day: input.day,
+          packets: noveltySelection.packets,
+          now,
+        });
+        return {
+          noveltyPolicy,
+          topicHistory,
+          result,
+          noveltySelection,
+          packets,
+          recoveredPersistedPackets: false,
+        };
+      } finally {
+        try {
+          await releaseResearchNoveltyLease({
+            runId: scheduleRunId,
+            agentJobId: claimedJob.id,
+            executionToken: researchExecutionToken,
+          });
+        } catch (releaseError) {
+          console.error(
+            "Could not release research novelty lease",
+            operationalCode(releaseError)
+          );
+        }
+      }
+    })();
+    const {
+      noveltyPolicy,
+      topicHistory,
+      result,
+      noveltySelection,
+      packets,
+      recoveredPersistedPackets,
+    } = selectionWork;
+    const exactRaceDuplicates = recoveredPersistedPackets
+      ? 0
+      : Math.max(0, noveltySelection.packets.length - packets.length);
     let draftsProduced = 0;
     const draftFailures: Array<{
       researchPacketId: string;
@@ -351,6 +596,45 @@ export async function runResearchCalendarDay(input: {
         });
       }
     }
+    const rejectionCounts = mergedRejectionCounts(
+      result.rejectionCounts,
+      noveltySelection.summary.rejectionCounts,
+      exactRaceDuplicates ? { duplicate_topic: exactRaceDuplicates } : {}
+    );
+    const reasonCode = selectionReason({
+      packetsAccepted: packets.length,
+      counts: rejectionCounts,
+      fallback: result.noGoodTopicCode,
+    });
+    const skippedCandidates = Object.values(rejectionCounts).reduce(
+      (total, count) => total + (count ?? 0),
+      0
+    );
+    const message = packets.length
+      ? `${recoveredPersistedPackets ? "Recovered" : "Created"} ${packets.length} research packet(s) and ${draftsProduced} review draft(s).${
+          skippedCandidates
+            ? ` Skipped ${skippedCandidates} candidate(s) that did not pass deterministic selection.`
+            : ""
+        }`
+      : noTopicMessage({
+          reason: reasonCode ?? "no_qualifying_candidate",
+          modelReason: result.noGoodTopicReason,
+          closestTitle:
+            noveltySelection.summary.closestDuplicate?.matchedTitle ?? null,
+          counts: rejectionCounts,
+        });
+    const selectionSummary: ResearchSelectionSummary = {
+      primaryReason: reasonCode,
+      message,
+      candidatesEvaluated: result.candidatesEvaluated,
+      candidatesAccepted: packets.length,
+      rejectionCounts,
+      historyWindowDays: noveltyPolicy.windowDays,
+      similarityThreshold: Math.round(
+        noveltyPolicy.similarityThreshold * 10_000
+      ) / 100,
+      closestDuplicate: noveltySelection.summary.closestDuplicate,
+    };
     const status = !packets.length
       ? "no_good_topic"
       : draftFailures.length
@@ -363,7 +647,55 @@ export async function runResearchCalendarDay(input: {
       packetsProduced: packets.length,
       draftsProduced,
       searchedSources: result.searchedSources,
-      noGoodTopicReason: result.noGoodTopicReason,
+      outcomeReasonCode: reasonCode,
+      noGoodTopicReason: packets.length ? null : message,
+      modelNoGoodTopicReason: result.noGoodTopicReason,
+      selectionSummary: {
+        primaryReason: selectionSummary.primaryReason,
+        message: selectionSummary.message,
+        candidatesEvaluated: selectionSummary.candidatesEvaluated,
+        candidatesAccepted: selectionSummary.candidatesAccepted,
+        rejectionCounts: selectionSummary.rejectionCounts,
+        historyWindowDays: selectionSummary.historyWindowDays,
+        similarityThreshold: selectionSummary.similarityThreshold,
+        closestDuplicate: selectionSummary.closestDuplicate
+          ? {
+              candidateTitle:
+                selectionSummary.closestDuplicate.candidateTitle,
+              matchedTitle: selectionSummary.closestDuplicate.matchedTitle,
+              similarityScore:
+                selectionSummary.closestDuplicate.similarityScore,
+              matchedKind: selectionSummary.closestDuplicate.matchedKind,
+              matchedAt: selectionSummary.closestDuplicate.matchedAt,
+            }
+          : null,
+      },
+      novelty: {
+        historyItemsCompared: recoveredPersistedPackets
+          ? null
+          : topicHistory.length,
+        recoveredPersistedPackets,
+        exactRaceDuplicates,
+        rejections: noveltySelection.rejections.slice(0, 5).map((rejection) => ({
+          reason: rejection.reason,
+          candidateTitle: rejection.candidateTitle,
+          matchedId: rejection.matchedId,
+          matchedKind: rejection.matchedKind,
+          matchedTitle: rejection.matchedTitle,
+          similarityScore: rejection.similarityScore,
+          metrics: {
+            title: rejection.metrics.title,
+            angle: rejection.metrics.angle,
+            domain: rejection.metrics.domain,
+            url: rejection.metrics.url,
+            intent: rejection.metrics.intent,
+            product: rejection.metrics.product,
+            audience: rejection.metrics.audience,
+            contentType: rejection.metrics.contentType,
+            similarity: rejection.metrics.similarity,
+          },
+        })),
+      },
       usage: {
         inputTokens: result.usage.inputTokens,
         outputTokens: result.usage.outputTokens,
@@ -404,11 +736,16 @@ export async function runResearchCalendarDay(input: {
     if (!packets.length) {
       await notifyResearchAdminBestEffort({
         type: "research.no_good_topic",
+        severity: "warning",
         title: `No qualifying topic for ${input.day.theme_name}`,
         message:
-          result.noGoodTopicReason ??
-          "The research call found no topic that met the configured evidence threshold.",
-        metadata: { calendarDayId: input.day.id, scheduleRunId },
+          message,
+        metadata: {
+          calendarDayId: input.day.id,
+          scheduleRunId,
+          reasonCode,
+          rejectionCounts,
+        },
       });
     }
 
@@ -419,9 +756,9 @@ export async function runResearchCalendarDay(input: {
       status,
       packetsProduced: packets.length,
       draftsProduced,
-      message: packets.length
-        ? `Created ${packets.length} research packet(s) and ${draftsProduced} review draft(s).`
-        : "No topic met the configured research threshold.",
+      message,
+      reasonCode,
+      selectionSummary,
     };
   } catch (error) {
     const code = operationalCode(error);

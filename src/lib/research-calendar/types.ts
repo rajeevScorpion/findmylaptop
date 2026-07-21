@@ -22,6 +22,33 @@ export type ResearchPacketStatus =
   | "rejected"
   | "expired";
 
+export type ResearchSelectionReasonCode =
+  | "duplicate_topic"
+  | "insufficient_freshness"
+  | "insufficient_evidence"
+  | "source_rotation"
+  | "no_qualifying_candidate"
+  | "source_configuration";
+
+export type ResearchHistoryKind = "research_packet" | "blog_post";
+
+export interface ResearchSelectionSummary {
+  primaryReason: ResearchSelectionReasonCode | null;
+  message: string;
+  candidatesEvaluated: number;
+  candidatesAccepted: number;
+  rejectionCounts: Partial<Record<ResearchSelectionReasonCode, number>>;
+  historyWindowDays: number;
+  similarityThreshold: number;
+  closestDuplicate: {
+    candidateTitle: string;
+    matchedTitle: string;
+    similarityScore: number;
+    matchedKind: ResearchHistoryKind;
+    matchedAt: string;
+  } | null;
+}
+
 export interface ResearchCalendar {
   id: string;
   name: string;
@@ -33,6 +60,9 @@ export interface ResearchCalendar {
   max_posts_per_week: number;
   max_auto_posts_per_day: number;
   max_auto_posts_per_week: number;
+  novelty_window_days: number;
+  novelty_similarity_threshold: number;
+  source_rotation_enabled: boolean;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -95,6 +125,7 @@ export interface ResearchScheduleRun {
   error_code: string | null;
   error_message: string | null;
   notification_sent: boolean;
+  outcome_reason_code: ResearchSelectionReasonCode | null;
   started_at: string | null;
   finished_at: string | null;
   packets_persisted_at: string | null;
@@ -147,6 +178,16 @@ export interface ResearchPacketRow {
   content_type: ResearchContentType;
   monetization_intent: GeneratedResearchPacket["monetizationIntent"];
   status: ResearchPacketStatus;
+  topic_fingerprint: string;
+  novelty_score: number | null;
+  nearest_topic_similarity: number | null;
+  nearest_topic_kind: ResearchHistoryKind | null;
+  nearest_topic_id: string | null;
+  nearest_topic_title: string | null;
+  novelty_window_days: number | null;
+  novelty_checked_at: string | null;
+  subject_key: string | null;
+  source_domains: string[];
   expires_at: string | null;
   used_at: string | null;
   created_at: string;

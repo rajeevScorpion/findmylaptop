@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  researchPacketAuditPresentation,
+  researchRunPresentation,
+} from "@/lib/research-calendar/presentation";
 import type {
   ResearchCalendarDashboard,
   ResearchCalendarDay,
@@ -63,6 +67,8 @@ interface ResearchRunApiResponse {
     status?: string;
     message?: unknown;
     packetsProduced?: number;
+    reasonCode?: unknown;
+    selectionSummary?: unknown;
   };
   dashboard?: ResearchCalendarDashboard;
 }
@@ -102,6 +108,7 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
   );
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const orderedDays = useMemo(
@@ -123,6 +130,7 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
     setBusy(key);
     setError(null);
     setMessage(null);
+    setWarning(null);
     try {
       const response = await fetch("/api/admin/growth-agents/calendar", {
         method: "PATCH",
@@ -144,6 +152,7 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
     setBusy(`run:${dayId}`);
     setError(null);
     setMessage(null);
+    setWarning(null);
     try {
       const response = await fetch("/api/admin/growth-agents/calendar/run", {
         method: "POST",
@@ -163,12 +172,24 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
         );
         return;
       }
-      setMessage(
+      const fallbackMessage =
         json.result?.status === "duplicate"
           ? "That scheduled run was already processed."
           : resultMessage ??
-              `Run completed with ${json.result?.packetsProduced ?? 0} research packet(s).`
-      );
+            `Run completed with ${json.result?.packetsProduced ?? 0} research packet(s).`;
+      const presentation = researchRunPresentation({
+        status: json.result?.status ?? "succeeded",
+        resultJson: {
+          selectionSummary: json.result?.selectionSummary,
+          outcomeReasonCode: json.result?.reasonCode,
+        },
+        fallbackMessage,
+      });
+      if (presentation.tone === "warning") {
+        setWarning(presentation.detail ?? fallbackMessage);
+      } else {
+        setMessage(presentation.detail ?? fallbackMessage);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Research run failed.");
     } finally {
@@ -260,6 +281,64 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
               }
             />
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Topic history window (days)</Label>
+            <Input
+              className={inputClass}
+              type="number"
+              min={90}
+              max={365}
+              value={calendarDraft.novelty_window_days}
+              onChange={(event) =>
+                setCalendarDraft((current) => ({
+                  ...current,
+                  novelty_window_days: Number(event.target.value),
+                }))
+              }
+            />
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Topics are compared with recent research packets and CMS posts in this period.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Topic similarity cutoff (%)</Label>
+            <Input
+              className={inputClass}
+              type="number"
+              min={20}
+              max={95}
+              step={1}
+              value={calendarDraft.novelty_similarity_threshold}
+              onChange={(event) =>
+                setCalendarDraft((current) => ({
+                  ...current,
+                  novelty_similarity_threshold: Number(event.target.value),
+                }))
+              }
+            />
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Lower values block more similar topics; 62% is recommended. Exact
+              titles and matching source + subject + intent anchors are treated as
+              duplicates regardless of this cutoff.
+            </p>
+          </div>
+          <label className="flex min-h-9 items-center gap-3 self-start pt-6 text-xs text-muted-foreground">
+            <Switch
+              checked={calendarDraft.source_rotation_enabled}
+              onCheckedChange={(source_rotation_enabled) =>
+                setCalendarDraft((current) => ({
+                  ...current,
+                  source_rotation_enabled,
+                }))
+              }
+            />
+            <span>
+              Rotate recently used primary sources
+              <span className="mt-0.5 block text-[11px] leading-relaxed">
+                Checks the last two non-empty research runs for this day within the previous 14 days.
+              </span>
+            </span>
+          </label>
           <div className="space-y-1.5">
             <Label className="text-xs">Mode</Label>
             <select
@@ -360,6 +439,10 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
                   max_posts_per_week: calendarDraft.max_posts_per_week,
                   max_auto_posts_per_day: calendarDraft.max_auto_posts_per_day,
                   max_auto_posts_per_week: calendarDraft.max_auto_posts_per_week,
+                  novelty_window_days: calendarDraft.novelty_window_days,
+                  novelty_similarity_threshold:
+                    calendarDraft.novelty_similarity_threshold,
+                  source_rotation_enabled: calendarDraft.source_rotation_enabled,
                 },
               },
               "calendar"
@@ -387,6 +470,15 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
           className="break-words rounded-lg bg-primary/10 p-3 text-xs text-primary"
         >
           {message}
+        </p>
+      )}
+      {warning && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="break-words rounded-lg border border-orange-300/60 bg-orange-500/10 p-3 text-xs text-orange-700 dark:text-orange-300"
+        >
+          {warning}
         </p>
       )}
 
@@ -513,16 +605,43 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
             <p className="text-xs text-muted-foreground">No runs yet.</p>
           ) : (
             <div className="space-y-2">
-              {dashboard.recentRuns.slice(0, 8).map((run) => (
-                <div key={run.id} className="rounded-lg border border-border/50 p-3 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-foreground">{run.status.replaceAll("_", " ")}</span>
-                    <span className="text-muted-foreground">{formatDate(run.created_at)}</span>
+              {dashboard.recentRuns.slice(0, 8).map((run) => {
+                const presentation = researchRunPresentation({
+                  status: run.status,
+                  resultJson: run.result_json,
+                  outcomeReasonCode: run.outcome_reason_code,
+                  errorMessage: run.error_message,
+                });
+                return (
+                  <div key={run.id} className="rounded-lg border border-border/50 p-3 text-xs">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                      <span className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
+                        <span className="capitalize">{presentation.label}</span>
+                        {presentation.reasonLabel && (
+                          <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-300">
+                            {presentation.reasonLabel}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground">{formatDate(run.created_at)}</span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">{run.packets_produced} packet(s), {run.drafts_produced} draft(s)</p>
+                    {presentation.detail && (
+                      <p
+                        className={`mt-1 break-words ${
+                          presentation.tone === "error"
+                            ? "text-destructive"
+                            : presentation.tone === "warning"
+                              ? "text-orange-700 dark:text-orange-300"
+                              : "text-muted-foreground"
+                        }`}
+                      >
+                        {presentation.detail}
+                      </p>
+                    )}
                   </div>
-                  <p className="mt-1 text-muted-foreground">{run.packets_produced} packet(s), {run.drafts_produced} draft(s)</p>
-                  {run.error_message && <p className="mt-1 break-words text-destructive">{run.error_message}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -532,13 +651,130 @@ export function ResearchCalendarManager({ initialDashboard }: Props) {
             <p className="text-xs text-muted-foreground">No packets yet.</p>
           ) : (
             <div className="space-y-2">
-              {dashboard.recentPackets.slice(0, 8).map((packet) => (
-                <div key={packet.id} className="rounded-lg border border-border/50 p-3 text-xs">
-                  <p className="font-medium text-foreground">{packet.topic_title}</p>
-                  <p className="mt-1 text-muted-foreground">{packet.status.replaceAll("_", " ")} · confidence {packet.confidence_score}</p>
-                  <p className="mt-1 line-clamp-2 text-muted-foreground">{packet.summary}</p>
-                </div>
-              ))}
+              {dashboard.recentPackets.slice(0, 8).map((packet) => {
+                const audit = researchPacketAuditPresentation({
+                  noveltyScore: packet.novelty_score,
+                  nearestTopicSimilarity: packet.nearest_topic_similarity,
+                  nearestTopicKind: packet.nearest_topic_kind,
+                  nearestTopicTitle: packet.nearest_topic_title,
+                  sourceDomains: packet.source_domains,
+                  sourceRefs: packet.source_refs_json,
+                });
+                return (
+                  <div
+                    key={packet.id}
+                    className="overflow-hidden rounded-lg border border-border/50 p-3 text-xs"
+                  >
+                  <p className="break-words font-medium text-foreground">
+                    {packet.topic_title}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    {packet.status.replaceAll("_", " ")} · confidence{" "}
+                    {packet.confidence_score}
+                  </p>
+                  <p className="mt-1 line-clamp-2 break-words text-muted-foreground">
+                    {packet.summary}
+                  </p>
+                  <details className="mt-3 rounded-md border border-border/50 bg-muted/20 px-3">
+                    <summary className="cursor-pointer select-none py-2 font-medium text-foreground">
+                      Novelty and source audit
+                    </summary>
+                    <div className="space-y-3 border-t border-border/50 py-3">
+                      <dl className="grid gap-2 sm:grid-cols-2">
+                        <div className="min-w-0 rounded-md bg-background/60 p-2">
+                          <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            Novelty score
+                          </dt>
+                          <dd className="mt-0.5 break-words font-medium text-foreground">
+                            {audit.noveltyScoreLabel}
+                          </dd>
+                          <dd className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+                            Higher means more different from recent topics.
+                          </dd>
+                        </div>
+                        <div className="min-w-0 rounded-md bg-background/60 p-2">
+                          <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            Nearest topic type
+                          </dt>
+                          <dd className="mt-0.5 break-words font-medium text-foreground">
+                            {audit.nearestTopicKindLabel}
+                          </dd>
+                        </div>
+                        <div className="min-w-0 rounded-md bg-background/60 p-2 sm:col-span-2">
+                          <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            Nearest topic title
+                          </dt>
+                          <dd className="mt-0.5 break-words font-medium text-foreground">
+                            {audit.nearestTopicTitleLabel}
+                          </dd>
+                        </div>
+                        <div className="min-w-0 rounded-md bg-background/60 p-2 sm:col-span-2">
+                          <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            Similarity to nearest topic
+                          </dt>
+                          <dd className="mt-0.5 break-words font-medium text-foreground">
+                            {audit.nearestTopicSimilarityLabel}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Source domains
+                        </p>
+                        {audit.sourceDomains.length > 0 ? (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {audit.sourceDomains.map((domain) => (
+                              <span
+                                key={domain}
+                                className="max-w-full break-all rounded-full bg-background/70 px-2 py-1 text-[10px] text-foreground"
+                              >
+                                {domain}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-muted-foreground">
+                            None recorded.
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          Source URLs
+                        </p>
+                        {audit.sourceLinks.length > 0 ? (
+                          <ul className="mt-1.5 space-y-1.5">
+                            {audit.sourceLinks.map((source) => (
+                              <li key={source.url} className="min-w-0">
+                                <a
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block min-w-0 rounded-md bg-background/70 p-2 text-primary hover:underline"
+                                >
+                                  <span className="block break-words font-medium">
+                                    {source.title ?? source.domain}
+                                  </span>
+                                  <span className="mt-0.5 block break-all text-[10px] text-muted-foreground">
+                                    {source.url}
+                                  </span>
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-1 text-muted-foreground">
+                            No safe HTTP(S) source URLs recorded.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </details>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

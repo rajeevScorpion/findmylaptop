@@ -49,6 +49,9 @@ export const calendarPatchSchema = z
     max_posts_per_week: z.number().int().min(0).max(100).optional(),
     max_auto_posts_per_day: z.number().int().min(0).max(20).optional(),
     max_auto_posts_per_week: z.number().int().min(0).max(100).optional(),
+    novelty_window_days: z.number().int().min(90).max(365).optional(),
+    novelty_similarity_threshold: z.number().min(20).max(95).optional(),
+    source_rotation_enabled: z.boolean().optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -193,6 +196,13 @@ export const generatedPacketSchema = z.object({
 
 export const generatedResearchResultSchema = z.object({
   packets: z.array(generatedPacketSchema).max(5),
+  noGoodTopicCode: z
+    .enum([
+      "insufficient_freshness",
+      "insufficient_evidence",
+      "no_qualifying_candidate",
+    ])
+    .nullable(),
   noGoodTopicReason: z.string().max(1000).nullable(),
 });
 

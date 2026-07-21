@@ -92,11 +92,21 @@ supabase/migrations/020_seed_domain_flags.sql       # domain_tech/mgmt_enabled f
 supabase/migrations/024_create_agent_foundations.sql
 ... (025–032 — product research, calendar, personas, Chip learning,
     blog agent, affiliate events, and access hardening)
+supabase/migrations/033_add_research_novelty.sql   # deterministic topic novelty
 ```
 
 Copy the contents of each file and paste into the SQL editor, then click **Run**.
 Each migration `0NN_*.sql` has a matching `0NN_*_rollback.sql` to undo it (run
 in reverse order if needed).
+
+Migration 033 must be applied manually to the staging Supabase project after
+032 and after compatible application code is deployed with the Research Agent
+still disabled. It is not applied automatically by a code deployment. If it
+must be reversed, first deploy code that no longer reads its novelty fields,
+then run
+`033_add_research_novelty_rollback.sql` before any earlier rollback. Do not
+apply or roll back staging/production migrations as part of an ordinary code
+deployment.
 
 > **Multi-domain (Design / Technology / Management):** migrations 017–020 add the
 > domain dimension. Technology and Management ship **disabled** — turn each on in
@@ -141,6 +151,37 @@ The `/api/admin/process-laptop` route:
 4. The admin reviews and edits before saving — nothing is auto-saved
 
 The OpenAI API key is only used server-side and never exposed to the browser.
+
+### Research topic novelty
+
+Research calls are stateless; the model does not remember earlier runs. The
+server supplies awareness by loading platform-wide research packets and
+non-archived CMS posts, passing recent covered topics into the call, then
+applying a deterministic semantic feature comparison before persistence. This
+does not use embeddings or model memory.
+
+Admins configure the policy at **Admin → Growth Agents → Research Calendar →
+Schedule control**. Defaults are a 180-day history window, 62% similarity
+cutoff, and source rotation enabled. The window accepts 90–365 days. Rotation
+checks the last two non-empty research runs for the same calendar day within
+14 days.
+
+The cutoff governs the weighted semantic comparison. Separate hard checks can
+still reject a candidate below that percentage: an exact readable normalized
+title fingerprint, an exact rich subject key, or the same canonical source with
+matching domain, subject/product, and intent. The title fingerprint is the
+normalized title text; the subject key is a separate hash derived from several
+topic features. An atomic database exact-title claim remains reserved after
+packet status changes and the ordinary history window.
+
+Eligible history contains non-rejected research packets and non-archived CMS
+posts in the selected window, plus rejected packets from only the last 30 days.
+If the combined eligible history exceeds 500 items, the run stops before web
+research instead of comparing against a silently truncated history. A global
+novelty lease allows one research run at a time to load history, select topics,
+and persist packets; it is released before optional Blog draft generation. See
+the admin guide and autonomous-agent runbook linked above for typed no-topic
+reasons, mobile operation, and staging verification.
 
 ---
 

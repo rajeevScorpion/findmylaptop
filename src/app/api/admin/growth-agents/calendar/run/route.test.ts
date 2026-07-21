@@ -88,4 +88,35 @@ describe("POST /api/admin/growth-agents/calendar/run", () => {
     expect(payload).toEqual({ result: outcome, dashboard });
     expect(payload).not.toHaveProperty("error");
   });
+
+  it("returns a typed deterministic no-topic outcome as HTTP 200", async () => {
+    const outcome = {
+      dayId: DAY_ID,
+      jobId: "33333333-3333-4333-8333-333333333333",
+      scheduleRunId: "44444444-4444-4444-8444-444444444444",
+      status: "no_good_topic" as const,
+      packetsProduced: 0,
+      draftsProduced: 0,
+      message: "The proposed topic was already covered recently.",
+      reasonCode: "duplicate_topic" as const,
+      selectionSummary: {
+        primaryReason: "duplicate_topic" as const,
+        message: "The proposed topic was already covered recently.",
+        candidatesEvaluated: 1,
+        candidatesAccepted: 0,
+        rejectionCounts: { duplicate_topic: 1 },
+        historyWindowDays: 180,
+        similarityThreshold: 62,
+        closestDuplicate: null,
+      },
+    };
+    vi.mocked(runResearchCalendarDayById).mockResolvedValue(outcome);
+
+    const response = await POST(request());
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({ result: outcome, dashboard });
+    expect(payload).not.toHaveProperty("error");
+  });
 });
