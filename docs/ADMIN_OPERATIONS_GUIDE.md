@@ -258,7 +258,11 @@ The mode field currently records intent. It is not used to enable an auto-public
 
 ### API source activation
 
-An API source cannot be enabled until its stored credential status is `valid`. The current Probe Health action does not persist that status. First-time API-source validation and provider-secret setup therefore require a technical owner; a nontechnical operator cannot complete this entirely in the UI today.
+Turning on an API source performs a fresh server-side credential check before changing the queue state. A successful check saves `credential_status = valid`, the health timestamp, and an audit event, then enables the source. Missing or rejected credentials keep the source disabled and display a scrubbed explanation; secrets and provider response bodies never reach the browser.
+
+**Probe health** in Research Queue runs and saves the same validation without enabling the source. This is useful when an operator wants to verify configuration first and then enable the source under **Growth Agents → Approved sources**. Amazon's probe authenticates the configured Creators API client and confirms that the partner tag is present; importing one Amazon candidate remains the end-to-end catalog-access test.
+
+Source activation, public outbound-link permission, and the global **Affiliate links** capability are separate controls. Enabling Amazon for Product Research Queue ingestion does not automatically expose public affiliate links.
 
 ### Public outbound permission
 
@@ -476,8 +480,8 @@ These govern AI/agent paths. They do not remove an administrator's manual CMS ca
 2. Keep Safe mode on for review-controlled operations.
 3. Understand the exact stop-control scope described earlier.
 4. Review retention periods before changing them. Shortening a period can cause irreversible cleanup; increasing it cannot restore deleted data.
-5. Confirm provider credentials with the technical owner.
-6. Enable only validated sources. Treat public outbound presentation/monetization as a separate permission.
+5. Confirm the provider variables were added by the technical owner and the deployment was rebuilt after any change.
+6. Turn on one API source. The server validates and saves credential health before enabling it; if validation fails, leave it off and follow the displayed message. Treat public outbound presentation/monetization as a separate permission.
 7. Enable one capability and select **Save controls**.
 8. Test that capability in staging.
 9. Review recent jobs for repeated failure/retry patterns.

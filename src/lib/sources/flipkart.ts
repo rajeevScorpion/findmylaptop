@@ -197,6 +197,7 @@ export const flipkartSourceAdapter: SourceAdapter = {
         checkedAt,
         capabilities: this.capabilities,
         remoteChecked: false,
+        credentialStatus: configured ? "unchecked" : "not_configured",
       };
     }
 
@@ -223,6 +224,11 @@ export const flipkartSourceAdapter: SourceAdapter = {
         checkedAt,
         capabilities: this.capabilities,
         remoteChecked: true,
+        credentialStatus: response.ok
+          ? "valid"
+          : response.status === 401 || response.status === 403
+            ? "invalid"
+            : "error",
       };
     } catch {
       return {
@@ -236,6 +242,7 @@ export const flipkartSourceAdapter: SourceAdapter = {
         checkedAt,
         capabilities: this.capabilities,
         remoteChecked: true,
+        credentialStatus: "error",
       };
     }
   },

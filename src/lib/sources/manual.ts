@@ -106,6 +106,7 @@ export const manualSourceAdapter: SourceAdapter = {
       checkedAt: new Date().toISOString(),
       capabilities: this.capabilities,
       remoteChecked: false,
+      credentialStatus: "not_required",
     };
   },
 

@@ -273,9 +273,9 @@ export const CURRENT_OPERATIONAL_BOUNDARIES = [
       "Calendar mode is stored as intent, but no current agent path auto-publishes a blog post. Imports and generated posts remain unpublished. Price refresh can auto-unpublish unavailable laptops and can republish back-in-stock items only through its explicit republish flow.",
   },
   {
-    title: "Initial API source activation needs a platform owner",
+    title: "API sources validate before activation",
     detail:
-      "The UI requires a persisted valid credential status before enabling an API source, while Probe health does not currently persist that status. Provider secrets and first-time validation are a technical configuration boundary.",
+      "Turning on an API source performs a server-side credential probe, persists the scrubbed result and audit timestamp, and enables the source only when validation succeeds. Probe health performs the same saved validation without enabling the source. Provider secrets remain a technical-owner responsibility.",
   },
   {
     title: "Some data is advisory, not automatically learned",
@@ -468,7 +468,7 @@ export const ADMIN_SCREEN_GUIDES: readonly AdminScreenGuide[] = [
       { title: "Keep Safe mode on", instruction: "Use Safe mode during normal staging/review operations. Generated work is already draft-only; Safe mode additionally keeps affiliate monetization gated." },
       { title: "Understand stop-control scope", instruction: "Global pause and Emergency stop gate Calendar research, Blog Agent work, and affiliate monetization. They do not disable product candidate ingestion, public Chip chat, Chip learning, manual Blog AI assist, laptop extraction, or price refresh." },
       { title: "Set retention deliberately", instruction: "Choose deletion windows that meet operational, privacy, and audit needs. Avoid extending raw or conversational data without a documented reason." },
-      { title: "Validate sources", instruction: "An API source must have a persisted valid credential status before it can be enabled. The current health probe does not persist that status, so first-time API activation needs a platform owner. Public outbound-link presentation and monetization are a separate permission." },
+      { title: "Validate sources", instruction: "Turn on an API source to run a fresh server-side credential probe and enable it only after success. Alternatively, use Probe health in Research Queue to save the validation result without enabling the queue. A rejected or missing credential keeps the source disabled. Public outbound-link presentation and monetization remain separate permissions." },
       { title: "Enable one capability", instruction: "Turn on Research, Blogging, Chip learning, or Affiliate links individually, save, and run a small staging test before enabling another." },
       { title: "Review durable jobs", instruction: "Check job type, status, and time. Investigate repeated failure or retry patterns before continuing." },
     ],
@@ -479,7 +479,7 @@ export const ADMIN_SCREEN_GUIDES: readonly AdminScreenGuide[] = [
       { label: "Agent Drafts", href: "/admin/growth-agents/blog", relationship: "Requires permitted blogging execution." },
     ],
     troubleshooting: [
-      { symptom: "A source cannot be enabled.", response: "Provider secrets and a persisted valid credential status are required. This cannot currently be completed by a nontechnical admin from the UI alone; contact the platform owner." },
+      { symptom: "A source cannot be enabled.", response: "Read the returned credential-check message. Confirm the provider variables exist in the deployed environment and redeploy after changing them. A rejected, missing, disabled, or temporarily unavailable provider remains fail-closed; use Probe health after correcting the issue." },
       { symptom: "Calendar or Blog Agent work does not run despite enabled capabilities.", response: "Check Emergency stop, Global pause, calendar/day state, caps, persona permissions, source health, and recent job errors." },
       { symptom: "Jobs repeatedly fail.", response: "Pause execution, capture the scrubbed error code and dependency state, correct it in staging, then retry once." },
     ],

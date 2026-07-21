@@ -129,13 +129,26 @@ export function GrowthAgentControlCenter({
         body: JSON.stringify({ sourceKey: source.source_key, ...update }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not update source.");
+      if (!response.ok) {
+        const refresh = await fetch("/api/admin/growth-agents/sources", {
+          cache: "no-store",
+        });
+        if (refresh.ok) {
+          const refreshed = await refresh.json();
+          setSources(refreshed.sources);
+        }
+        throw new Error(data.error ?? "Could not update source.");
+      }
       setSources((current) =>
         current.map((item) =>
           item.source_key === data.source.source_key ? data.source : item
         )
       );
-      setMessage(`${source.display_name} updated.`);
+      setMessage(
+        update.enabled === true && source.mode === "api"
+          ? `${source.display_name} credentials validated and source enabled.`
+          : `${source.display_name} updated.`
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not update source.");
     } finally {
@@ -254,7 +267,7 @@ export function GrowthAgentControlCenter({
         <div>
           <h2 className="text-sm font-semibold text-foreground">Approved sources</h2>
           <p className="text-xs text-muted-foreground">
-            API sources cannot be enabled until their server-side credential check is valid.
+            Turning on an API source performs a server-side credential check first. Secrets are never returned to the browser.
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-3">

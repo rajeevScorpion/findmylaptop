@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SourceCredentialStatus } from "@/lib/growth-agents/types";
 import { isHttpUrl } from "@/lib/http-url";
 
 export const SOURCE_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
@@ -203,6 +204,7 @@ export interface SourceHealth {
   checkedAt: string;
   capabilities: SourceCapabilities;
   remoteChecked: boolean;
+  credentialStatus: SourceCredentialStatus;
 }
 
 export interface SourceFetchRequest {

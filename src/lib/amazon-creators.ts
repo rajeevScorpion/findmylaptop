@@ -5,14 +5,20 @@ const TOKEN_ENDPOINT = "https://api.amazon.co.uk/auth/o2/token";
 const API_BASE = "https://creatorsapi.amazon/catalog/v1/";
 
 let tokenCache: { token: string; expiresAt: number } | null = null;
+const AMAZON_REQUEST_TIMEOUT_MS = 10_000;
 
-async function getAccessToken(): Promise<string> {
-  if (tokenCache && Date.now() < tokenCache.expiresAt - 60_000) {
+async function getAccessToken(options: { forceRefresh?: boolean } = {}): Promise<string> {
+  if (options.forceRefresh) tokenCache = null;
+  if (
+    !options.forceRefresh &&
+    tokenCache &&
+    Date.now() < tokenCache.expiresAt - 60_000
+  ) {
     return tokenCache.token;
   }
 
-  const clientId = process.env.AMAZON_CREATORS_CLIENT_ID;
-  const clientSecret = process.env.AMAZON_CREATORS_CLIENT_SECRET;
+  const clientId = process.env.AMAZON_CREATORS_CLIENT_ID?.trim();
+  const clientSecret = process.env.AMAZON_CREATORS_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     throw new Error("AMAZON_CREATORS_CLIENT_ID and AMAZON_CREATORS_CLIENT_SECRET must be set");
@@ -20,14 +26,23 @@ async function getAccessToken(): Promise<string> {
 
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
-  const res = await fetch(TOKEN_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${credentials}`,
-    },
-    body: "grant_type=client_credentials&scope=creatorsapi%3A%3Adefault",
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AMAZON_REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${credentials}`,
+      },
+      body: "grant_type=client_credentials&scope=creatorsapi%3A%3Adefault",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     // Provider error bodies can contain request/account metadata. Keep them
@@ -36,12 +51,38 @@ async function getAccessToken(): Promise<string> {
     throw new AmazonApiError(res.status, `Token fetch failed (${res.status}).`);
   }
 
-  const data = await res.json();
+  const data = (await res.json()) as {
+    access_token?: unknown;
+    expires_in?: unknown;
+  };
+  const expiresIn =
+    typeof data.expires_in === "number"
+      ? data.expires_in
+      : typeof data.expires_in === "string"
+        ? Number(data.expires_in)
+        : Number.NaN;
+  if (
+    typeof data.access_token !== "string" ||
+    !data.access_token ||
+    !Number.isFinite(expiresIn) ||
+    expiresIn <= 0
+  ) {
+    throw new AmazonApiError(502, "Token endpoint returned an invalid response.");
+  }
   tokenCache = {
     token: data.access_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
+    expiresAt: Date.now() + expiresIn * 1000,
   };
   return tokenCache.token;
+}
+
+/**
+ * Validate server-side Creators API client credentials without exposing the
+ * access token or making a catalog request. A forced refresh ensures an admin
+ * health probe actually reaches Amazon instead of trusting an old process cache.
+ */
+export async function validateAmazonCreatorsCredentials(): Promise<void> {
+  await getAccessToken({ forceRefresh: true });
 }
 
 export class AmazonApiError extends Error {
@@ -140,8 +181,8 @@ export function parsePriceToInt(displayAmount?: string): number | null {
 }
 
 export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
-  const partnerTag = process.env.AMAZON_PARTNER_TAG;
-  const marketplace = process.env.AMAZON_MARKETPLACE ?? "www.amazon.in";
+  const partnerTag = process.env.AMAZON_PARTNER_TAG?.trim();
+  const marketplace = process.env.AMAZON_MARKETPLACE?.trim() || "www.amazon.in";
 
   if (!partnerTag) throw new Error("AMAZON_PARTNER_TAG must be set");
 

@@ -18,6 +18,7 @@ import type {
   GrowthAgentSettings,
   JsonValue,
   SourceAdapterRecord,
+  SourceCredentialStatus,
   SourceAdapterUpdate,
 } from "@/lib/growth-agents/types";
 
@@ -242,6 +243,65 @@ export async function listSourceAdapters(
   }
 
   return data as unknown as SourceAdapterRecord[];
+}
+
+export async function recordSourceAdapterHealth(
+  sourceKey: string,
+  health: {
+    credentialStatus: SourceCredentialStatus;
+    checkedAt: string;
+    message: string;
+    runtimeEnabled: boolean;
+  },
+  checkedBy: string,
+  client: GrowthAgentDatabaseClient = createAdminClient()
+): Promise<SourceAdapterRecord> {
+  const failed =
+    health.credentialStatus === "invalid" ||
+    health.credentialStatus === "error" ||
+    health.credentialStatus === "not_configured";
+  const fields: Record<string, string | boolean | null> = {
+    credential_status: health.credentialStatus,
+    last_health_check_at: health.checkedAt,
+  };
+  if (health.credentialStatus === "valid" || health.credentialStatus === "not_required") {
+    fields.last_success_at = health.checkedAt;
+    fields.last_error_at = null;
+    fields.last_error_message = null;
+  } else if (failed) {
+    fields.last_error_at = health.checkedAt;
+    fields.last_error_message = health.message.slice(0, 1_000);
+  }
+  if (
+    !health.runtimeEnabled ||
+    health.credentialStatus === "invalid" ||
+    health.credentialStatus === "not_configured"
+  ) {
+    fields.enabled = false;
+  }
+
+  const { data, error } = await client
+    .from("source_adapters")
+    .update(fields)
+    .eq("source_key", sourceKey)
+    .select(SOURCE_ADAPTER_SELECT)
+    .single();
+  if (error || !data) {
+    throw databaseError("Could not record the source credential check.", error);
+  }
+
+  await recordAuditEvent(client, {
+    eventType: "source_adapter.health_checked",
+    actorIdentifier: checkedBy,
+    entityType: "source_adapter",
+    entityId: sourceKey,
+    summary: "Source adapter credential health checked.",
+    metadata: {
+      credentialStatus: health.credentialStatus,
+    },
+  });
+
+  return data as unknown as SourceAdapterRecord;
 }
 
 export async function updateSourceAdapter(

@@ -5,6 +5,7 @@ import {
   requireAdmin,
 } from "@/lib/admin/authorization";
 import {
+  AgentError,
   getAgentErrorHttpStatus,
   isAgentError,
 } from "@/lib/growth-agents/errors";
@@ -12,6 +13,7 @@ import {
   listSourceAdapters,
   updateSourceAdapter,
 } from "@/lib/growth-agents/settings";
+import { probeSourceAdapterHealth } from "@/lib/sources/health";
 
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -79,6 +81,25 @@ export async function PATCH(request: Request): Promise<Response> {
     }
 
     const { sourceKey, ...update } = parsed.data;
+    if (update.enabled === true) {
+      const health = await probeSourceAdapterHealth(sourceKey, {
+        actorEmail: admin.email,
+      });
+      if (
+        !health.runtimeEnabled ||
+        (health.credentialStatus !== "valid" &&
+          health.credentialStatus !== "not_required")
+      ) {
+        throw new AgentError({
+          code: "CONFIGURATION_ERROR",
+          message: health.message,
+          details: {
+            sourceKey,
+            credentialStatus: health.credentialStatus,
+          },
+        });
+      }
+    }
     const source = await updateSourceAdapter(sourceKey, update, admin.email);
     return json({ source });
   } catch (error) {

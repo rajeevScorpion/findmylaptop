@@ -82,7 +82,11 @@ No environment variable substitutes for this migration.
 
 1. Confirm the branch is deployed to the staging project and all agent flags are off.
 2. Confirm an allowlisted admin can open **Admin > Growth Agents**.
-3. Validate source health. Keep Flipkart and any unverified source disabled.
+3. Validate source health. **Probe health** saves the credential result without
+   enabling a source; turning on an API source performs the same fresh check and
+   enables it only after success. For Amazon, import one staging candidate after
+   activation as the end-to-end catalog-access test. Keep Flipkart and any
+   unverified source disabled.
 4. Test a manual product candidate, then reject or promote it. Promotion must
    create an unpublished laptop only.
 5. Enable the Research Agent and keep the calendar paused. Open **Admin >

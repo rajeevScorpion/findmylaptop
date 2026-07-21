@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   X,
 } from "lucide-react";
+import type { SourceCredentialStatus } from "@/lib/growth-agents/types";
 import type {
   CandidateReviewStatus,
   ProductCandidateRow,
@@ -36,7 +37,7 @@ export interface ResearchSourceHealth {
   checkedAt: string;
   capabilities: SourceCapabilities;
   remoteChecked: boolean;
-  credentialStatus: string;
+  credentialStatus: SourceCredentialStatus;
   freshnessTtlMinutes: number | null;
   publicDisplayAllowed: boolean;
   requiresAdminApproval: boolean;
@@ -122,6 +123,10 @@ async function responseBody(response: Response): Promise<Record<string, unknown>
 }
 
 function SourceHealthCard({ source }: { source: ResearchSourceHealth }) {
+  const validatedWhileDisabled =
+    source.mode === "api" &&
+    source.credentialStatus === "valid" &&
+    !source.databaseEnabled;
   return (
     <div className="rounded-xl border border-border/50 bg-card/60 p-3.5 space-y-2">
       <div className="flex items-start justify-between gap-3">
@@ -131,8 +136,14 @@ function SourceHealthCard({ source }: { source: ResearchSourceHealth }) {
             {source.mode} · {source.sourceKey}
           </p>
         </div>
-        <span className={`text-xs font-medium capitalize ${HEALTH_TONE[source.status]}`}>
-          {label(source.status)}
+        <span
+          className={`text-xs font-medium capitalize ${
+            validatedWhileDisabled
+              ? "text-emerald-500"
+              : HEALTH_TONE[source.status]
+          }`}
+        >
+          {validatedWhileDisabled ? "Validated" : label(source.status)}
         </span>
       </div>
       <p className="text-xs leading-relaxed text-muted-foreground">{source.message}</p>
@@ -495,13 +506,18 @@ export function ResearchQueue({
   async function refreshHealth() {
     setHealthBusy(true);
     setPageError(null);
+    setSuccess(null);
     try {
-      const response = await fetch("/api/admin/growth-agents/sources/health?probe=true", {
+      const response = await fetch("/api/admin/growth-agents/sources/health", {
+        method: "POST",
         cache: "no-store",
       });
       const result = await responseBody(response);
       if (!response.ok) throw new Error(String(result.error ?? "Health check failed."));
       setSources(result.sources as ResearchSourceHealth[]);
+      setSuccess(
+        "Source health saved. A validated source remains off until you enable it under Growth Agents."
+      );
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "Health check failed.");
     } finally {
@@ -532,15 +548,23 @@ export function ResearchQueue({
               Runtime configuration and fail-closed queue enablement. Tokens are never returned.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={refreshHealth}
-            disabled={healthBusy}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border bg-card px-3 text-xs font-medium hover:bg-muted disabled:opacity-40"
-          >
-            {healthBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HeartPulse className="h-3.5 w-3.5" />}
-            Probe health
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <a
+              href="/admin/growth-agents"
+              className="inline-flex h-8 items-center rounded-lg border bg-card px-3 text-xs font-medium hover:bg-muted"
+            >
+              Manage sources
+            </a>
+            <button
+              type="button"
+              onClick={refreshHealth}
+              disabled={healthBusy}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border bg-card px-3 text-xs font-medium hover:bg-muted disabled:opacity-40"
+            >
+              {healthBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HeartPulse className="h-3.5 w-3.5" />}
+              Probe health
+            </button>
+          </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-3">
           {sources.map((source) => <SourceHealthCard key={source.sourceKey} source={source} />)}

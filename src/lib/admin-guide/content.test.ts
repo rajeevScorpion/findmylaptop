@@ -46,7 +46,8 @@ describe("admin operations guide content", () => {
     expect(boundaries).toContain("Research Queue");
     expect(boundaries).toContain("Research Calendar");
     expect(boundaries).toContain("do not stop");
-    expect(boundaries).toContain("does not currently persist");
+    expect(boundaries).toContain("persists the scrubbed result");
+    expect(boundaries).toContain("only when validation succeeds");
   });
 
   it("keeps the Markdown handbook aligned with guide version and routes", () => {

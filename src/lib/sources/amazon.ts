@@ -5,6 +5,7 @@ import {
   buildAffiliateUrl,
   fetchProductByAsin,
   resolveAsin,
+  validateAmazonCreatorsCredentials,
 } from "@/lib/amazon-creators";
 import { AgentError } from "@/lib/growth-agents/errors";
 import { sourceProductSchema, type SourceAdapter } from "./types";
@@ -68,30 +69,74 @@ export const amazonSourceAdapter: SourceAdapter = {
     livePrice: true,
   },
 
-  async getHealth() {
+  async getHealth(options = {}) {
     const enabled = process.env.AMAZON_CREATORS_ENABLED !== "false";
     const missing = [
       "AMAZON_CREATORS_CLIENT_ID",
       "AMAZON_CREATORS_CLIENT_SECRET",
       "AMAZON_PARTNER_TAG",
-    ].filter((key) => !process.env[key]);
+    ].filter((key) => !process.env[key]?.trim());
     const configured = missing.length === 0;
-    return {
-      sourceKey: this.key,
-      displayName: this.displayName,
-      mode: this.mode,
-      enabled,
-      configured,
-      status: !enabled ? "disabled" : configured ? "ready" : "unconfigured",
-      message: !enabled
-        ? "Disabled by configuration."
-        : configured
-          ? "Creators API credentials and partner tag are configured. No catalog request was made."
-          : `Missing server configuration: ${missing.join(", ")}.`,
-      checkedAt: new Date().toISOString(),
-      capabilities: this.capabilities,
-      remoteChecked: false,
-    };
+    const checkedAt = new Date().toISOString();
+    if (!enabled || !configured || !options.probe) {
+      return {
+        sourceKey: this.key,
+        displayName: this.displayName,
+        mode: this.mode,
+        enabled,
+        configured,
+        status: !enabled ? "disabled" : configured ? "ready" : "unconfigured",
+        message: !enabled
+          ? "Disabled by server configuration."
+          : configured
+            ? "Creators API credentials and partner tag are configured. Remote authentication has not been checked."
+            : `Missing server configuration: ${missing.join(", ")}.`,
+        checkedAt,
+        capabilities: this.capabilities,
+        remoteChecked: false,
+        credentialStatus: configured ? "unchecked" : "not_configured",
+      };
+    }
+
+    try {
+      await validateAmazonCreatorsCredentials();
+      return {
+        sourceKey: this.key,
+        displayName: this.displayName,
+        mode: this.mode,
+        enabled: true,
+        configured: true,
+        status: "ready" as const,
+        message:
+          "Amazon accepted the configured Creators API client credentials. The partner tag is configured.",
+        checkedAt,
+        capabilities: this.capabilities,
+        remoteChecked: true,
+        credentialStatus: "valid" as const,
+      };
+    } catch (error) {
+      const authenticationRejected =
+        error instanceof AmazonApiError &&
+        (error.status === 400 || error.status === 401 || error.status === 403);
+      const rateLimited = error instanceof AmazonApiError && error.status === 429;
+      return {
+        sourceKey: this.key,
+        displayName: this.displayName,
+        mode: this.mode,
+        enabled: true,
+        configured: true,
+        status: rateLimited ? "degraded" as const : "unavailable" as const,
+        message: authenticationRejected
+          ? "Amazon rejected the configured Creators API client credentials."
+          : rateLimited
+            ? "Amazon temporarily rate-limited the credential validation request."
+            : "Amazon credential validation timed out or the service was unavailable.",
+        checkedAt,
+        capabilities: this.capabilities,
+        remoteChecked: true,
+        credentialStatus: authenticationRejected ? "invalid" as const : "error" as const,
+      };
+    }
   },
 
   async fetchProduct(request) {

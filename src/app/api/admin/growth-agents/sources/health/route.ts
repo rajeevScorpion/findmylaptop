@@ -31,13 +31,27 @@ function routeError(error: unknown): Response {
   return json({ error: "Source health request failed." }, 500);
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(_request: Request): Promise<Response> {
   await connection();
   try {
     await requireAdmin();
-    const probe = new URL(request.url).searchParams.get("probe") === "true";
-    const sources = await getEffectiveSourceHealth({ probe });
-    return json({ sources, probed: probe });
+    // Reading health is side-effect free. Remote probes that persist status use
+    // POST below so browser retries/caches cannot mutate source configuration.
+    const sources = await getEffectiveSourceHealth();
+    return json({ sources, probed: false });
+  } catch (error) {
+    return routeError(error);
+  }
+}
+
+export async function POST(): Promise<Response> {
+  try {
+    const admin = await requireAdmin();
+    const sources = await getEffectiveSourceHealth({
+      probe: true,
+      actorEmail: admin.email,
+    });
+    return json({ sources, probed: true });
   } catch (error) {
     return routeError(error);
   }
