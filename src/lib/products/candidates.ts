@@ -669,7 +669,10 @@ export async function reviewCandidate(
     });
   }
 
-  const reviewStatus = parsed.action;
+  // The admin action uses the imperative `reject`, while the persisted state
+  // is the past-tense `rejected`. Keep that API wording at the boundary and
+  // translate it before writing the constrained database column.
+  const reviewStatus = parsed.action === "reject" ? "rejected" : parsed.action;
   const update: Record<string, unknown> = {
     review_status: reviewStatus,
     reviewed_by: reviewedBy,
