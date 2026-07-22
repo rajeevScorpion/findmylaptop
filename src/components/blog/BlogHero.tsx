@@ -20,7 +20,7 @@ export function BlogHero() {
 
   return (
     <LazyMotion features={domAnimation}>
-      <section className="relative z-10 mb-12 pb-4">
+      <section className="relative z-10 mb-8 pb-2">
         <div className="px-4 max-w-6xl mx-auto">
           <m.div
             custom={0}
@@ -59,7 +59,7 @@ export function BlogHero() {
             variants={fadeUp}
             initial="hidden"
             animate="visible"
-            className="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+            className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
           >
             <Link
               href="/"

@@ -24,6 +24,18 @@ export async function getPublishedPosts(): Promise<BlogPost[]> {
   return (data ?? []) as BlogPost[];
 }
 
+export async function getPublicBlogCategories(): Promise<BlogCategory[]> {
+  "use cache";
+  cacheTag("blog");
+  cacheLife("hours");
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("blog_categories")
+    .select("id, name, slug, description")
+    .order("name", { ascending: true });
+  return (data ?? []) as BlogCategory[];
+}
+
 export async function getPublishedPostBySlug(slug: string): Promise<BlogPost | null> {
   "use cache";
   cacheTag("blog");
