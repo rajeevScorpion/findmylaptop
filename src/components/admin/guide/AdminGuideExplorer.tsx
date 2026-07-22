@@ -63,6 +63,7 @@ const BREADCRUMBS: Record<string, string> = {
   blog: "Admin → Blog",
   "author-personas": "Admin → Author Personas",
   "growth-agents": "Admin → Growth Agents",
+  "product-curation": "Admin → Growth Agents → Product Curation",
   "research-queue": "Admin → Growth Agents → Research Queue",
   "research-calendar": "Admin → Growth Agents → Research Calendar",
   "agent-drafts": "Admin → Growth Agents → Agent Drafts",

@@ -10,7 +10,7 @@ import {
 
 describe("admin operations guide content", () => {
   it("covers every top-level admin screen with unique routes and anchors", () => {
-    expect(ADMIN_SCREEN_GUIDES).toHaveLength(12);
+    expect(ADMIN_SCREEN_GUIDES).toHaveLength(13);
 
     const ids = ADMIN_SCREEN_GUIDES.map((screen) => screen.id);
     const routes = ADMIN_SCREEN_GUIDES.map((screen) => screen.route);

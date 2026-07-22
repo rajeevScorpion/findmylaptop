@@ -1,6 +1,6 @@
 # LaptopFinder Admin Operations Guide
 
-Version: **2026.07**
+Version: **2026.08**
 
 Audience: platform operators, power users, and technical owners
 
@@ -29,7 +29,56 @@ These are documentation roles, not application roles. LaptopFinder currently has
 7. Never apply migrations to staging or production unless explicitly requested. Run forward migrations manually in order and retain every rollback.
 8. Never promote to `master` or make a production database change without explicit approval.
 
-## The three features most often confused
+## The four features most often confused
+
+### Product Curation
+
+- **Path:** Admin -> Growth Agents -> Product Curation
+- **Route:** `/admin/growth-agents/curation`
+
+**Purpose:** convert plain-English domain expectations into a versioned rulebook, audit the existing catalog first, and prepare only a small number of gap-filling decisions.
+
+**How the path is linked**
+
+```text
+Taxonomy + admin rulebook
+          |
+          v
+Existing catalog audit ---> course-mapping proposals ---> admin approve/reject
+          |
+          | only when a verified gap remains
+          v
+Bounded Amazon search ---> dedupe + hardware + API-budget gates
+          |
+          v
+Research Queue candidate ---> admin approve ---> unpublished Laptop
+                                                   |
+                                                   v
+                                         separate admin publication
+```
+
+**Procedure**
+
+1. Leave **Paused** on while configuring the feature.
+2. Choose Design, Technology, or Management and write the expected workloads, hardware, portability, value, longevity, exclusions, and valid gaps in plain English.
+3. Keep domain and course recommendation caps small to prevent decision fatigue.
+4. Save the prose, then select **Compile and enable**. Compilation validates a structured interpretation; it changes no catalog record.
+5. Select **Audit existing catalog**. Review every proposed addition/removal of a course mapping.
+6. Set conservative search, item, requests-per-second, daily-call, and refresh budgets.
+7. Run **Refresh now**, then **Discover now** in staging.
+8. Open Research Queue and inspect the target domain, portfolio role, gap reason, curation score, rulebook version, and suggested course mappings.
+9. Enable Daily discovery and/or Catalog refresh, then clear Paused only after the manual test succeeds.
+
+**Important behavior**
+
+- The model interprets prose and proposes narrow searches. Deterministic code controls catalog reuse, specifications, deduplication, caps, cooldown, freshness, and API budgets.
+- A search is not allowed when existing catalog laptops can fill the course gap, the domain cap is reached, or three decisions are already pending.
+- Candidate approval creates an unpublished laptop. Course mappings shown on that candidate are part of that approval; existing-laptop mapping proposals have separate Approve/Reject buttons.
+- Publication always remains a separate Laptops action.
+- The current Vercel Hobby cron polls once daily around 03:00 Asia/Kolkata and can be delayed within the hour. Exact arbitrary times or a rolling 22-hour trigger require Pro or an approved external hourly scheduler.
+- Amazon price/availability has an exact freshness expiry; stale data is not presented as current.
+
+**Common dependencies:** migration 034 after 024-033, active Taxonomy courses, Research Agent permission, validated/enabled Amazon source, OpenAI key/model for compilation, Supabase service role, and CRON_SECRET for scheduled calls.
 
 ### Research Queue
 
@@ -148,7 +197,7 @@ The browser should not receive service-role or provider credentials. Catalog, CM
 
 1. Confirm the hostname is `dev.laptopfinder.cc` and the database is staging.
 2. Sign in with an account included in `ADMIN_EMAILS`.
-3. Confirm migrations 024–033 are available and have been applied manually in order where required.
+3. Confirm migrations 024–034 are available and have been applied manually in order where required.
 4. Keep Research, Blogging, Chip Learning, and Affiliate capabilities off; keep Safe mode on; keep the Calendar paused.
 5. Configure **Settings** conservatively: disclaimer, contact link, and only ready public domains.
 6. Build **Taxonomy** before tagging laptops.
@@ -928,21 +977,23 @@ Forward, in this exact order:
 8. `031_harden_chat_and_blog_access.sql`
 9. `032_harden_catalog_and_taxonomy_access.sql`
 10. `033_add_research_novelty.sql`
+11. `034_add_product_curation.sql`
 
 Rollback in exact reverse order:
 
-1. `033_add_research_novelty_rollback.sql`
-2. `032_harden_catalog_and_taxonomy_access_rollback.sql`
-3. `031_harden_chat_and_blog_access_rollback.sql`
-4. `030_create_affiliate_click_events_rollback.sql`
-5. `029_create_blog_agent_metadata_rollback.sql`
-6. `028_create_chip_learning_rollback.sql`
-7. `027_add_blog_personas_rollback.sql`
-8. `026_create_research_calendar_rollback.sql`
-9. `025_create_product_research_rollback.sql`
-10. `024_create_agent_foundations_rollback.sql`
+1. `034_add_product_curation_rollback.sql`
+2. `033_add_research_novelty_rollback.sql`
+3. `032_harden_catalog_and_taxonomy_access_rollback.sql`
+4. `031_harden_chat_and_blog_access_rollback.sql`
+5. `030_create_affiliate_click_events_rollback.sql`
+6. `029_create_blog_agent_metadata_rollback.sql`
+7. `028_create_chip_learning_rollback.sql`
+8. `027_add_blog_personas_rollback.sql`
+9. `026_create_research_calendar_rollback.sql`
+10. `025_create_product_research_rollback.sql`
+11. `024_create_agent_foundations_rollback.sql`
 
-The database operator runs these files manually; application deployment does not run them. For migration 033, first deploy compatible preview code with the Research Agent disabled, confirm migration 032 is already present, and then run `033_add_research_novelty.sql` against staging. Migration 033 adds the calendar policy fields, novelty audit metadata, typed no-topic reasons, exact-title claims, and the global novelty lease used to serialize history through packet persistence.
+The database operator runs these files manually; application deployment does not run them. For migration 033, first deploy compatible preview code with the Research Agent disabled, confirm migration 032 is already present, and then run `033_add_research_novelty.sql` against staging. Migration 033 adds the calendar policy fields, novelty audit metadata, typed no-topic reasons, exact-title claims, and the global novelty lease used to serialize history through packet persistence. Migration 034 then adds disabled product-curation rulebooks, schedules, review proposals, API budgets, and candidate metadata.
 
 To reverse it, first stop research and deploy code that no longer reads migration-033 fields or calls its functions. Then run `033_add_research_novelty_rollback.sql` before rollback 032 or any earlier rollback. The rollback removes novelty policy/metadata and restores the original migration-026 persistence and completion functions. Do not apply or roll back a migration merely because this guide is being read or updated, and never apply it to production without explicit approval.
 

@@ -29,10 +29,11 @@ import {
   type IngestCandidateInput,
   type NormalizedLaptop,
   type ProductCandidateRow,
+  type SourceProduct,
 } from "@/lib/sources/types";
 
 const CANDIDATE_SELECT =
-  "id, discovery_job_id, source_key, source_product_id, dedupe_key, raw_payload_json, normalized_json, title, brand, model, price_amount, price_currency, price_fetched_at, product_url, affiliate_url, image_url, source_fetched_at, fresh_until, confidence_score, fit_score, fit_tags, risk_tags, compliance_status, review_status, admin_notes, error_message, reviewed_by, reviewed_at, promoted_laptop_id, created_at, updated_at";
+  "id, discovery_job_id, source_key, source_product_id, dedupe_key, raw_payload_json, normalized_json, title, brand, model, price_amount, price_currency, price_fetched_at, product_url, affiliate_url, image_url, source_fetched_at, fresh_until, confidence_score, fit_score, fit_tags, risk_tags, compliance_status, review_status, admin_notes, error_message, reviewed_by, reviewed_at, promoted_laptop_id, target_domain, suggested_course_names, rulebook_version, portfolio_role, gap_reason, curation_score, discovered_by_agent, created_at, updated_at";
 
 export interface CandidateIngestResult {
   candidate: ProductCandidateRow;
@@ -42,6 +43,17 @@ export interface CandidateIngestResult {
 export interface CandidateServiceOptions {
   client?: GrowthAgentDatabaseClient;
   actorEmail?: string;
+  sourceProductOverride?: SourceProduct;
+  curation?: {
+    discoveryJobId: string;
+    targetDomain: "design" | "technology" | "management";
+    suggestedCourseNames: string[];
+    rulebookVersion: number;
+    portfolioRole: "best_overall" | "best_value" | "specialist";
+    gapReason: string;
+    curationScore: number;
+    reopenReviewedCandidate?: boolean;
+  };
 }
 
 function databaseError(message: string, cause: unknown): AgentError {
@@ -63,6 +75,10 @@ function candidateFromRow(row: Record<string, unknown>): ProductCandidateRow {
         : Number(row.price_amount),
     confidence_score: Number(row.confidence_score),
     fit_score: Number(row.fit_score),
+    curation_score:
+      row.curation_score === null || row.curation_score === undefined
+        ? null
+        : Number(row.curation_score),
   };
 }
 
@@ -171,9 +187,9 @@ export async function ingestCandidate(
   await assertSourceEnabled(parsed.sourceKey, client);
   const adapter = getSourceAdapter(parsed.sourceKey);
 
-  let sourceProduct;
+  let sourceProduct: SourceProduct;
   try {
-    sourceProduct = await adapter.fetchProduct({
+    sourceProduct = options.sourceProductOverride ?? await adapter.fetchProduct({
       productId: parsed.productId,
       url: parsed.url,
       payload: parsed.payload,
@@ -233,13 +249,35 @@ export async function ingestCandidate(
     risk_tags: normalized.riskTags,
     compliance_status: normalized.complianceStatus,
     error_message: null,
+    target_domain: options.curation?.targetDomain ?? parsed.targetDomain,
+    ...(options.curation
+      ? {
+          discovery_job_id: options.curation.discoveryJobId,
+          suggested_course_names: options.curation.suggestedCourseNames,
+          rulebook_version: options.curation.rulebookVersion,
+          portfolio_role: options.curation.portfolioRole,
+          gap_reason: options.curation.gapReason,
+          curation_score: Math.max(0, Math.min(100, options.curation.curationScore)),
+          discovered_by_agent: true,
+        }
+      : {}),
   };
 
   const existing = await findExistingCandidate(normalized, dedupeKey, client);
   if (existing) {
+    const reopen = options.curation?.reopenReviewedCandidate === true &&
+      existing.review_status !== "approved" && existing.review_status !== "pending";
     const { data, error } = await client
       .from("product_candidates")
-      .update(values)
+      .update({
+        ...values,
+        ...(reopen ? {
+          review_status: "pending",
+          reviewed_by: null,
+          reviewed_at: null,
+          admin_notes: null,
+        } : {}),
+      })
       .eq("id", existing.id as string)
       .select(CANDIDATE_SELECT)
       .single();
@@ -538,6 +576,21 @@ export async function approveCandidate(
   const candidate = await getCandidate(id, { client });
   if (candidate.review_status === "approved") return candidate;
 
+  if (candidate.discovered_by_agent) {
+    const { data: rulebook, error: rulebookError } = await client
+      .from("product_curation_rulebooks")
+      .select("version, enabled")
+      .eq("domain", candidate.target_domain)
+      .single();
+    if (rulebookError || !rulebook) throw databaseError("Could not validate the candidate rulebook.", rulebookError);
+    if (!rulebook.enabled || Number(rulebook.version) !== Number(candidate.rulebook_version)) {
+      throw new AgentError({
+        code: "CONFLICT",
+        message: "This candidate belongs to an inactive or superseded product rulebook. Run discovery again before approval.",
+      });
+    }
+  }
+
   const issues = promotionIssues(candidate);
   if (issues.length > 0) {
     throw new AgentError({
@@ -574,7 +627,7 @@ export async function approveCandidate(
       .insert({
         slug: `${slugify(`${product.brand ?? ""} ${product.model ?? ""} ${product.title}`)}-${candidate.id.slice(0, 8)}`,
         name: product.title,
-        domain: "design",
+        domain: candidate.target_domain,
         brand: product.brand ?? null,
         model: product.model ?? null,
         price_approx: showPrice ? Math.round(product.price!.amount) : null,
@@ -602,7 +655,8 @@ export async function approveCandidate(
         weight: product.weightKg ? `${product.weightKg} kg` : null,
         os: product.operatingSystem ?? null,
         availability: product.availability ?? null,
-        priority_score: 50,
+        recommended_for_courses: candidate.suggested_course_names,
+        priority_score: Math.round(candidate.curation_score ?? 50),
         is_published: false,
         last_checked: product.fetchedAt.slice(0, 10),
         raw_input: `Promoted from reviewed product candidate ${candidate.id}.`,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   BookOpenCheck,
+  BookMarked,
   Bot,
   CalendarDays,
   Cpu,
@@ -40,6 +41,7 @@ const NAV = [
   { href: "/admin/personas", label: "Author Personas", icon: UserRound, exact: false },
   { href: "/admin/growth-agents", label: "Growth Agents", icon: Bot, exact: true },
   { href: "/admin/growth-agents/research", label: "Research Queue", icon: ScanSearch, exact: false },
+  { href: "/admin/growth-agents/curation", label: "Product Curation", icon: BookMarked, exact: false },
   { href: "/admin/growth-agents/calendar", label: "Research Calendar", icon: CalendarDays, exact: false },
   { href: "/admin/growth-agents/blog", label: "Agent Drafts", icon: FilePenLine, exact: false },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquare, exact: false },

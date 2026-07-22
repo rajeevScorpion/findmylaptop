@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import type { SourceCredentialStatus } from "@/lib/growth-agents/types";
+import type { DomainId } from "@/lib/domains";
 import type {
   CandidateReviewStatus,
   ProductCandidateRow,
@@ -308,6 +309,22 @@ function CandidateCard({
           </div>
         )}
 
+        {candidate.discovered_by_agent && (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 font-medium text-foreground">
+              <span>Agent-curated: {label(candidate.target_domain)}</span>
+              {candidate.portfolio_role && <span>Role: {label(candidate.portfolio_role)}</span>}
+              {candidate.curation_score !== null && <span>Curation score: {Math.round(candidate.curation_score)}/100</span>}
+              {candidate.rulebook_version !== null && <span>Rulebook v{candidate.rulebook_version}</span>}
+            </div>
+            {candidate.gap_reason && <p className="mt-2 leading-relaxed text-muted-foreground">Why it was shortlisted: {candidate.gap_reason}</p>}
+            <p className="mt-2 text-muted-foreground">
+              Suggested course mappings: {candidate.suggested_course_names.length > 0 ? candidate.suggested_course_names.join(", ") : "none"}.
+              Approval creates an unpublished laptop with these mappings; publication still requires a separate admin decision.
+            </p>
+          </div>
+        )}
+
         {(candidate.error_message || error) && (
           <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-700 dark:text-red-300">
             <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -399,6 +416,7 @@ export function ResearchQueue({
   const [candidates, setCandidates] = useState(initialCandidates);
   const [sources, setSources] = useState(initialSources);
   const [sourceKey, setSourceKey] = useState("manual");
+  const [targetDomain, setTargetDomain] = useState<DomainId>("design");
   const [manualJson, setManualJson] = useState(MANUAL_EXAMPLE);
   const [identifier, setIdentifier] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | CandidateReviewStatus>("all");
@@ -442,13 +460,13 @@ export function ResearchQueue({
         } catch {
           throw new Error("Manual import must be valid JSON.");
         }
-        body = { sourceKey, payload };
+        body = { sourceKey, targetDomain, payload };
       } else {
         const value = identifier.trim();
         if (!value) throw new Error("Enter a product URL or direct product ID.");
         body = value.startsWith("http")
-          ? { sourceKey, url: value }
-          : { sourceKey, productId: value };
+          ? { sourceKey, targetDomain, url: value }
+          : { sourceKey, targetDomain, productId: value };
       }
 
       const response = await fetch("/api/admin/growth-agents/candidates", {
@@ -581,7 +599,7 @@ export function ResearchQueue({
             </p>
           </div>
         </div>
-        <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+        <div className="grid gap-3 md:grid-cols-[220px_180px_1fr]">
           <div className="space-y-1.5">
             <label htmlFor="candidate-source" className="text-xs font-medium text-foreground">Source adapter</label>
             <select
@@ -601,6 +619,15 @@ export function ResearchQueue({
                 {selectedSource.message}
               </p>
             )}
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="candidate-domain" className="text-xs font-medium text-foreground">Target domain</label>
+            <select id="candidate-domain" value={targetDomain} onChange={(event) => setTargetDomain(event.target.value as DomainId)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40">
+              <option value="design">Design</option>
+              <option value="technology">Technology</option>
+              <option value="management">Management</option>
+            </select>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">Approval creates the unpublished laptop in this domain.</p>
           </div>
           {sourceKey === "manual" ? (
             <div className="space-y-1.5">

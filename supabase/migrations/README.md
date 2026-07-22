@@ -43,7 +43,7 @@ Run the rollbacks in **reverse** order:
 `public.handle_updated_at()` — that function is shared with the pre-existing
 `laptops` table.
 
-## Autonomous growth-agent migrations (024–033)
+## Autonomous growth-agent migrations (024–034)
 
 These migrations are not applied automatically. Apply them to staging in this
 exact order:
@@ -59,6 +59,7 @@ exact order:
 031_harden_chat_and_blog_access.sql
 032_harden_catalog_and_taxonomy_access.sql
 033_add_research_novelty.sql
+034_add_product_curation.sql
 ```
 
 Migration 033 is required by the deterministic Research Calendar novelty code.
@@ -69,9 +70,16 @@ preview code with the Research Agent disabled, confirm migration 032 is already
 present, and then run `033_add_research_novelty.sql` manually against staging.
 No application deployment or environment variable applies this migration.
 
+Migration 034 adds domain rulebooks, the product-curation scheduler, the
+course-mapping approval queue, source API budgets, and domain-aware product
+candidate fields. It never publishes a laptop or changes a course mapping
+automatically. Run it only after migration 033 and keep curation paused until
+compatible application code is deployed.
+
 Rollback is destructive and must be run in exact reverse order:
 
 ```text
+034_add_product_curation_rollback.sql
 033_add_research_novelty_rollback.sql
 032_harden_catalog_and_taxonomy_access_rollback.sql
 031_harden_chat_and_blog_access_rollback.sql

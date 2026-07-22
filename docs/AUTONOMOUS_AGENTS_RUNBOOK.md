@@ -66,6 +66,7 @@ order against the staging Supabase project:
 8. `031_harden_chat_and_blog_access.sql`
 9. `032_harden_catalog_and_taxonomy_access.sql`
 10. `033_add_research_novelty.sql`
+11. `034_add_product_curation.sql`
 
 Do not continue after an error. Record the failing statement and inspect the
 database state before retrying.
@@ -77,6 +78,12 @@ It adds and backfills Research Calendar novelty policy and packet-history
 metadata, adds typed no-topic reasons, makes the exact normalized-title claim
 atomic, and adds the global lease that serializes deterministic novelty work.
 No environment variable substitutes for this migration.
+
+Migration 034 adds disabled-by-default product-curation rulebooks, the daily
+schedule and Amazon API budget, admin-reviewed course-mapping proposals, and
+candidate curation metadata. Apply it only after 033 and compatible application
+code are deployed to staging. Do not enable automation until each domain
+rulebook has been reviewed and compiled.
 
 ## Preview activation sequence
 
@@ -109,6 +116,10 @@ No environment variable substitutes for this migration.
    affiliate links/source public-display flags in staging.
 11. Unpause/enable the research calendar only after cron authentication is
     tested. The included schedule polls once daily at 03:30 UTC (09:00 IST).
+12. Open **Admin > Growth Agents > Product Curation**. Keep it paused, compile
+    one domain rulebook, audit the existing catalog, then run Refresh now and
+    Discover now. Verify course changes and candidates remain admin-approved.
+    The product-curation cron polls at 21:30 UTC (approximately 03:00 IST).
 
 The database stores schedule times, but the bundled once-daily Vercel cron can
 only honor the daily poll window. More precise or multiple daily run times need
@@ -254,16 +265,17 @@ First enable the emergency stop, pause the calendar, disable every capability,
 and deploy code that no longer reads the new schema. Then run these destructive
 rollbacks manually in exact reverse order:
 
-1. `033_add_research_novelty_rollback.sql`
-2. `032_harden_catalog_and_taxonomy_access_rollback.sql`
-3. `031_harden_chat_and_blog_access_rollback.sql`
-4. `030_create_affiliate_click_events_rollback.sql`
-5. `029_create_blog_agent_metadata_rollback.sql`
-6. `028_create_chip_learning_rollback.sql`
-7. `027_add_blog_personas_rollback.sql`
-8. `026_create_research_calendar_rollback.sql`
-9. `025_create_product_research_rollback.sql`
-10. `024_create_agent_foundations_rollback.sql`
+1. `034_add_product_curation_rollback.sql`
+2. `033_add_research_novelty_rollback.sql`
+3. `032_harden_catalog_and_taxonomy_access_rollback.sql`
+4. `031_harden_chat_and_blog_access_rollback.sql`
+5. `030_create_affiliate_click_events_rollback.sql`
+6. `029_create_blog_agent_metadata_rollback.sql`
+7. `028_create_chip_learning_rollback.sql`
+8. `027_add_blog_personas_rollback.sql`
+9. `026_create_research_calendar_rollback.sql`
+10. `025_create_product_research_rollback.sql`
+11. `024_create_agent_foundations_rollback.sql`
 
 Export any agent records that must be retained before rollback. These files
 remove the newly introduced tables/columns and their data; they do not roll back

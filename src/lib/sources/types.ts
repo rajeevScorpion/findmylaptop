@@ -174,6 +174,13 @@ export interface ProductCandidateRow {
   reviewed_by: string | null;
   reviewed_at: string | null;
   promoted_laptop_id: string | null;
+  target_domain: "design" | "technology" | "management";
+  suggested_course_names: string[];
+  rulebook_version: number | null;
+  portfolio_role: "best_overall" | "best_value" | "specialist" | null;
+  gap_reason: string | null;
+  curation_score: number | null;
+  discovered_by_agent: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -228,11 +235,12 @@ export interface SourceAdapter {
 
 export const ingestCandidateSchema = z.object({
   sourceKey: sourceKeySchema.default("manual"),
+  targetDomain: z.enum(["design", "technology", "management"]).default("design"),
   productId: z.string().trim().min(1).max(256).optional(),
   url: httpUrlSchema.optional(),
   payload: z.unknown().optional(),
 });
-export type IngestCandidateInput = z.infer<typeof ingestCandidateSchema>;
+export type IngestCandidateInput = z.input<typeof ingestCandidateSchema>;
 
 export const candidateListQuerySchema = z.object({
   status: candidateReviewStatusSchema.optional(),

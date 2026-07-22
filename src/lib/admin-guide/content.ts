@@ -1,4 +1,4 @@
-export const ADMIN_GUIDE_VERSION = "2026.07";
+export const ADMIN_GUIDE_VERSION = "2026.08";
 
 export type GuideAudience = "operator" | "power";
 
@@ -100,6 +100,12 @@ export const WORKFLOW_GUIDES: readonly WorkflowGuide[] = [
         gate: "Source gate",
       },
       {
+        label: "Product Curation",
+        href: "/admin/growth-agents/curation",
+        detail: "Audit course coverage first, then let enabled domain rulebooks discover only a bounded number of gap-filling candidates.",
+        gate: "Rulebook, dedupe, coverage, and API-budget gate",
+      },
+      {
         label: "Research Queue",
         href: "/admin/growth-agents/research",
         detail: "Import, normalize, inspect freshness, and approve only adequate evidence.",
@@ -199,7 +205,7 @@ export const DEPENDENCY_GROUPS = [
     items: [
       "ADMIN_EMAILS membership is required for every admin route and mutation.",
       "Supabase stores catalog, editorial, agent, feedback, audit, and configuration records.",
-      "Autonomous-agent migrations 024–033 must be applied in order by the operator responsible for the database.",
+      "Autonomous-agent migrations 024–034 must be applied in order by the operator responsible for the database.",
     ],
   },
   {
@@ -237,6 +243,11 @@ export const DEPENDENCY_GROUPS = [
 ] as const;
 
 export const CURRENT_OPERATIONAL_BOUNDARIES = [
+  {
+    title: "Product curation audits before it searches",
+    detail:
+      "Product Curation compiles admin-written domain rules, checks existing catalog records, proposes course-tag corrections, and searches Amazon only for a remaining verified gap. Candidates, course mappings, and publication all require admin approval.",
+  },
   {
     title: "Two kinds of research are separate",
     detail:
@@ -486,6 +497,47 @@ export const ADMIN_SCREEN_GUIDES: readonly AdminScreenGuide[] = [
     powerUser: {
       decisionPoints: ["Capability flags are enforced inside their privileged services, but kill-switch coverage must be reviewed when adding a new tool.", "Runtime setting reads fail closed when configuration cannot be loaded.", "Source freshness TTL is stored but product price freshness currently uses adapter-specific hard-coded windows."],
       technicalPaths: ["src/lib/growth-agents/settings.ts", "src/lib/growth-agents/jobs.ts", "src/app/api/admin/growth-agents"],
+    },
+  },
+  {
+    id: "product-curation",
+    label: "Product Curation",
+    route: "/admin/growth-agents/curation",
+    purpose:
+      "Turn plain-English domain expectations into deterministic catalog audits and a deliberately small, admin-reviewed product shortlist.",
+    useWhen: "Defining recommendation standards, checking course coverage, or preparing a bounded daily product discovery run.",
+    prerequisites: ["Migration 034 after migrations 024 through 033", "Research Agent enabled", "Amazon source enabled and remotely validated", "Active course taxonomy"],
+    steps: [
+      { title: "Keep automation paused", instruction: "Leave Paused on while preparing rulebooks. Daily discovery and Catalog refresh are independent switches, and Paused stops both." },
+      { title: "Write one domain rulebook", instruction: "Choose Design, Technology, or Management and describe expected workloads, hardware, portability, longevity, value, exclusions, and the types of catalog gaps worth filling in plain English." },
+      { title: "Set decision-fatigue limits", instruction: "Keep the course and domain recommendation caps small. Set how long a rejected product remains excluded before it may be reconsidered." },
+      { title: "Compile and inspect", instruction: "Save the prose, then Compile and enable. Compilation creates a schema-validated interpretation; it does not change catalog data or contact Amazon." },
+      { title: "Audit before searching", instruction: "Run Audit existing catalog. Approve or reject every suggested course mapping. Existing suitable laptops are reused before a marketplace search is allowed." },
+      { title: "Set the API budget", instruction: "Keep refresh ahead of discovery, use conservative request-per-second and daily-call limits, and retain the seeded 22-hour freshness target." },
+      { title: "Test manually", instruction: "Use Refresh now, then Discover now. Review agent-curated candidates in Research Queue, including domain, role, gap reason, score, rulebook version, and suggested courses." },
+      { title: "Enable the daily run", instruction: "Enable only the required switches and clear Paused after staging succeeds. On the current Vercel Hobby plan the poll runs once daily around 03:00 Asia/Kolkata and can be delayed within the hour.", caution: "An exact arbitrary run time or rolling 22-hour execution requires Vercel Pro or an approved external hourly scheduler." },
+    ],
+    outputs: ["Versioned compiled domain rulebook", "Catalog coverage audit", "Admin-reviewed course-mapping proposals", "Bounded product candidates", "Fresh Amazon offer snapshots"],
+    relationships: [
+      { label: "Taxonomy", href: "/admin/taxonomy", relationship: "Supplies active course names and programme coverage targets." },
+      { label: "Research Queue", href: "/admin/growth-agents/research", relationship: "Receives no more than the permitted gap-filling candidates for admin review." },
+      { label: "Laptops", href: "/admin/laptops", relationship: "Stores approved candidates as unpublished records and owns final publication." },
+      { label: "Growth Agents", href: "/admin/growth-agents", relationship: "Supplies the Research Agent stop controls and validated Amazon source." },
+    ],
+    troubleshooting: [
+      { symptom: "Compile fails.", response: "Confirm OPENAI_API_KEY, the research model, active courses for the selected domain, and that the prose describes concrete product expectations." },
+      { symptom: "Discovery performs no search.", response: "Read the audit reason. Complete pending decisions, reduce existing catalog excess, or accept that every active course already has enough valid recommendations." },
+      { symptom: "Amazon requests stop early.", response: "The per-second, per-run, daily, or serverless-time budget was reached. Do not bypass it; let the next run continue." },
+      { symptom: "A scheduled run does not match the saved minute exactly.", response: "The Hobby cron polls once daily with an allowed delivery delay. Use the seeded 03:00 time or move to an approved higher-frequency scheduler." },
+    ],
+    powerUser: {
+      decisionPoints: [
+        "The model only compiles prose and proposes search strategies; pure policy code enforces specifications, coverage, deduplication, caps, and reuse.",
+        "ASIN and configuration fingerprints cover catalog duplicates; candidate dedupe covers the queue, and recent rejected ASINs remain on cooldown.",
+        "Candidate approval may create an unpublished laptop with the displayed suggested courses; public publication remains a separate Laptops action.",
+        "The database RPC serializes Amazon budget claims across concurrent serverless invocations.",
+      ],
+      technicalPaths: ["src/lib/product-curation", "src/app/api/admin/growth-agents/curation/route.ts", "src/app/api/cron/product-curation/route.ts", "supabase/migrations/034_add_product_curation.sql"],
     },
   },
   {

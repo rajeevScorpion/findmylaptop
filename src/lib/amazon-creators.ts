@@ -144,6 +144,11 @@ export interface AmazonProduct {
   asin: string;
 }
 
+export interface AmazonSearchInput {
+  keywords: string;
+  itemCount?: number;
+}
+
 /**
  * OffersV2 nests the price under `price.money` (`{ amount, displayAmount }`);
  * older/flatter shapes put `displayAmount` directly on `price`. Read both so a
@@ -188,28 +193,29 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
 
   const token = await getAccessToken();
 
-  const res = await fetch(`${API_BASE}getItems`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      Authorization: `Bearer ${token}`,
-      "x-marketplace": marketplace,
-    },
-    body: JSON.stringify({
-      itemIds: [asin],
-      partnerTag,
-      marketplace,
-      resources: [
-        "itemInfo.title",
-        "itemInfo.features",
-        "itemInfo.byLineInfo",
-        "itemInfo.technicalInfo",
-        "offersV2.listings.price",
-        "offersV2.listings.availability",
-        "images.primary.large",
-      ],
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AMAZON_REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}getItems`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Authorization: `Bearer ${token}`,
+        "x-marketplace": marketplace,
+      },
+      body: JSON.stringify({
+        itemIds: [asin],
+        partnerTag,
+        marketplace,
+        resources: AMAZON_PRODUCT_RESOURCES,
+      }),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     res.body?.cancel().catch(() => {});
@@ -229,6 +235,24 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
     throw new AmazonApiError(404, `No product found for ASIN ${asin}.`);
   }
 
+  return productFromItem(item, asin);
+}
+
+const AMAZON_PRODUCT_RESOURCES = [
+  "itemInfo.title",
+  "itemInfo.features",
+  "itemInfo.byLineInfo",
+  "itemInfo.technicalInfo",
+  "offersV2.listings.price",
+  "offersV2.listings.availability",
+  "images.primary.large",
+];
+
+function productFromItem(item: any, fallbackAsin?: string): AmazonProduct {
+  const asin = String(item?.asin ?? item?.ASIN ?? fallbackAsin ?? "").toUpperCase();
+  if (!/^[A-Z0-9]{10}$/.test(asin)) {
+    throw new AmazonApiError(502, "Amazon returned a product without a valid ASIN.");
+  }
   const listing = item?.offersV2?.listings?.[0];
   const { display: priceDisplay, amount: priceAmount } = extractListingPrice(listing);
   if (!priceDisplay) {
@@ -248,6 +272,61 @@ export async function fetchProductByAsin(asin: string): Promise<AmazonProduct> {
       ...(item?.itemInfo?.technicalInfo?.formats?.displayValues ?? []),
     ],
   };
+}
+
+/** Search the official Creators catalog. Rulebook planning happens upstream. */
+export async function searchAmazonProducts(
+  input: AmazonSearchInput
+): Promise<AmazonProduct[]> {
+  const keywords = input.keywords.trim();
+  if (keywords.length < 3 || keywords.length > 200) {
+    throw new TypeError("Amazon search keywords must contain 3 to 200 characters.");
+  }
+  const itemCount = Math.max(1, Math.min(10, input.itemCount ?? 10));
+  const partnerTag = process.env.AMAZON_PARTNER_TAG?.trim();
+  const marketplace = process.env.AMAZON_MARKETPLACE?.trim() || "www.amazon.in";
+  if (!partnerTag) throw new Error("AMAZON_PARTNER_TAG must be set");
+  const token = await getAccessToken();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AMAZON_REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}searchItems`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Authorization: `Bearer ${token}`,
+        "x-marketplace": marketplace,
+      },
+      body: JSON.stringify({
+        keywords,
+        searchIndex: "Computers",
+        itemCount,
+        partnerTag,
+        marketplace,
+        resources: AMAZON_PRODUCT_RESOURCES,
+      }),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+  if (!res.ok) {
+    res.body?.cancel().catch(() => {});
+    throw new AmazonApiError(res.status, `SearchItems failed (${res.status}).`);
+  }
+  const data = await res.json();
+  const items = data?.itemsResult?.items ?? data?.items ?? data?.data?.items ?? [];
+  if (!Array.isArray(items)) throw new AmazonApiError(502, "SearchItems returned an invalid response.");
+  return items.slice(0, itemCount).flatMap((item: unknown) => {
+    try {
+      const product = productFromItem(item);
+      return product.title ? [product] : [];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export function buildAffiliateUrl(asin: string): string {
