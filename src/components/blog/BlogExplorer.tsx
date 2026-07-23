@@ -332,16 +332,8 @@ export function BlogExplorer({ posts, categories }: BlogExplorerProps) {
           </aside>
 
           <div className="min-w-0">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 id="blog-results-heading" className="text-xl font-bold">
-                  Latest guides
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground" role="status" aria-live="polite" aria-atomic="true">
-                  {filteredPosts.length} {filteredPosts.length === 1 ? "article" : "articles"} found
-                </p>
-              </div>
-              {activeFilterCount > 0 && (
+            {activeFilterCount > 0 && (
+              <div className="mb-4 flex justify-end lg:hidden">
                 <button
                   type="button"
                   onClick={resetFilters}
@@ -349,8 +341,8 @@ export function BlogExplorer({ posts, categories }: BlogExplorerProps) {
                 >
                   Clear all filters
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             {activeFilterCount > 0 && (
               <div className="mb-5 flex flex-wrap gap-2" aria-label="Active filters">
@@ -396,7 +388,7 @@ export function BlogExplorer({ posts, categories }: BlogExplorerProps) {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2" aria-labelledby="blog-results-heading">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2" aria-label="Guides">
                 {filteredPosts.map((post) => {
                   const category = categoryById.get(post.category_id ?? "");
                   return (
