@@ -66,8 +66,22 @@ Research Queue candidate ---> admin approve ---> unpublished Laptop
 5. Select **Audit existing catalog**. Review every proposed addition/removal of a course mapping.
 6. Set conservative search, item, requests-per-second, daily-call, and refresh budgets.
 7. Run **Refresh now**, then **Discover now** in staging.
-8. Open Research Queue and inspect the target domain, portfolio role, gap reason, curation score, rulebook version, and suggested course mappings.
-9. Enable Daily discovery and/or Catalog refresh, then clear Paused only after the manual test succeeds.
+8. Treat the green **Discovery run completed** message as confirmation that execution finished—not confirmation that a new laptop was found.
+9. Scroll to **Catalog decisions** on Product Curation, then open Research Queue and inspect any Agent-curated candidates.
+10. For execution diagnostics, open **Growth Agents → Recent Jobs** and locate `research.discover_laptops`.
+11. Approve only adequate candidates, complete the resulting unpublished laptop, and make the separate publication decision under Laptops.
+12. Enable Daily discovery and/or Catalog refresh, then clear Paused only after the manual test succeeds.
+
+**Where each output appears**
+
+| Output | Admin location | What to do |
+|---|---|---|
+| Existing-laptop course mapping or publication-review suggestion | Product Curation → Catalog decisions | Inspect the laptop and approve or reject the prepared decision. |
+| Newly discovered product | Growth Agents → Research Queue | Find the **Agent-curated** panel and review its domain, gap reason, role, score, rulebook version, evidence, risks, freshness, and suggested courses. |
+| Approved candidate | Laptops | Complete the unpublished record, verify all recommendation content and evidence, then publish separately only when ready. |
+| Execution status or failure | Growth Agents → Recent Jobs | Inspect the `research.discover_laptops` job and its scrubbed status. |
+
+If the completion message appears but both Catalog decisions and Research Queue are empty, the run can still be correct. Common reasons are: every active course already has enough valid recommendations; a suitable unpublished laptop can fill the gap; the domain cap has been reached; three candidates are already pending; every result was a known ASIN or configuration duplicate; or no Amazon result passed the rulebook’s deterministic hardware requirements.
 
 **Important behavior**
 
@@ -77,6 +91,7 @@ Research Queue candidate ---> admin approve ---> unpublished Laptop
 - Publication always remains a separate Laptops action.
 - The current Vercel Hobby cron polls once daily around 03:00 Asia/Kolkata and can be delayed within the hour. Exact arbitrary times or a rolling 22-hour trigger require Pro or an approved external hourly scheduler.
 - Amazon price/availability has an exact freshness expiry; stale data is not presented as current.
+- **Paused** stops scheduled execution but does not disable the intentional **Refresh now** and **Discover now** admin tests.
 
 **Common dependencies:** migration 034 after 024-033, active Taxonomy courses, Research Agent permission, validated/enabled Amazon source, OpenAI key/model for compilation, Supabase service role, and CRON_SECRET for scheduled calls.
 
