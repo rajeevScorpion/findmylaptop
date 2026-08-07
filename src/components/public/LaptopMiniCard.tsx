@@ -4,7 +4,9 @@ import { ExternalLink } from "lucide-react";
 import { TIER_LABELS } from "@/lib/constants";
 import type { Laptop } from "@/lib/types";
 import {
+  affiliateCtaLabel,
   buildAffiliateOutboundPath,
+  catalogDisplayPrice,
   type AffiliatePlacement,
   type WithAffiliateCta,
 } from "@/lib/affiliate/public";
@@ -60,6 +62,11 @@ export function LaptopMiniCard({
               {TIER_LABELS[laptop.tier] ?? laptop.tier}
             </span>
           )}
+          {catalogDisplayPrice(laptop) && (
+            <span className="text-[11px] font-semibold text-foreground tabular-nums">
+              {catalogDisplayPrice(laptop)}
+            </span>
+          )}
         </div>
         {laptop.affiliateCta && (
           <>
@@ -70,7 +77,7 @@ export function LaptopMiniCard({
               className="inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
             >
               <ExternalLink className="w-2.5 h-2.5" />
-              Check current price
+              {affiliateCtaLabel(laptop.affiliateCta.sourceKey)}
             </a>
             <AffiliateCtaDetails
               cta={laptop.affiliateCta}

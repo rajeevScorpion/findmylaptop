@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ExternalLink, ArrowLeft } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { LaptopRedirect } from "./LaptopRedirect";
-import { buildAffiliateOutboundPath } from "@/lib/affiliate/public";
+import { affiliateCtaLabel, buildAffiliateOutboundPath } from "@/lib/affiliate/public";
 import { getAffiliateCtaMetadataForLaptops } from "@/lib/affiliate/resolver";
 import { AffiliateCtaDetails } from "@/components/public/AffiliateCtaDetails";
 
@@ -155,7 +155,7 @@ export default async function LaptopPage({ params }: Props) {
                             className="inline-flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
-                            Check current price
+                            {affiliateCtaLabel(alt.affiliateCta.sourceKey)}
                           </a>
                           <AffiliateCtaDetails cta={alt.affiliateCta} compact />
                         </>

@@ -9,7 +9,11 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import type { RecommendationResult } from "@/lib/types";
 import { FOUR_YEAR_LABELS, TIER_LABELS } from "@/lib/constants";
-import { buildAffiliateOutboundPath } from "@/lib/affiliate/public";
+import {
+  affiliateCtaLabel,
+  buildAffiliateOutboundPath,
+  catalogDisplayPrice,
+} from "@/lib/affiliate/public";
 import { AffiliateCtaDetails } from "./AffiliateCtaDetails";
 
 interface ComparePanelProps {
@@ -157,9 +161,14 @@ function LaptopCompareCard({
           <h3 className="font-semibold text-sm text-foreground leading-snug break-words">
             {laptop.name}
           </h3>
-          <div className="flex items-baseline gap-2 mt-0.5">
+          <div className="flex items-baseline justify-between gap-2 mt-0.5">
             {laptop.tier && (
               <span className="text-xs text-muted-foreground">{TIER_LABELS[laptop.tier]}</span>
+            )}
+            {catalogDisplayPrice(laptop) && (
+              <span className="text-sm font-semibold text-foreground shrink-0 tabular-nums">
+                {catalogDisplayPrice(laptop)}
+              </span>
             )}
           </div>
         </div>
@@ -244,7 +253,7 @@ function LaptopCompareCard({
               className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity mt-1"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Check current price
+              {affiliateCtaLabel(laptop.affiliateCta.sourceKey)}
             </a>
             <AffiliateCtaDetails cta={laptop.affiliateCta} compact />
           </>

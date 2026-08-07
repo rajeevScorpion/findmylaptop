@@ -11,7 +11,11 @@ import { Button } from "@/components/ui/button";
 import { BadgeList } from "./BadgeList";
 import type { RecommendationResult } from "@/lib/types";
 import { FOUR_YEAR_LABELS, TIER_LABELS } from "@/lib/constants";
-import { buildAffiliateOutboundPath } from "@/lib/affiliate/public";
+import {
+  affiliateCtaLabel,
+  buildAffiliateOutboundPath,
+  catalogDisplayPrice,
+} from "@/lib/affiliate/public";
 import { AffiliateCtaDetails } from "./AffiliateCtaDetails";
 
 type CardSection = "why" | "specs" | "bestfor" | "details";
@@ -49,6 +53,7 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
 
   const glowColor = TIER_GLOW[laptop.tier ?? ""] ?? "#a78bfa";
   const hasDetails = laptop.cautions || laptop.upgrade_notes;
+  const displayPrice = catalogDisplayPrice(laptop);
 
   useEffect(() => {
     if (isHighlighted && cardRef.current) {
@@ -127,15 +132,29 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
                 {laptop.brand}
                 {laptop.model ? ` · ${laptop.model}` : ""}
               </p>
+              {displayPrice && (
+                <p className="text-sm font-semibold text-foreground shrink-0 tabular-nums">
+                  {displayPrice}
+                </p>
+              )}
             </div>
             <h3 className="font-semibold text-foreground leading-tight text-sm sm:text-base w-full">
               {laptop.name}
             </h3>
-            {laptop.tier && (
-              <p className="text-xs text-muted-foreground">
-                {TIER_LABELS[laptop.tier]} tier
-              </p>
-            )}
+            <div className="flex items-center justify-between gap-2">
+              {laptop.tier ? (
+                <p className="text-xs text-muted-foreground">
+                  {TIER_LABELS[laptop.tier]} tier
+                </p>
+              ) : (
+                <span />
+              )}
+              {displayPrice && laptop.last_checked && (
+                <p className="text-[10px] text-muted-foreground shrink-0">
+                  Price as of {formatCheckedDate(laptop.last_checked)}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Badges */}
@@ -306,7 +325,7 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
                 className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded-lg h-7 px-2.5 bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                Check current price
+                {affiliateCtaLabel(laptop.affiliateCta.sourceKey)}
               </a>
             )}
             <Button
@@ -335,6 +354,21 @@ export function LaptopCard({ laptop, onCompareToggle, isInCompare, isHighlighted
       </m.div>
     </LazyMotion>
   );
+}
+
+/**
+ * "2026-08-07" -> "7 Aug". Pinned to an explicit locale and zone so the server
+ * and client render identical text; the input carries no time component, so
+ * there is nothing here that can drift between renders.
+ */
+function formatCheckedDate(value: string): string {
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Asia/Kolkata",
+  });
 }
 
 function SpecRow({

@@ -266,7 +266,7 @@ function CandidateCard({
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Price snapshot</p>
             <p className={`mt-0.5 text-xs ${freshPrice ? "text-foreground" : "text-amber-700 dark:text-amber-300"}`}>
               {candidate.price_amount === null
-                ? "No exact price supplied — use “Check current price”."
+                ? "No exact price supplied — use “See on Amazon”."
                 : freshPrice
                   ? `${formatMoney(candidate.price_amount, candidate.price_currency)} · fresh`
                   : `${formatMoney(candidate.price_amount, candidate.price_currency)} · ${label(product.priceFreshness)} snapshot; do not publish as current`}

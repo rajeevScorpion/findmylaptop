@@ -11,6 +11,7 @@ import type {
 } from "@/lib/growth-agents/types";
 import {
   AFFILIATE_DISCLOSURE,
+  affiliateCtaLabel,
   type AffiliateCtaMetadata,
   type AffiliatePlacement,
 } from "./public";
@@ -247,7 +248,7 @@ function resolveOfferDestination(input: {
     destinationKind: affiliateUrl ? "affiliate" : "canonical",
     monetized: Boolean(affiliateUrl),
     cta: {
-      label: `Check current price on ${sourceName}`,
+      label: affiliateCtaLabel(offer.source_key),
       sourceKey: offer.source_key,
       sourceName,
       priceFreshness: price
@@ -301,7 +302,7 @@ function resolveLegacyAmazon(input: {
     destinationKind: affiliateUrl ? "affiliate" : "canonical",
     monetized: Boolean(affiliateUrl),
     cta: {
-      label: `Check current price on ${sourceName}`,
+      label: affiliateCtaLabel("amazon"),
       sourceKey: "amazon",
       sourceName,
       priceFreshness: "unavailable",
@@ -395,7 +396,7 @@ function metadataSafeForPublicDisplay(
   if (source?.public_display_allowed) return resolved.cta;
   return {
     ...resolved.cta,
-    label: "Check current price",
+    label: affiliateCtaLabel("other"),
     sourceKey: "other",
     sourceName: "Other retailer",
     priceFreshness: "unavailable",
