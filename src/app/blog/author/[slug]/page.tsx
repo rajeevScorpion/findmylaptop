@@ -1,16 +1,29 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cacheLife, cacheTag } from "next/cache";
 import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { getBlogFlags } from "@/lib/flags";
 import { serializeJsonLd } from "@/lib/json-ld";
 import {
   getPublicPersonaBySlug,
+  getPublishedPersonaSlugs,
   getPublishedPostsForPersona,
 } from "@/lib/personas/service";
 
 type Props = { params: Promise<{ slug: string }> };
+
+// Prerendered per author, same as the article route.
+export async function generateStaticParams() {
+  try {
+    const personas = await getPublishedPersonaSlugs();
+    return personas.map(({ slug }) => ({ slug }));
+  } catch {
+    return [];
+  }
+}
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://laptopfinder.cc"
@@ -43,8 +56,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function BlogAuthorPage({ params }: Props) {
-  const { slug } = await params;
+function AuthorSkeleton() {
+  return (
+    <div className="animate-pulse" role="status" aria-label="Loading author">
+      <div className="glass-card rounded-2xl border p-6 sm:p-8">
+        <div className="h-7 w-56 rounded-lg bg-muted" />
+        <div className="mt-3 h-3 w-40 rounded bg-muted/70" />
+        <div className="mt-5 h-4 w-full rounded bg-muted/60" />
+        <div className="mt-2 h-4 w-4/5 rounded bg-muted/60" />
+      </div>
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="glass-card h-36 rounded-xl border" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Cached per slug; invalidated by the existing `blog`/`personas` tags. */
+async function AuthorProfile({ slug }: { slug: string }) {
+  "use cache";
+  cacheTag("blog", "personas");
+  cacheLife("days");
+
   const flags = await getBlogFlags();
   if (!flags.blog_enabled || !flags.blog_public_enabled) notFound();
 
@@ -66,21 +101,12 @@ export default async function BlogAuthorPage({ params }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-12 text-foreground sm:py-16">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(profileSchema) }}
       />
-      <div className="mx-auto max-w-5xl">
-        <SiteHeader showCta className="mb-8" />
-        <Link
-          href="/blog"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          All guides
-        </Link>
-
+      <div>
         <header className="glass-card rounded-2xl border p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold sm:text-3xl">
@@ -158,6 +184,37 @@ export default async function BlogAuthorPage({ params }: Props) {
             ))}
           </div>
         </section>
+      </div>
+    </>
+  );
+}
+
+export default async function BlogAuthorPage({ params }: Props) {
+  const { slug } = await params;
+
+  // Outside the cached profile so an unknown author still answers with a real
+  // 404 rather than a streamed soft 404.
+  const flags = await getBlogFlags();
+  if (!flags.blog_enabled || !flags.blog_public_enabled) notFound();
+  const persona = await getPublicPersonaBySlug(slug);
+  if (!persona) notFound();
+  if ((await getPublishedPostsForPersona(persona.id)).length === 0) notFound();
+
+  return (
+    <div className="min-h-screen bg-background px-4 py-12 text-foreground sm:py-16">
+      <div className="mx-auto max-w-5xl">
+        <SiteHeader showCta className="mb-8" />
+        <Link
+          href="/blog"
+          className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          All guides
+        </Link>
+
+        <Suspense fallback={<AuthorSkeleton />}>
+          <AuthorProfile slug={slug} />
+        </Suspense>
       </div>
     </div>
   );

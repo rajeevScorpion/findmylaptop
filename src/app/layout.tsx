@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Caveat } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { RouteProgress } from "@/components/RouteProgress";
 import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
@@ -77,6 +78,11 @@ export default function RootLayout({
         <meta name="impact-site-verification" {...{ value: "2280a2f3-f462-4e2f-b220-dd5c0ebddfb9" } as any} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        {/* Reads the pathname, which is not known at build time on routes with
+            dynamic params — its own boundary keeps that out of the page shell. */}
+        <Suspense>
+          <RouteProgress />
+        </Suspense>
         <Suspense>
           <ThemeProvider>{children}</ThemeProvider>
         </Suspense>
