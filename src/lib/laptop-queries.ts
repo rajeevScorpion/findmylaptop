@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Laptop } from "@/lib/types";
+import type { HomePickCandidate } from "@/lib/home-picks";
 import type { GrowthAgentDatabaseClient } from "@/lib/growth-agents/types";
 import {
   buildAffiliateOutboundPath,
@@ -54,18 +55,25 @@ export async function getPublishedLaptopsForDomain(domainId: string): Promise<Pu
   return decoratePublicLaptops(data ?? [], supabase);
 }
 
-export async function getFeaturedLaptops(): Promise<PublicLaptop[]> {
+// Feeds the home hub's picks carousel. Selection happens in home-picks.ts from
+// the whole published catalog, so this deliberately does *not* filter on
+// `feature_on_home` — that column is now an admin pin, not the pick list.
+// No affiliate decoration: the cards link to the on-site domain page, never
+// straight out to a retailer.
+const HOME_PICK_SELECT =
+  "id, slug, domain, name, brand, price_approx, price_label, image_url, cpu, gpu, gpu_vram_gb, ram_gb, storage_gb, tier, four_year_suitability, priority_score, availability, feature_on_home" as const;
+
+export async function getHomePickCandidates(): Promise<HomePickCandidate[]> {
   "use cache";
   cacheTag("laptops");
   cacheLife("minutes");
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("laptops")
-    .select(PUBLIC_LAPTOP_SELECT)
+    .select(HOME_PICK_SELECT)
     .eq("is_published", true)
-    .eq("feature_on_home", true)
     .order("priority_score", { ascending: false });
-  return decoratePublicLaptops(data ?? [], supabase);
+  return (data ?? []) as HomePickCandidate[];
 }
 
 export async function getAllPublishedLaptops(): Promise<PublicLaptop[]> {

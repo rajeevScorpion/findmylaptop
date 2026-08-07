@@ -2,17 +2,17 @@ import Link from "next/link";
 import { ArrowRight, Bot, Clock, CalendarDays } from "lucide-react";
 import { getDomainFlags, getBlogFlags } from "@/lib/flags";
 import { getPublishedPosts } from "@/lib/blog/queries";
-import { getFeaturedLaptops, getPublicSettings } from "@/lib/laptop-queries";
+import { getHomePickCandidates, getPublicSettings } from "@/lib/laptop-queries";
+import { selectHomePicks } from "@/lib/home-picks";
 import { DOMAIN_ORDER, type DomainId } from "@/lib/domains";
 import { HardwareExplainer } from "@/components/public/HardwareExplainer";
-import { EditorsPicks } from "@/components/public/EditorsPicks";
+import { HomePicks } from "@/components/public/HomePicks";
 import { TrustSection } from "@/components/public/TrustSection";
 import { WhatsAppCTA } from "@/components/public/WhatsAppCTA";
 import { VisitCounter } from "@/components/public/VisitCounter";
 import { Disclaimer } from "@/components/public/Disclaimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SiteHeader } from "@/components/public/SiteHeader";
-import type { Laptop } from "@/lib/types";
 
 // Discipline-agnostic landing hub at /. Introduces all three domains and routes
 // the visitor into the right one. Deliberately omits the finder, domain tabs,
@@ -28,21 +28,21 @@ function formatDate(value: string | null): string {
 }
 
 export async function HomeHub() {
-  const [flags, blogFlags, featuredAll, settingsMap] = await Promise.all([
+  const [flags, blogFlags, pickCandidates, settingsMap] = await Promise.all([
     getDomainFlags(),
     getBlogFlags(),
-    getFeaturedLaptops(),
+    getHomePickCandidates(),
     getPublicSettings(),
   ]);
 
   // Design is always enabled; the other two follow their flags.
   const enabledDomains = DOMAIN_ORDER.filter((d) => !d.flagKey || flags[d.flagKey]);
-  const enabledIds = new Set<DomainId>(enabledDomains.map((d) => d.id));
+  const enabledIds: DomainId[] = enabledDomains.map((d) => d.id);
 
-  // Never surface a pick from a domain that isn't live yet.
-  const featured: Laptop[] = featuredAll
-    .filter((l) => !l.domain || enabledIds.has(l.domain as DomainId))
-    .slice(0, 6);
+  // Picks are derived from the live catalog on every render (cached alongside
+  // the laptop queries) — passing the enabled domains keeps a laptop from a
+  // domain that isn't live yet off the hub.
+  const pickSlides = selectHomePicks(pickCandidates, { domains: enabledIds });
 
   const blogPublic = blogFlags.blog_enabled && blogFlags.blog_public_enabled;
   const recentPosts = blogPublic ? (await getPublishedPosts()).slice(0, 3) : [];
@@ -115,7 +115,7 @@ export async function HomeHub() {
         </div>
       </section>
 
-      <EditorsPicks laptops={featured} />
+      <HomePicks slides={pickSlides} />
 
       <HardwareExplainer />
 

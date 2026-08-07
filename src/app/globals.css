@@ -297,6 +297,48 @@
 .dark .badge-portable    { color: oklch(0.75 0.18 60);  background: oklch(0.55 0.18 60  / 20%); border-color: oklch(0.55 0.18 60  / 40%); }
 .dark .badge-budget      { color: oklch(0.72 0.12 90);  background: oklch(0.5  0.12 90  / 20%); border-color: oklch(0.5  0.12 90  / 40%); }
 
+/* ── Diagonal corner ribbon (home picks cards) ──
+   A clipped square at the card's top-left corner holding a rotated band. The
+   card's own `overflow-hidden` + rounded corner trims the band's outer tip,
+   which is what gives it the folded-corner look. Colour follows data-domain. */
+.corner-ribbon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  width: 108px;
+  height: 108px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.corner-ribbon span {
+  position: absolute;
+  top: 22px;
+  left: -44px;
+  display: block;
+  width: 160px;
+  padding: 4px 0;
+  transform: rotate(-45deg);
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: oklch(1 0 0);
+  box-shadow: 0 2px 8px oklch(0 0 0 / 22%);
+}
+
+.corner-ribbon[data-domain="design"] span {
+  background: linear-gradient(135deg, oklch(0.68 0.16 65), oklch(0.56 0.17 45));
+}
+.corner-ribbon[data-domain="technology"] span {
+  background: linear-gradient(135deg, oklch(0.62 0.18 255), oklch(0.5 0.2 268));
+}
+.corner-ribbon[data-domain="management"] span {
+  background: linear-gradient(135deg, oklch(0.62 0.14 162), oklch(0.5 0.15 175));
+}
+
 /* ── Laptop card hover ── */
 .laptop-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;

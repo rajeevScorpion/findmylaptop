@@ -74,18 +74,37 @@ export const FOUR_YEAR_LABELS: Record<string, string> = {
 // Workload tags are now defined per-domain in domains.ts (DomainConfig.workloadTags)
 // and aggregated as ALL_WORKLOAD_TAGS.
 
+// Rough 0–100 standing of a *laptop* GPU, used to rank capability.
+//
+// Key order is load-bearing: getGpuStrengthScore returns the first substring
+// match, so every "Ti" variant must sit immediately before its base model
+// ("rtx 5070 ti" before "rtx 5070") and specific names before generic ones.
 export const GPU_STRENGTH_ORDER: Record<string, number> = {
-  "rtx 4090": 100,
-  "rtx 4080": 90,
-  "rtx 4070": 80,
-  "rtx 4060": 70,
-  "rtx 4050": 60,
+  "rtx 5090": 100,
+  "rtx 5080": 95,
+  "rtx 4090": 94,
+  "rtx 5070 ti": 88,
+  "rtx 4080": 87,
+  "rtx 5070": 82,
+  "rtx 4070 ti": 80,
+  "rtx 4070": 78,
+  "rtx 3080 ti": 77,
   "rtx 3080": 75,
+  "rtx 5060": 72,
+  "rtx 4060": 70,
+  "rtx 3070 ti": 67,
   "rtx 3070": 65,
+  "rtx 5050": 62,
+  "rtx 4050": 60,
   "rtx 3060": 55,
+  "rtx 3050 ti": 48,
   "rtx 3050": 45,
   "rtx 2060": 40,
+  "rtx 2050": 35,
+  "gtx 1660": 28,
   "gtx 1650": 25,
+  "intel arc": 14,
+  "radeon graphics": 12,
   "iris xe": 10,
   "integrated": 5,
 };
