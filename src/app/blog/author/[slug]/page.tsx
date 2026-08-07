@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { cacheLife, cacheTag } from "next/cache";
 import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
 import { SiteHeader } from "@/components/public/SiteHeader";
-import { getBlogFlags } from "@/lib/flags";
+import { ChipDomainRouterLoader } from "@/components/public/ChipDomainRouterLoader";
+import { getBlogFlags, getEnabledDomainIds } from "@/lib/flags";
 import { serializeJsonLd } from "@/lib/json-ld";
 import {
   getPublicPersonaBySlug,
@@ -200,6 +201,8 @@ export default async function BlogAuthorPage({ params }: Props) {
   if (!persona) notFound();
   if ((await getPublishedPostsForPersona(persona.id)).length === 0) notFound();
 
+  const enabledIds = await getEnabledDomainIds();
+
   return (
     <div className="min-h-screen bg-background px-4 py-12 text-foreground sm:py-16">
       <div className="mx-auto max-w-5xl">
@@ -216,6 +219,10 @@ export default async function BlogAuthorPage({ params }: Props) {
           <AuthorProfile slug={slug} />
         </Suspense>
       </div>
+
+      {/* Chip has no discipline to reason about here, so it asks for one and
+          hands off to the real advisor on that domain's page. */}
+      <ChipDomainRouterLoader enabledIds={enabledIds} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bot, Clock, CalendarDays } from "lucide-react";
+import { ArrowRight, Clock, CalendarDays } from "lucide-react";
 import { getDomainFlags, getBlogFlags } from "@/lib/flags";
 import { getPublishedPosts } from "@/lib/blog/queries";
 import { getHomePickCandidates, getPublicSettings } from "@/lib/laptop-queries";
@@ -13,11 +13,14 @@ import { VisitCounter } from "@/components/public/VisitCounter";
 import { Disclaimer } from "@/components/public/Disclaimer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SiteHeader } from "@/components/public/SiteHeader";
+import { ChipInvite } from "@/components/public/ChipInvite";
+import { ChipDomainRouterLoader } from "@/components/public/ChipDomainRouterLoader";
 
 // Discipline-agnostic landing hub at /. Introduces all three domains and routes
-// the visitor into the right one. Deliberately omits the finder, domain tabs,
-// and Chip (Chip is scoped to the per-domain pages). Only flag-enabled domains
-// are shown — Design is always on.
+// the visitor into the right one. Deliberately omits the finder and domain tabs.
+// Chip appears as the domain router rather than the real advisor — answers here
+// would have no discipline to reason about, so it asks for one and hands off.
+// Only flag-enabled domains are shown — Design is always on.
 function formatDate(value: string | null): string {
   if (!value) return "";
   return new Date(value).toLocaleDateString("en-IN", {
@@ -80,12 +83,7 @@ export async function HomeHub() {
           </Link>
         </div>
         <div className="mt-4 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full glass-card border px-4 py-2.5 text-xs sm:text-sm text-muted-foreground/80">
-            <Bot className="w-4 h-4 shrink-0 text-violet-500" />
-            <span className="text-balance">
-              Meet Chip — chat inside any discipline.
-            </span>
-          </span>
+          <ChipInvite />
         </div>
       </section>
 
@@ -191,6 +189,7 @@ export async function HomeHub() {
       <WhatsAppCTA whatsappUrl={settingsMap["whatsapp_url"]} />
       <VisitCounter />
       <Disclaimer text={settingsMap["disclaimer_text"]} />
+      <ChipDomainRouterLoader enabledIds={enabledIds} />
     </main>
   );
 }

@@ -9,6 +9,7 @@ import { LaptopMiniCard } from "./LaptopMiniCard";
 import { cn } from "@/lib/utils";
 import type { Laptop, ChatMessage, ChatApiResponse } from "@/lib/types";
 import { DOMAINS, type DomainId } from "@/lib/domains";
+import { consumeChipHandoff } from "@/lib/chip-handoff";
 
 // Conversation state is cached in sessionStorage, scoped PER DOMAIN so that
 // switching domains (e.g. Technology → Design via the tabs) never restores the
@@ -50,6 +51,8 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
   const [inputValue, setInputValue] = useState("");
   const [messagesRemaining, setMessagesRemaining] = useState(30);
   const [hasBeenOpened, setHasBeenOpened] = useState(false);
+  /** A question typed into the domain router before it navigated here. */
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -94,6 +97,17 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
       if (sessionStorage.getItem(keys.rated) === "1") setFeedbackStage("done");
     } catch {}
 
+    // Arriving from the domain router on a discipline-agnostic page (home hub,
+    // blog): the visitor already answered "which discipline?", so pick the
+    // conversation up here rather than making them find the bubble again.
+    const handoff = consumeChipHandoff(domain);
+    if (handoff) {
+      setIsOpen(true);
+      setHasBeenOpened(true);
+      try { localStorage.setItem("chip_opened", "1"); } catch {}
+      if (handoff.question) setPendingQuestion(handoff.question);
+    }
+
     const handleOpenEvent = () => {
       setIsOpen(true);
       setHasBeenOpened(true);
@@ -101,7 +115,7 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
     };
     document.addEventListener("chip:open", handleOpenEvent);
     return () => document.removeEventListener("chip:open", handleOpenEvent);
-  }, [keys]);
+  }, [keys, domain]);
 
   useEffect(() => {
     try { sessionStorage.setItem(keys.messages, JSON.stringify(messages)); } catch {}
@@ -133,6 +147,17 @@ export function ChatWidget({ laptops, voiceEnabled = true, domain = "design" }: 
   useEffect(() => {
     if (isOpen) setTimeout(() => textareaRef.current?.focus(), 100);
   }, [isOpen]);
+
+  // Send the question the visitor typed into the domain router. Deliberately a
+  // separate effect from the mount restore above: by the time this runs, the
+  // saved conversation has been applied, so `sendMessage` appends to the real
+  // history rather than to the greeting it was mounted with. Clearing the state
+  // first makes a re-run a no-op, which is why `sendMessage` is not a dependency.
+  useEffect(() => {
+    if (!pendingQuestion) return;
+    setPendingQuestion(null);
+    sendMessage(pendingQuestion);
+  }, [pendingQuestion]);
 
   // Track whether we're on a mobile-sized screen (matches the `md` breakpoint).
   useEffect(() => {

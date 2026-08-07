@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cacheLife, cacheTag } from "next/cache";
 import { ArrowLeft, Clock, CalendarDays, ListTree } from "lucide-react";
-import { getBlogFlags } from "@/lib/flags";
+import { getBlogFlags, getEnabledDomainIds } from "@/lib/flags";
 import {
   getPublishedPostBySlug,
   getPublishedPostSlugs,
@@ -19,6 +19,7 @@ import { placeEditorialCardAfterFaq } from "@/lib/blog/editorial-card";
 import type { BlogContentDoc, Block, FaqItem } from "@/lib/blog/types";
 import { getAllPublishedLaptops } from "@/lib/laptop-queries";
 import { SiteHeader } from "@/components/public/SiteHeader";
+import { ChipDomainRouterLoader } from "@/components/public/ChipDomainRouterLoader";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -345,6 +346,10 @@ export default async function BlogPostPage({ params }: Props) {
   if (!flags.blog_enabled || !flags.blog_public_enabled) notFound();
   if (!(await getPublishedPostBySlug(slug))) notFound();
 
+  // Part of the page chrome, not the article — so it is there from the first
+  // paint rather than waiting behind the article's Suspense boundary.
+  const enabledIds = await getEnabledDomainIds();
+
   return (
     <div className="min-h-screen bg-background text-foreground px-4 py-12 sm:py-16">
       <div className="max-w-5xl mx-auto">
@@ -364,6 +369,10 @@ export default async function BlogPostPage({ params }: Props) {
           <BlogArticle slug={slug} />
         </Suspense>
       </div>
+
+      {/* Chip has no discipline to reason about here, so it asks for one and
+          hands off to the real advisor on that domain's page. */}
+      <ChipDomainRouterLoader enabledIds={enabledIds} />
     </div>
   );
 }

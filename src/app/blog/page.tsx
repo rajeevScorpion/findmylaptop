@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { cacheLife, cacheTag } from "next/cache";
-import { getBlogFlags } from "@/lib/flags";
+import { getBlogFlags, getEnabledDomainIds } from "@/lib/flags";
 import { getPublicBlogCategories, getPublishedPosts } from "@/lib/blog/queries";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { BlogHero } from "@/components/blog/BlogHero";
 import { BlogExplorer } from "@/components/blog/BlogExplorer";
+import { ChipDomainRouterLoader } from "@/components/public/ChipDomainRouterLoader";
 
 export const metadata: Metadata = {
   title: "Laptop Buying Guides & Tips — laptopfinder.cc",
@@ -24,9 +25,10 @@ export default async function BlogIndexPage() {
     notFound();
   }
 
-  const [posts, categories] = await Promise.all([
+  const [posts, categories, enabledIds] = await Promise.all([
     getPublishedPosts(),
     getPublicBlogCategories(),
+    getEnabledDomainIds(),
   ]);
 
   return (
@@ -60,6 +62,10 @@ export default async function BlogIndexPage() {
           <BlogExplorer posts={posts} categories={categories} />
         </Suspense>
       )}
+
+      {/* Chip has no discipline to reason about here, so it asks for one and
+          hands off to the real advisor on that domain's page. */}
+      <ChipDomainRouterLoader enabledIds={enabledIds} />
     </div>
   );
 }

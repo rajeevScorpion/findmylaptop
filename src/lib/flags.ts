@@ -7,6 +7,7 @@ import {
   type BlogFlags,
   type DomainFlags,
 } from "@/lib/flag-keys";
+import { DOMAIN_ORDER, type DomainId } from "@/lib/domains";
 
 // Re-export types and constants so existing callers of @/lib/flags still work.
 export type { BlogFlagKey, BlogFlags, DomainFlagKey, DomainFlags } from "@/lib/flag-keys";
@@ -57,6 +58,17 @@ export async function getDomainFlags(): Promise<DomainFlags> {
   } catch {
     return { ...DOMAIN_SAFE_DEFAULTS };
   }
+}
+
+/**
+ * The domains a visitor may actually be sent to, in tab order. Design has no
+ * flag and is always on; the other two follow their settings flag. Callers that
+ * offer a choice of domain (notably the Chip domain router) must use this — a
+ * route whose flag is off answers with notFound().
+ */
+export async function getEnabledDomainIds(): Promise<DomainId[]> {
+  const flags = await getDomainFlags();
+  return DOMAIN_ORDER.filter((d) => !d.flagKey || flags[d.flagKey]).map((d) => d.id);
 }
 
 // Cached across requests via `use cache`. Uses the admin (service-role) client

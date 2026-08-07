@@ -16,6 +16,7 @@ const fadeUp = {
 };
 
 export function BlogHero() {
+  // Answered by ChipDomainRouter, mounted by the blog index page.
   const openChip = () => document.dispatchEvent(new CustomEvent("chip:open"));
 
   return (
