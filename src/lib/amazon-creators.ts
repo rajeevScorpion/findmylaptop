@@ -161,12 +161,15 @@ function extractListingPrice(listing: unknown): { display?: string; amount?: num
   const display = (money.displayAmount ?? price.displayAmount ?? price.displayString) as
     | string
     | undefined;
-  // Prefer the human-readable display ("₹66,500.00") — it's authoritative in
-  // rupees. Amazon's `money.amount` on amazon.in is in paise (minor units), so
-  // it's only a fallback and must be divided by 100.
+  // Both fields carry the major unit (rupees) on amazon.in. A live Creators API
+  // listing returns `money.amount: 74990` next to `displayAmount: "₹74,990.00"`,
+  // and the same 1:1 relationship holds for savingBasis and savings. Prefer the
+  // display string because it is already locale-formatted; fall back to the raw
+  // amount unscaled, since dividing by 100 here would understate a ₹74,990
+  // laptop as ₹750.
   const amount =
     parsePriceToInt(display) ??
-    (typeof money.amount === "number" ? Math.round(money.amount / 100) : null);
+    (typeof money.amount === "number" ? Math.round(money.amount) : null);
   return { display, amount: amount ?? undefined };
 }
 
@@ -317,7 +320,15 @@ export async function searchAmazonProducts(
     throw new AmazonApiError(res.status, `SearchItems failed (${res.status}).`);
   }
   const data = await res.json();
-  const items = data?.itemsResult?.items ?? data?.items ?? data?.data?.items ?? [];
+  // SearchItems nests results under `searchResult`, unlike GetItems, which uses
+  // `itemsResult`. Verified against the live amazon.in catalog. The remaining
+  // fallbacks are bounded compatibility shims.
+  const items =
+    data?.searchResult?.items ??
+    data?.itemsResult?.items ??
+    data?.items ??
+    data?.data?.items ??
+    [];
   if (!Array.isArray(items)) throw new AmazonApiError(502, "SearchItems returned an invalid response.");
   return items.slice(0, itemCount).flatMap((item: unknown) => {
     try {

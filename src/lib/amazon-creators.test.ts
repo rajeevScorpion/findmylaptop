@@ -15,7 +15,9 @@ describe("Amazon Creators catalog search", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(Response.json({ access_token: "token", expires_in: 3600 }))
       .mockResolvedValueOnce(Response.json({
-        itemsResult: {
+        // SearchItems nests under `searchResult`; GetItems uses `itemsResult`.
+        // This mirrors the live amazon.in payload.
+        searchResult: {
           items: [{
             asin: "B0ABC12345",
             itemInfo: {
@@ -45,6 +47,50 @@ describe("Amazon Creators catalog search", () => {
       marketplace: "www.amazon.in",
     });
     expect(result).toEqual([expect.objectContaining({ asin: "B0ABC12345", title: "Example Laptop 16GB 512GB", priceAmount: 79_990 })]);
+  });
+
+  it("does not silently drop results when the payload uses the GetItems envelope", async () => {
+    // Regression: the parser once only checked `itemsResult`, so every live
+    // search returned zero products with a 200 response and no error.
+    vi.stubEnv("AMAZON_CREATORS_CLIENT_ID", "client-id");
+    vi.stubEnv("AMAZON_CREATORS_CLIENT_SECRET", "client-secret");
+    vi.stubEnv("AMAZON_PARTNER_TAG", "laptopfinder-21");
+    const item = {
+      asin: "B0ABC12345",
+      itemInfo: { title: { displayValue: "Example Laptop" } },
+    };
+    for (const envelope of [{ searchResult: { items: [item] } }, { itemsResult: { items: [item] } }]) {
+      vi.resetModules();
+      vi.stubGlobal("fetch", vi.fn()
+        .mockResolvedValueOnce(Response.json({ access_token: "token", expires_in: 3600 }))
+        .mockResolvedValueOnce(Response.json(envelope)));
+      const { searchAmazonProducts } = await import("./amazon-creators");
+      const result = await searchAmazonProducts({ keywords: "student laptop" });
+      expect(result).toHaveLength(1);
+      expect(result[0].asin).toBe("B0ABC12345");
+    }
+  });
+
+  it("reads money.amount as rupees when the display string is absent", async () => {
+    // Live amazon.in returns `money.amount: 74990` beside "₹74,990.00" — the
+    // major unit, not paise. Scaling it would list the laptop at ₹750.
+    vi.stubEnv("AMAZON_CREATORS_CLIENT_ID", "client-id");
+    vi.stubEnv("AMAZON_CREATORS_CLIENT_SECRET", "client-secret");
+    vi.stubEnv("AMAZON_PARTNER_TAG", "laptopfinder-21");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(Response.json({ access_token: "token", expires_in: 3600 }))
+      .mockResolvedValueOnce(Response.json({
+        searchResult: {
+          items: [{
+            asin: "B0ABC12345",
+            itemInfo: { title: { displayValue: "Example Laptop" } },
+            offersV2: { listings: [{ price: { money: { amount: 74990, currency: "INR" } } }] },
+          }],
+        },
+      })));
+    const { searchAmazonProducts } = await import("./amazon-creators");
+    const [product] = await searchAmazonProducts({ keywords: "student laptop" });
+    expect(product.priceAmount).toBe(74_990);
   });
 
   it("rejects broad empty keyword requests before making an API call", async () => {
